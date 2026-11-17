@@ -2,4 +2,4 @@
 
 Built site only, published from the private source repo (branch `jojo`). Not the main prototype.
 
-- Preview: https://kirtanyak-pe.github.io/lemonn-app-jojo/
+- Preview: https://lemonnade-design.github.io/lemonn-app-jojo/
