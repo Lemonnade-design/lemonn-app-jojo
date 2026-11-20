@@ -1,6 +1,6 @@
 # Flow: First deposit (`deposit`)
 
-> One self-contained file for converting this flow to another platform. Read https://lemonnade-design.github.io/lemonn-app-prototype/CONVERT.md first. Design system: Lemonnade V3 @ `4afbde2` (components, tokens and rules: https://lemonnade-design.github.io/lemonnade-v3-docs/llms.txt).
+> One self-contained file for converting this flow to another platform. Read https://lemonnade-design.github.io/lemonn-app-prototype/CONVERT.md first. Design system: Lemonnade V3 @ `3cd03a0` (components, tokens and rules: https://lemonnade-design.github.io/lemonnade-v3-docs/llms.txt).
 
 Add money over UPI after account setup: amount, UPI app, confirmation, receipt or failure.
 
@@ -17,7 +17,12 @@ Prototype: https://lemonnade-design.github.io/lemonn-app-prototype/#/deposit · 
 | `deposit-09` | Add money · from the wallet | — | — | Opened by Deposit on the INR wallet: no first-deposit perks, ₹1,100.00 available; after the receipt, Done goes back to the wallet. |
 | `deposit-10` | Add money · no bank account | — | — | No bank linked (User status → Bank accounts: None): the bank row and the button ask to add one first → Add bank account. |
 | `deposit-11` | Add money · change bank | — | — | The bank row (chevron) opens "Pay from": the linked banks as radio rows, picking one closes it; "Add another bank account" → Add bank account. |
-| `deposit-12` | Add bank account | — | `deposit-09` | From the bank row or "Pay from" — the ₹ and the US add money both come here. Verify (₹1 name check) goes back to the add money it came from. |
+| `deposit-12` | Add bank account | — | `deposit-09`, `deposit-13` | From the bank row or "Pay from" — the ₹ and the US add money both come here. Verify account → the ₹1 name check. Opened from US Stocks (US add money, activation, the USD wallet) it is deposit-16; from the ₹ side any bank can be added, no check. |
+| `deposit-16` | Add bank account · for US Stocks | — | `us-stocks-21`, `deposit-13` | Not in Figma: opened from US Stocks (US add money\ |
+| `deposit-17` | Add bank account · US · bank not supported | — | `us-stocks-21`, `deposit-13` | Not in Figma: from US Stocks, an IFSC of a bank that can\ |
+| `deposit-13` | Verifying bank account | — | — | Not in Figma: ₹1 goes to the account and the bank returns the name on it. Moves on by itself to Bank account added. |
+| `deposit-14` | Bank account added | — | — | Not in Figma: the name matched PAN. The account joins the linked banks; Continue goes back to the add money (₹ or US) that opened Add bank account, with the new bank picked. |
+| `deposit-15` | Bank account not added | — | `deposit-12` | Not in Figma: the name on the account isn’t the user’s (₹1 check). Try another account → Add bank account; Back to Add money → the add money that opened it. |
 | `deposit-02` | Approve in UPI app (external) | [5436:7954](https://www.figma.com/design/sG24GPizTdwbMBxLm0IpTA/?node-id=5436-7954) | `deposit-05` | Handoff placeholder: the UPI app’s own payment sheet is not built by Lemonn. |
 | `deposit-03` | Confirming payment | [5436:7953](https://www.figma.com/design/sG24GPizTdwbMBxLm0IpTA/?node-id=5436-7953) | — |  |
 | `deposit-04` | Money added | [5436:7955](https://www.figma.com/design/sG24GPizTdwbMBxLm0IpTA/?node-id=5436-7955) | — | First deposit: Start investing → the Stocks home. Opened from the wallet: Done → the wallet. (The prototype remembers the entry; a screen opened straight from the list assumes the first deposit.) |
@@ -49,7 +54,10 @@ Prototype: https://lemonnade-design.github.io/lemonn-app-prototype/#/deposit · 
 | `deposit-09` | Add money · from the wallet | — | As deposit-01 without the perk, "₹1,100.00 available"; back and Done return to the wallet. |
 | `deposit-10` | Add money · no bank account | — | User status → Bank accounts: None. The bank row reads “Add a bank account”; the button is “Add bank account” → deposit-12. |
 | `deposit-11` | Add money · change bank | — | The bank row (chevron) opened “Pay from”: linked banks as radio rows (picking one closes it), “Add another bank account” → deposit-12. |
-| `deposit-12` | Add bank account | — | Account number ×2 and IFSC (bank + branch found), “we send ₹1 to check it”, Verify account → back to where it came from. |
+| `deposit-12` | Add bank account | — | No intro header: title + description in the Actionbar. Opens empty, account number focused with the number keypad up; the IFSC field brings up the text keyboard. Confirm number shows “don’t match” as it goes wrong; a valid IFSC shows the bank (+ branch), an unknown one an error. Verify account (on once all three are right) → deposit-13. |
+| `deposit-13` | Verifying bank account | — | Not in Figma. Loader: ₹1 goes to the account to check the name. Moves on by itself → deposit-14. |
+| `deposit-14` | Bank account added | — | Not in Figma. Success: the account (name on it, bank, ••last 4, IFSC, ₹1 refunded). It joins the linked banks; Continue → the add money (₹ or US) that opened Add bank account, with the new bank picked. |
+| `deposit-15` | Bank account not added | — | Not in Figma. The name on the account isn’t the user’s (PAN): Try another account → deposit-12; Back to Add money → the add money that opened it. |
 | `deposit-02` | Approve in UPI app (external) | 5436:7954 | **Handoff placeholder** while the UPI app's own payment sheet is open. Cancel payment. |
 | `deposit-03` | Confirming payment | 5436:7953 | Loader while the payment is confirmed with the bank. Moves on by itself. |
 | `deposit-04` | Money added | 5436:7955 | "₹1,000 added" + receipt (paid with, reference no. with copy, time). Start investing. |
@@ -64,8 +72,8 @@ deposit-01 ─Add ₹X─▶ deposit-02 (UPI app) ─paid─▶ deposit-03 ─au
 deposit-01 ─back─▶ kyc-20
 deposit-09 (from the INR wallet, us-stocks-53) ─back─▶ wallet; same payment screens; deposit-04 Done ─▶ wallet
 deposit-06 / 07 / 08 are states of deposit-01 (same screen, other amount).
-bank row ─tap─▶ Pay from sheet (deposit-11) ─Add another─▶ deposit-12 ─Verify─▶ back
-deposit-10 (no bank) ─Add bank account─▶ deposit-12 ─Verify─▶ back
+bank row ─tap─▶ Pay from sheet (deposit-11) ─Add another─▶ deposit-12 ─Verify─▶ deposit-13 (₹1 check) ─auto─▶ deposit-14 ─Continue─▶ the add money it came from (new bank picked)
+deposit-10 (no bank) ─Add bank account─▶ deposit-12 ─Verify─▶ deposit-13 ─▶ deposit-14 (or deposit-15: name doesn’t match → Try another account)
 ```
 
 ### Data
@@ -141,6 +149,16 @@ From `src/shared/data/user.ts` (fictional sample user) and `data.ts`:
 - 2026-10-21 — layout moved from CSS-module classes to the L3 layout blocks (Section, Stack, Grid); nothing moved (measured at 392).
 - 2026-11-03 — Add money rebuilt on the shared AmountEntry (Groww-clean, in-app keypad, "+" chips, limits line); states deposit-06 / 07 / 08; deposit-09 opened from the INR wallet, receipt returns there.
 - 2026-11-03 — Bank accounts: the bank row shows the bank (logo, ••last 4) with a chevron that opens “Pay from” (change bank, add another); no bank linked → deposit-10; Add bank account (deposit-12). Linked banks come from User status → Bank accounts (None / One / Two).
+- 2026-11-04 — Add bank account finished: Verifying (deposit-13), Bank account added (deposit-14: the new bank joins the linked banks and is picked on the add money that opened it, ₹ or US), Bank account not added (deposit-15: name doesn’t match PAN). `shared/userStatus` remembers the opener and the added bank.
+- 2026-11-04 — Add bank account: intro header removed (description in the Actionbar); fields start empty and are typed on the keypad / text keyboard, with match and IFSC checks.
+- 2026-11-04 — Add bank account for US Stocks (deposit-16 / 17): opened from US Stocks (US add money's "Add another
+  bank account", activation's Add bank, the USD wallet's Add) it shows the five banks that can send money abroad (ICICI,
+  HDFC, Kotak, IDFC FIRST, Axis — `shared/data/usBanks`) and takes only their IFSCs; another bank's IFSC turns the field
+  red ("State Bank of India can't send money abroad for US Stocks…") and Verify stays off. From the ₹ side (INR wallet,
+  ₹ add money) any bank can be added, no check. The mode ends when Add bank closes. The bank typed is the one verified
+  and added (`bankFromEntry`).
+- 2026-11-04 — Pay from: banks are card rows (bordered, 8 apart), as on the US Stocks bank sheet. Back on Add money returns
+  to the page it was opened from (the wallet) instead of opening the wallet again, which looped wallet ↔ add money.
 
 
 ## Source — this flow
@@ -189,15 +207,41 @@ From `src/shared/data/user.ts` (fictional sample user) and `data.ts`:
   "bank.addAnother": "Add another bank account",
   "addMoney.addBankCta": "Add bank account",
   "addBank.screenTitle": "Add bank account",
-  "addBank.title": "Add a bank account",
-  "addBank.description": "Money you add or withdraw only moves between your own bank accounts and Lemonn",
+  "addBank.description": "Only your own bank accounts can add or withdraw money",
   "addBank.accountNumber": "Account number",
   "addBank.confirmNumber": "Confirm account number",
   "addBank.ifsc": "IFSC",
   "addBank.ifscFound": "{bank} · {branch}",
   "addBank.note": "We send ₹1 to check the account is in your name. It comes back to you.",
   "addBank.cta": "Verify account",
-  "addBank.actionsLabel": "Verify bank account"
+  "addBank.actionsLabel": "Verify bank account",
+  "verifyBank.title": "Verifying your account",
+  "verifyBank.description": "Sending ₹1 to {bank} ••{last4} to check the account is in your name",
+  "bankAdded.title": "Bank account added",
+  "bankAdded.description": "{bank} ••{last4} is verified in your name. You can add and withdraw money with it.",
+  "bankAdded.detailsLabel": "Bank account details",
+  "bankAdded.name": "Name on account",
+  "bankAdded.bank": "Bank",
+  "bankAdded.account": "Account number",
+  "bankAdded.ifsc": "IFSC",
+  "bankAdded.check": "₹1 check",
+  "bankAdded.refunded": "Refunded",
+  "bankAdded.groupLabel": "Next",
+  "bankAdded.cta": "Continue",
+  "bankFailed.title": "Couldn’t add this account",
+  "bankFailed.description": "This account is in the name of {name}, not {you} as on your PAN. Add a bank account in your own name. The ₹1 comes back to it.",
+  "bankFailed.groupLabel": "Try again",
+  "bankFailed.retry": "Try another account",
+  "bankFailed.back": "Back to Add money",
+  "addBank.accountPlaceholder": "Enter account number",
+  "addBank.confirmPlaceholder": "Enter account number again",
+  "addBank.ifscPlaceholder": "e.g. SBIN0001537",
+  "addBank.usIfscPlaceholder": "e.g. KKBK0000958",
+  "addBank.usBanks": "For US Stocks, add an account at one of these banks. Only they can send money abroad.",
+  "addBank.usBanksLabel": "Supported banks for US Stocks",
+  "addBank.usNotSupported": "{bank} can't send money abroad for US Stocks. Use an account at ICICI, HDFC, Kotak, IDFC FIRST or Axis Bank.",
+  "addBank.mismatch": "Account numbers don’t match",
+  "addBank.ifscNotFound": "We couldn’t find this IFSC. Check it on your cheque book or passbook."
 }
 ```
 
@@ -214,6 +258,9 @@ export const t = makeCopy('deposit', copy)
 ### `src/flows/deposit/data.ts`
 
 ```ts
+import type { LinkedBank } from '../../shared/data/user'
+import { addBankForUs } from '../../shared/userStatus'
+
 /** First deposit (and any "Add money"). */
 export const MIN_DEPOSIT = 100
 /** Net banking limit per deposit (not drawn: the method picker isn't part of this flow). */
@@ -234,8 +281,53 @@ export const upiApp: PaymentMethod = { id: 'phonepe', name: 'PhonePe', detail: '
 
 export const receipt = { reference: 'LMN2410161146', time: '16 Oct 2026, 11:46 AM' }
 
-/** The account typed on Add bank account (deposit-12): a second bank, shown filled in. */
-export const newBank = { bank: 'State Bank of India', accountNumber: '38291045526', ifsc: 'SBIN0001537', branch: 'Bandra West, Mumbai' }
+/** The account added on Add bank account (deposit-12): a second bank. Verified, it joins the linked banks. */
+export const newBank: LinkedBank = { id: 'sbi', bank: 'State Bank of India', accountNumber: '38291045526', ifsc: 'SBIN0001537', type: 'Savings', branch: 'Bandra West, Mumbai', logoSymbol: 'SBIN', last4: '5526' }
+/** The sample account added from US Stocks (deposit-16): it has to be at a bank that can send money abroad. */
+export const usNewBank: LinkedBank = { id: 'kotak', bank: 'Kotak Mahindra Bank', accountNumber: '7412589630', ifsc: 'KKBK0000958', type: 'Savings', branch: 'Lower Parel, Mumbai', logoSymbol: 'KOTAKBANK', last4: '9630' }
+
+// The account being added (typed on Add bank account), for the screens after it. Opened straight from the list, they
+// show the sample account (the US one when Add bank account was opened from US Stocks).
+let adding: LinkedBank | undefined
+export const setBankBeingAdded = (bank: LinkedBank) => { adding = bank }
+export const bankBeingAdded = () => adding ?? (addBankForUs() ? usNewBank : newBank)
+
+/** Indian bank account numbers run 9 to 18 digits. */
+export const ACCOUNT_DIGITS = { min: 9, max: 18 }
+export const IFSC_LENGTH = 11
+
+/**
+ * Banks by the first 4 letters of the IFSC (name and NSE symbol, for the logo), for "IFSC found" on Add bank account.
+ * Real app: an IFSC lookup API.
+ */
+const ifscBanks: Record<string, { bank: string; symbol: string }> = {
+  SBIN: { bank: 'State Bank of India', symbol: 'SBIN' },
+  HDFC: { bank: 'HDFC Bank', symbol: 'HDFCBANK' },
+  ICIC: { bank: 'ICICI Bank', symbol: 'ICICIBANK' },
+  UTIB: { bank: 'Axis Bank', symbol: 'AXISBANK' },
+  KKBK: { bank: 'Kotak Mahindra Bank', symbol: 'KOTAKBANK' },
+  IDFB: { bank: 'IDFC FIRST Bank', symbol: 'IDFCFIRSTB' },
+  PUNB: { bank: 'Punjab National Bank', symbol: 'PNB' },
+  BARB: { bank: 'Bank of Baroda', symbol: 'BANKBARODA' },
+  YESB: { bank: 'Yes Bank', symbol: 'YESBANK' },
+}
+
+/** The bank (and the branch, for the sample accounts' IFSCs) an IFSC belongs to; undefined when it isn't found. */
+export function findIfsc(ifsc: string): { bank: string; branch?: string; symbol: string } | undefined {
+  const sample = [newBank, usNewBank].find((b) => b.ifsc === ifsc)
+  if (sample) return { bank: sample.bank, branch: sample.branch, symbol: sample.logoSymbol }
+  return ifscBanks[ifsc.slice(0, 4)]
+}
+
+/** The account typed on Add bank account, as a linked bank (once verified). */
+export function bankFromEntry(accountNumber: string, ifsc: string): LinkedBank | undefined {
+  const found = findIfsc(ifsc)
+  if (!found) return undefined
+  return { id: `new-${ifsc}`, bank: found.bank, accountNumber, ifsc, type: 'Savings', branch: found.branch ?? ifsc, logoSymbol: found.symbol, last4: accountNumber.slice(-4) }
+}
+
+/** The name the bank returns on the ₹1 check when it's someone else's account (deposit-15). */
+export const mismatchName = 'Priya S Nair'
 ```
 
 ### `src/flows/deposit/index.tsx`
@@ -244,9 +336,11 @@ export const newBank = { bank: 'State Bank of India', accountNumber: '3829104552
 import type { Flow, Go } from '../types'
 import { AddBank } from './screens/AddBank'
 import { AddMoney } from './screens/AddMoney'
+import { BankAdded, BankFailed, VerifyingBank } from './screens/BankVerify'
 import { usePreview } from '../../shared/prototype'
+import { addBankForUs, addBankReturnScreen, startAddBank } from '../../shared/userStatus'
 import { Failed, Processing, Success, UpiHandoff } from './screens/Payment'
-import { defaultAmount, firstBalance, walletBalance } from './data'
+import { defaultAmount, firstBalance, newBank, setBankBeingAdded, walletBalance } from './data'
 import { t } from './copy'
 
 /** The INR wallet (Wallet · Indian tab) in the US Stocks flow: where "Deposit" there comes from and returns to. */
@@ -283,7 +377,12 @@ export const deposit: Flow = {
     { id: 'deposit-09', name: 'Add money · from the wallet', figma: '', note: 'Opened by Deposit on the INR wallet: no first-deposit perks, ₹1,100.00 available; after the receipt, Done goes back to the wallet.', render: (go) => addMoney(go, 'wallet', String(defaultAmount)) },
     { id: 'deposit-10', name: 'Add money · no bank account', figma: '', note: 'No bank linked (User status → Bank accounts: None): the bank row and the button ask to add one first → Add bank account.', render: (go) => addMoney(go, 'wallet', '', { noBank: true }) },
     { id: 'deposit-11', name: 'Add money · change bank', figma: '', note: 'The bank row (chevron) opens "Pay from": the linked banks as radio rows, picking one closes it; "Add another bank account" → Add bank account.', render: (go) => addMoney(go, 'wallet', String(defaultAmount), { banksOpen: true }) },
-    { id: 'deposit-12', name: 'Add bank account', figma: '', note: 'From the bank row or "Pay from" — the ₹ and the US add money both come here. Verify (₹1 name check) goes back to the add money it came from.', render: (go) => <AddBankBack fallback={() => go('deposit-09')} /> },
+    { id: 'deposit-12', name: 'Add bank account', figma: '', note: 'From the bank row or "Pay from" — the ₹ and the US add money both come here. Verify account → the ₹1 name check. Opened from US Stocks (US add money, activation, the USD wallet) it is deposit-16; from the ₹ side any bank can be added, no check.', render: (go) => <AddBankBack usStocks={addBankForUs()} fallback={() => go('deposit-09')} onVerify={() => go('deposit-13')} /> },
+    { id: 'deposit-16', name: 'Add bank account · for US Stocks', figma: '', note: 'Not in Figma: opened from US Stocks (US add money\'s "Add another bank account", activation\'s Add bank). A card on top shows the five banks that can send money abroad (ICICI, HDFC, Kotak, IDFC FIRST, Axis); only their IFSCs are taken (e.g. KKBK0000958). Verify account → the ₹1 name check, then back to where it was opened.', render: (go) => <AddBankBack usStocks fallback={() => go('us-stocks-21')} onVerify={() => go('deposit-13')} /> },
+    { id: 'deposit-17', name: 'Add bank account · US · bank not supported', figma: '', note: 'Not in Figma: from US Stocks, an IFSC of a bank that can\'t send money abroad (State Bank of India here). The IFSC is found but the field turns red: "State Bank of India can\'t send money abroad for US Stocks. Use an account at ICICI, HDFC, Kotak, IDFC FIRST or Axis Bank." Verify account stays off.', render: (go) => <AddBankBack usStocks initial={{ account: newBank.accountNumber, ifsc: newBank.ifsc }} fallback={() => go('us-stocks-21')} onVerify={() => go('deposit-13')} /> },
+    { id: 'deposit-13', name: 'Verifying bank account', figma: '', note: 'Not in Figma: ₹1 goes to the account and the bank returns the name on it. Moves on by itself to Bank account added.', render: () => <VerifyingBank next="deposit-14" /> },
+    { id: 'deposit-14', name: 'Bank account added', figma: '', note: 'Not in Figma: the name matched PAN. The account joins the linked banks; Continue goes back to the add money (₹ or US) that opened Add bank account, with the new bank picked.', render: (go) => <BankAdded onContinue={() => finishAddBank(go)} /> },
+    { id: 'deposit-15', name: 'Bank account not added', figma: '', note: 'Not in Figma: the name on the account isn’t the user’s (₹1 check). Try another account → Add bank account; Back to Add money → the add money that opened it.', render: (go) => <BankFailed onRetry={() => go('deposit-12')} onBack={() => finishAddBank(go)} /> },
     { id: 'deposit-02', name: 'Approve in UPI app (external)', figma: '5436:7954', note: 'Handoff placeholder: the UPI app’s own payment sheet is not built by Lemonn.', render: (go) => <UpiHandoff amount={paying} next="deposit-03" onCancel={() => go('deposit-05')} /> },
     { id: 'deposit-03', name: 'Confirming payment', figma: '5436:7953', render: () => <Processing next="deposit-04" /> },
     { id: 'deposit-04', name: 'Money added', figma: '5436:7955', note: 'First deposit: Start investing → the Stocks home. Opened from the wallet: Done → the wallet. (The prototype remembers the entry; a screen opened straight from the list assumes the first deposit.)', render: (go) => (
@@ -293,46 +392,153 @@ export const deposit: Flow = {
   ],
 }
 
-/** Add bank account, going back (both ways) to the screen it was opened from — the ₹ or the US add money. */
-function AddBankBack({ fallback }: { fallback: () => void }) {
-  const { back } = usePreview()
-  const leave = () => { if (!back?.()) fallback() }
-  return <AddBank onBack={leave} onVerify={leave} />
+/** Back to the add money that opened Add bank account; the US-only check ends with it. */
+function finishAddBank(go: (id: string) => void) {
+  const to = addBankReturnScreen() ?? 'deposit-09'
+  startAddBank()
+  go(to)
+}
+
+/**
+ * Add bank account: back goes to the screen it was opened from (the ₹ or the US add money, the activation sheet);
+ * Verify remembers the account typed and starts the ₹1 check. `usStocks`: only the banks that can send money abroad.
+ */
+function AddBankBack({ usStocks, initial, fallback, onVerify }: { usStocks: boolean; initial?: { account: string; ifsc: string }; fallback: () => void; onVerify: () => void }) {
+  const { back, interactive } = usePreview()
+  // Opened straight from the list in its US state: the account added goes back to the US add money.
+  if (usStocks && interactive && !addBankForUs()) startAddBank('us-stocks-21', { usStocks: true })
+  // Leaving Add bank ends it: the next one opened (₹ or US) sets its own mode.
+  const leave = () => { startAddBank(); if (!back?.()) fallback() }
+  return <AddBank usStocks={usStocks} initial={initial} onBack={leave} onVerify={(bank) => { setBankBeingAdded(bank); onVerify() }} />
 }
 ```
 
 ### `src/flows/deposit/screens/AddBank.tsx`
 
 ```tsx
+import { useState } from 'react'
 import { Actionbar } from '@l3/components/Actionbar'
 import { Aerobar } from '@l3/components/Aerobar'
 import { Icon } from '@l3/components/Icon'
 import { msInfo } from '@l3/icons/material'
 import { Button } from '@l3/components/Button'
+import { Card } from '@l3/components/Card'
+import { Stack } from '@l3/components/Stack'
 import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Section } from '@l3/components/Section'
 import { TextField } from '@l3/components/TextField'
-import { Intro } from '../../../shared/ui/Intro'
+import { isUsSupportedIfsc } from '../../../shared/data/usBanks'
+import type { LinkedBank } from '../../../shared/data/user'
+import { usePreview } from '../../../shared/prototype'
+import { SupportedBanks } from '../../../shared/ui/SupportedBanks'
+import { Keyboard, keypadFieldProps, typeKey } from '../../../shared/ui/Keyboard'
 import { Screen } from '../../../shared/ui/Screen'
-import { newBank } from '../data'
+import { TextKeyboard } from '../../../shared/ui/TextKeyboard'
+import { ACCOUNT_DIGITS, bankFromEntry, findIfsc, IFSC_LENGTH } from '../data'
 import { t } from '../copy'
+import styles from './Deposit.module.css'
+
+type Field = 'account' | 'confirm' | 'ifsc'
+
+/** IFSC: 4 letters (the bank), a 0, then 6 letters or digits (the branch). */
+const IFSC_FORMAT = /^[A-Z]{4}0[A-Z0-9]{6}$/
+
+/** A text-keyboard key on the IFSC: letters and digits only, always capitals. */
+const typeIfsc = (value: string, key: string) =>
+  key === 'Backspace' ? value.slice(0, -1) : /^[a-z0-9]$/i.test(key) && value.length < IFSC_LENGTH ? value + key.toUpperCase() : value
 
 /**
- * deposit-12 · Add bank account (from an add-money screen's bank row or its "Pay from" sheet): account number twice
- * and the IFSC, which shows the bank and branch once valid. Verify sends ₹1 to check the name, then goes back.
- * Shown filled in (the prototype doesn't type into it).
+ * deposit-12 · Add bank account (from an add-money screen's bank row or its "Pay from" sheet). No intro header: the
+ * Actionbar carries the title and the one-line description. Opens empty, on the account number with the number keypad up
+ * (the field focused: L3's Typing state). Account number twice, then the IFSC on the text keyboard; a valid IFSC shows
+ * the bank (and branch). Verify account turns on when the numbers match and the IFSC is found, and sends ₹1 to check the
+ * name (deposit-13 → 14 or 15).
+ * `usStocks` (opened from US Stocks: add money, activation): a card on top shows the five banks that can send money
+ * abroad (ICICI, HDFC, Kotak, IDFC FIRST, Axis); an IFSC of another bank is found but refused — the field says that bank
+ * can't be used for US Stocks, and Verify account stays off.
+ * Real app: numeric inputs and a text input with the system keyboards.
  */
-export function AddBank({ onBack, onVerify }: { onBack?: () => void; onVerify?: () => void }) {
+export function AddBank({ usStocks = false, initial, onBack, onVerify }: {
+  usStocks?: boolean
+  /** Filled in already (a state of its own in the list), with the IFSC field focused. */
+  initial?: { account: string; ifsc: string }
+  onBack?: () => void
+  /** The account typed, once it can be verified. */
+  onVerify?: (bank: LinkedBank) => void
+}) {
+  const { interactive } = usePreview()
+  const [account, setAccount] = useState(initial?.account ?? '')
+  const [confirm, setConfirm] = useState(initial?.account ?? '')
+  const [ifsc, setIfsc] = useState(initial?.ifsc ?? '')
+  const [field, setField] = useState<Field>(initial ? 'ifsc' : 'account')
+
+  const accountOk = account.length >= ACCOUNT_DIGITS.min
+  const mismatch = confirm.length > 0 && (confirm.length >= account.length ? confirm !== account : !account.startsWith(confirm))
+  const ifscDone = ifsc.length === IFSC_LENGTH
+  const found = ifscDone && IFSC_FORMAT.test(ifsc) ? findIfsc(ifsc) : undefined
+  // From US Stocks: a bank that can't send money abroad is found, but can't be added here.
+  const notForUs = usStocks && !!found && !isUsSupportedIfsc(ifsc)
+  const ready = accountOk && confirm === account && !!found && !notForUs
+  const ifscHelper = notForUs
+    ? t('addBank.usNotSupported', { bank: found.bank })
+    : found ? (found.branch ? t('addBank.ifscFound', { bank: found.bank, branch: found.branch }) : found.bank) : ifscDone ? t('addBank.ifscNotFound') : undefined
+
+  const onKey = (key: string) => {
+    if (field === 'account') setAccount((v) => typeKey(v, key, ACCOUNT_DIGITS.max))
+    else if (field === 'confirm') setConfirm((v) => typeKey(v, key, ACCOUNT_DIGITS.max))
+    else setIfsc((v) => typeIfsc(v, key))
+  }
+  // Each field takes focus on tap; the keyboard follows it (numbers for the account, letters for the IFSC).
+  const focus = (name: Field) => ({ ...keypadFieldProps(), onFocus: () => setField(name) })
+
   return (
     <Screen
-      top={<Actionbar title={t('addBank.screenTitle')} onBack={onBack} />}
-      bottom={<ButtonGroup aria-label={t('addBank.actionsLabel')}><Button variant="primary" size="lg" fullWidth onClick={onVerify}>{t('addBank.cta')}</Button></ButtonGroup>}
+      top={<Actionbar title={t('addBank.screenTitle')} description={t('addBank.description')} onBack={onBack} />}
+      bottom={
+        <>
+          <ButtonGroup aria-label={t('addBank.actionsLabel')}>
+            <Button variant="primary" size="lg" fullWidth disabled={!ready} onClick={() => { const bank = bankFromEntry(account, ifsc); if (bank) onVerify?.(bank) }}>{t('addBank.cta')}</Button>
+          </ButtonGroup>
+          {field === 'ifsc' ? <TextKeyboard onKey={onKey} /> : <Keyboard onKey={onKey} />}
+        </>
+      }
     >
-      <Intro title={t('addBank.title')} description={t('addBank.description')} />
       <Section paddingBlock="24" paddingInline="16" gap="24">
-        <TextField label={t('addBank.accountNumber')} inputMode="numeric" readOnly value={newBank.accountNumber} />
-        <TextField label={t('addBank.confirmNumber')} inputMode="numeric" readOnly value={newBank.accountNumber} />
-        <TextField label={t('addBank.ifsc')} readOnly value={newBank.ifsc} status="success" helperText={t('addBank.ifscFound', { bank: newBank.bank, branch: newBank.branch })} />
+        {usStocks && (
+          <Card surface="secondary">
+            <Stack gap="16">
+              <p className={styles.fine}>{t('addBank.usBanks')}</p>
+              <SupportedBanks label={t('addBank.usBanksLabel')} />
+            </Stack>
+          </Card>
+        )}
+        <TextField
+          label={t('addBank.accountNumber')}
+          placeholder={t('addBank.accountPlaceholder')}
+          value={account}
+          autoFocus={interactive && !initial}
+          {...focus('account')}
+          onChange={(e) => setAccount(e.target.value.replace(/\D/g, '').slice(0, ACCOUNT_DIGITS.max))}
+        />
+        <TextField
+          label={t('addBank.confirmNumber')}
+          placeholder={t('addBank.confirmPlaceholder')}
+          value={confirm}
+          status={mismatch ? 'error' : accountOk && confirm === account ? 'success' : undefined}
+          helperText={mismatch ? t('addBank.mismatch') : undefined}
+          {...focus('confirm')}
+          onChange={(e) => setConfirm(e.target.value.replace(/\D/g, '').slice(0, ACCOUNT_DIGITS.max))}
+        />
+        <TextField
+          label={t('addBank.ifsc')}
+          placeholder={t(usStocks ? 'addBank.usIfscPlaceholder' : 'addBank.ifscPlaceholder')}
+          value={ifsc}
+          autoFocus={interactive && !!initial}
+          status={notForUs ? 'error' : found ? 'success' : ifscDone ? 'error' : undefined}
+          helperText={ifscHelper}
+          {...focus('ifsc')}
+          onChange={(e) => setIfsc(e.target.value.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, IFSC_LENGTH))}
+        />
         <Aerobar floating placement="inline" type="discover" icon={<Icon icon={msInfo} />} heading={t('addBank.note')} />
       </Section>
     </Screen>
@@ -353,10 +559,11 @@ import { Icon } from '@l3/components/Icon'
 import { Section } from '@l3/components/Section'
 import { msCelebration } from '@l3/icons/material'
 import { inr } from '../../../shared/data/format'
+import { usePreview } from '../../../shared/prototype'
 import { AmountDock, AmountEntry, amountValue, typeAmount } from '../../../shared/ui/AmountEntry'
 import { BankRow, BankSheet, type BankPickerCopy } from '../../../shared/ui/BankPicker'
 import { Screen } from '../../../shared/ui/Screen'
-import { useLinkedBanks } from '../../../shared/userStatus'
+import { newlyLinkedBank, startAddBank, useLinkedBanks } from '../../../shared/userStatus'
 import { firstDepositPerks, MIN_DEPOSIT, quickAmounts, UPI_LIMIT } from '../data'
 import { t } from '../copy'
 
@@ -383,9 +590,16 @@ export function AddMoney({ initial = '', first = true, balance = 0, banksOpen = 
   onAddBank?: () => void
 }) {
   const [text, setText] = useState(initial)
+  const { screenId, back } = usePreview()
+  // Back returns to the page it was opened from (the wallet, KYC done); `onBack` only when there's none (opened from the list).
+  const leave = () => { if (!back?.()) onBack?.() }
+  // "Add bank account" comes back here once the account is verified.
+  const addBank = () => { startAddBank(screenId); onAddBank?.() }
   const linked = useLinkedBanks()
-  const banks = noBank ? [] : linked
-  const [bankId, setBankId] = useState(banks[0]?.id)
+  // Just added on "Add bank account": it counts even on the no-bank state, and it's the one picked.
+  const added = newlyLinkedBank()
+  const banks = noBank ? (added ? [added] : []) : linked
+  const [bankId, setBankId] = useState(added?.id ?? banks[0]?.id)
   const [sheet, setSheet] = useState(banksOpen)
   const bank = banks.find((b) => b.id === bankId) ?? banks[0]
   const bankCopy: BankPickerCopy = { method: t('bank.method'), addTitle: t('bank.addTitle'), addDescription: t('bank.addDescription'), sheetTitle: t('bank.sheetTitle'), addAnother: t('bank.addAnother') }
@@ -400,13 +614,13 @@ export function AddMoney({ initial = '', first = true, balance = 0, banksOpen = 
       : t('addMoney.range', { min: inr(MIN_DEPOSIT, 0), max: inr(UPI_LIMIT, 0) })
   return (
     <Screen
-      top={<Actionbar title={t('addMoney.title')} description={t('addMoney.available', { amount: inr(balance) })} onBack={onBack} />}
+      top={<Actionbar title={t('addMoney.title')} description={t('addMoney.available', { amount: inr(balance) })} onBack={leave} />}
       sheet={sheet && bank && (
-        <BankSheet banks={banks} selected={bank.id} copy={bankCopy} onSelect={setBankId} onAdd={() => { setSheet(false); onAddBank?.() }} onClose={() => setSheet(false)} />
+        <BankSheet banks={banks} selected={bank.id} copy={bankCopy} onSelect={setBankId} onAdd={() => { setSheet(false); addBank() }} onClose={() => setSheet(false)} />
       )}
       bottom={
         <AmountDock
-          method={<BankRow bank={bank} copy={bankCopy} onChange={() => setSheet(true)} onAdd={onAddBank} />}
+          method={<BankRow bank={bank} copy={bankCopy} onChange={() => setSheet(true)} onAdd={addBank} />}
           onKey={(k) => setText((v) => typeAmount(v, k, { decimals: 0, maxDigits: 7 }))}
           action={
             <ButtonGroup aria-label={t('addMoney.title')}>
@@ -415,7 +629,7 @@ export function AddMoney({ initial = '', first = true, balance = 0, banksOpen = 
                   {amount > 0 && !error ? t('addMoney.cta', { amount: inr(amount, 0) }) : t('addMoney.title')}
                 </Button>
               ) : (
-                <Button variant="primary" size="lg" fullWidth onClick={onAddBank}>{t('addMoney.addBankCta')}</Button>
+                <Button variant="primary" size="lg" fullWidth onClick={addBank}>{t('addMoney.addBankCta')}</Button>
               )}
             </ButtonGroup>
           }
@@ -440,6 +654,91 @@ export function AddMoney({ initial = '', first = true, balance = 0, banksOpen = 
           <Aerobar floating placement="inline" type="success" icon={<Icon icon={msCelebration} />} heading={firstDepositPerks[0]} />
         </Section>
       )}
+    </Screen>
+  )
+}
+```
+
+### `src/flows/deposit/screens/BankVerify.tsx`
+
+```tsx
+import { useEffect } from 'react'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
+import { Loader } from '@l3/components/Loader'
+import { Section } from '@l3/components/Section'
+import { Stack } from '@l3/components/Stack'
+import { msAccountBalance, msError } from '@l3/icons/material'
+import { useAutoAdvance, usePreview } from '../../../shared/prototype'
+import { user } from '../../../shared/data/user'
+import { Intro } from '../../../shared/ui/Intro'
+import { Screen } from '../../../shared/ui/Screen'
+import { Spot } from '../../../shared/ui/Spot'
+import { linkBank } from '../../../shared/userStatus'
+import { bankBeingAdded, mismatchName } from '../data'
+import { t } from '../copy'
+import styles from './Deposit.module.css'
+
+/** The account being added, as "State Bank of India ••5526" in the copy. */
+const masked = () => { const bank = bankBeingAdded(); return { bank: bank.bank, last4: bank.last4 } }
+
+/** deposit-13 · Verify account was tapped: ₹1 goes to the account and the bank returns the name on it. Moves on by itself. */
+export function VerifyingBank({ next }: { next?: string }) {
+  useAutoAdvance(next, 2000)
+  return (
+    <Screen>
+      <Stack justify="center" className={styles.fill}>
+        <Section paddingBlock="24" paddingInline="16" gap="24">
+          <Intro align="center" art={<Loader size="lg" label={null} />} title={t('verifyBank.title')} description={t('verifyBank.description', masked())} />
+        </Section>
+      </Stack>
+    </Screen>
+  )
+}
+
+/**
+ * deposit-14 · The name matched: the account is linked (it joins the linked banks and is picked on the add-money
+ * screen). Continue goes back to the add money that opened "Add bank account".
+ */
+export function BankAdded({ onContinue }: { onContinue?: () => void }) {
+  const { interactive } = usePreview()
+  const newBank = bankBeingAdded()
+  useEffect(() => { if (interactive) linkBank(newBank) }, [interactive, newBank])
+  return (
+    <Screen bottom={<ButtonGroup aria-label={t('bankAdded.groupLabel')}><Button onClick={onContinue}>{t('bankAdded.cta')}</Button></ButtonGroup>}>
+      <Stack justify="center" className={styles.fill}>
+        <Section style={{ width: '100%' }} paddingBlock="24" paddingInline="16" gap="24">
+          <Intro align="center" art={<Spot icon={msAccountBalance} tone="success" />} title={t('bankAdded.title')} description={t('bankAdded.description', masked())} />
+          <KeyValueList variant="card" aria-label={t('bankAdded.detailsLabel')}>
+            <KeyValueRow label={t('bankAdded.name')} value={user.name} />
+            <KeyValueRow label={t('bankAdded.bank')} value={newBank.bank} />
+            <KeyValueRow label={t('bankAdded.account')} value={`••${newBank.last4}`} />
+            <KeyValueRow label={t('bankAdded.ifsc')} value={newBank.ifsc} />
+            <KeyValueRow label={t('bankAdded.check')} value={t('bankAdded.refunded')} />
+          </KeyValueList>
+        </Section>
+      </Stack>
+    </Screen>
+  )
+}
+
+/** deposit-15 · The name on the account isn't the user's: not linked. Try another account, or back to Add money. */
+export function BankFailed({ onRetry, onBack }: { onRetry?: () => void; onBack?: () => void }) {
+  return (
+    <Screen
+      bottom={
+        <ButtonGroup aria-label={t('bankFailed.groupLabel')}>
+          <Button onClick={onRetry}>{t('bankFailed.retry')}</Button>
+          <Button variant="secondary" onClick={onBack}>{t('bankFailed.back')}</Button>
+        </ButtonGroup>
+      }
+    >
+      <Stack justify="center" className={styles.fill}>
+        <Section style={{ width: '100%' }} paddingBlock="24" paddingInline="16" gap="24">
+          <Intro align="center" art={<Spot icon={msError} tone="error" />} title={t('bankFailed.title')} description={t('bankFailed.description', { name: mismatchName, you: user.name })} />
+        </Section>
+      </Stack>
     </Screen>
   )
 }
@@ -580,6 +879,37 @@ export function makeCopy<Copy extends Record<string, string>>(flow: string, copy
 }
 ```
 
+### `src/shared/data/assets/idfcfirstb.png`
+
+```tsx
+�PNG
+
+   IHDR   �   �   �>a�   gAMA  ���a    cHRM  z&  ��  �   ��  u0  �`  :�  p��Q<   DeXIfMM *    �i            �       �       ��       �    H�w  �iTXtXML:com.adobe.xmp     <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMP Core 6.0.0">
+   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <rdf:Description rdf:about=""
+            xmlns:exif="http://ns.adobe.com/exif/1.0/">
+         <exif:ColorSpace>1</exif:ColorSpace>
+         <exif:PixelXDimension>300</exif:PixelXDimension>
+         <exif:PixelYDimension>300</exif:PixelYDimension>
+      </rdf:Description>
+   </rdf:RDF>
+</x:xmpmeta>
+� ��  �IDATx��kU�ϼ��Ę�D���(��ܺP���BD�t���e� R[T����XӘD�RM� �{M޼�ib�:1�ܛ;�9�Hޛ̝{��|��ܹ?&939��Yf=�� �8   W���� �q���  W���� �q���  W���� �q��?���e��;��O�{0�/� KO͑5���螓M�z=}`��<������T��f���=G��L��a���9x��z�M���d 2�)pcf��}�� b����v�Z�Q�Ųt�$I��MK�۞���j� }�� `�?{��K/�F!��ZX� ������>�^�e �
+�F�{�%z����d@�m/-��ǟP��A�\�O�vnѡ��9 nG�=WP �F��T��_ �{ ����lM��J�	�� H�B�	 B); � �Pf�	ܓ�ܗ�����w����. |i%4G��`�'����]ꮵ�0T���б�_��m��3���?���GI��z
+��T�S���?|D��.x��?TM��]�QE�,�H��~���x��
+��Y@��� ��Y@���CX ,��=���5, ��R
+ �Rr�og P���� ���~;��Ŵ�G ��\��Y�/ ���'�V�Y��e�* ���s�pa�z=�N����qd����3����
+]�b�* 2d�h�җ&{%�y����� �qr����U��	�Z��� ��js @ՊGV �, U� �V<���[2.����,w�i�����s�8?`�!��:=��st��S�B��Iĭt�={�.NS�Պͼ}�'0 �ۘ��?1�8��qr����O��?�@ �DA.�b� �[���^���	ԏ�� @U~���~T-  ��� �c�j P�_�p �U ����� ��Z  T��/ ��@��� �|k>��_U5v(<V�v0�i�. �ٲ��F��������U�ž|춓��gR`ht�v��i��O�M@�κ&U �̒W�uWW�շ��:��Þ_cg��K^5��P��і �M5��jt�� mh�1L�&0����sK	�o���c�c�Υ
+��a�������x�m^i��o����2 p�X �2��3�����̗GG��z������������ ��Y��� y~ S�b�O��<8m����\ I ��  Z�GR. �$Zf  -�#) D-3����p�������I�
+ �~=�} �B��0 ����7 `.���w��0��k�%����u�o� ���?�H7�����K������o���Q����VUN��9�sn�0�ʕ�w��v.U Dz���yj�&PM�8
+ q�A�
+ �&}�8�fE؛@��-�>�<�����r�kP ��v��)����F���-G�Y�ᱱ���W0 �ډ'��乏6@����o:��8+O�Ə<��7�ܥ@��@P �ҏx��_+�V@`�c?< �=B���p���;������a~ �M���+4|��\�*T@���
+7��+����_��|�~�R�
+��̐�Xdӯ���u�C�ޣ8Q ��z<e�@�ȇe�D$�/��-l.(  
+���  lŻ�- (Hbk � � �� �V����$�6  [�.x 
+���  lŻ�- (Hbk ����E�}R�    IEND�B`�
+```
+
 ### `src/shared/data/companies.ts`
 
 ```ts
@@ -644,7 +974,7 @@ export type Company = CompanyProfile & {
 
 const both: Exchange[] = ['NSE', 'BSE']
 const company = (symbol: string, name: string, initials: string, founded: number, headquarters: string, website: string, about: string): CompanyProfile => ({
-  symbol, name, initials, exchanges: both, founded, headquarters, website, about,
+  symbol, name, initials: initials.slice(0, 1), exchanges: both, founded, headquarters, website, about,
 })
 
 /** Profiles, by NSE symbol (one line each — scripts/market-snapshot.mjs reads the symbols from here). */
@@ -15866,6 +16196,45 @@ export const mask = (s: string, keepStart: number, keepEnd: number) =>
 }
 ```
 
+### `src/shared/data/usBanks.ts`
+
+```ts
+import { getCompany } from './companies'
+import type { LinkedBank } from './user'
+// FLAG: not in L3's company logos (L3 gap) — the bank's mark, cropped from its Wikimedia Commons logo.
+import idfcFirstLogo from './assets/idfcfirstb.png'
+
+/**
+ * The banks money for US Stocks can go from (LRS remittance partners): activation, US add money and "Add bank account"
+ * opened from US Stocks all use this list. `symbol` is the bank's NSE symbol — its logo comes from the company
+ * catalogue; IDFC FIRST isn't in it, so its logo is kept here (assets/). `ifsc` is the bank's IFSC prefix.
+ */
+export const SUPPORTED_BANKS = [
+  { symbol: 'ICICIBANK', ifsc: 'ICIC', name: 'ICICI Bank', short: 'ICICI', initials: 'I' },
+  { symbol: 'HDFCBANK', ifsc: 'HDFC', name: 'HDFC Bank', short: 'HDFC', initials: 'H' },
+  { symbol: 'KOTAKBANK', ifsc: 'KKBK', name: 'Kotak Mahindra Bank', short: 'Kotak', initials: 'K' },
+  { symbol: 'IDFCFIRSTB', ifsc: 'IDFB', name: 'IDFC FIRST Bank', short: 'IDFC FIRST', initials: 'I' },
+  { symbol: 'AXISBANK', ifsc: 'UTIB', name: 'Axis Bank', short: 'Axis', initials: 'A' },
+] as const
+
+export const bankLogoUrl = (symbol: string) => (symbol === 'IDFCFIRSTB' ? idfcFirstLogo : getCompany(symbol)?.logoUrl)
+
+/** "ICICI, HDFC, Kotak, IDFC FIRST and Axis Bank" — the supported banks in one line. */
+export const supportedBanksLine = () => {
+  const names = SUPPORTED_BANKS.map((b) => b.short)
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} Bank`
+}
+
+/** Whether US Stocks money can go from this linked account. */
+export const isUsSupported = (bank: LinkedBank) => SUPPORTED_BANKS.some((s) => s.symbol === bank.logoSymbol)
+
+/** The user's linked accounts US Stocks can use. */
+export const supportedOf = (banks: LinkedBank[]) => banks.filter(isUsSupported)
+
+/** Whether an IFSC belongs to a bank US Stocks money can go from. */
+export const isUsSupportedIfsc = (ifsc: string) => SUPPORTED_BANKS.some((s) => ifsc.startsWith(s.ifsc))
+```
+
 ### `src/shared/data/user.ts`
 
 ```ts
@@ -15910,6 +16279,12 @@ export const linkedBanks: LinkedBank[] = [
   { ...bankAccount, id: 'hdfc', logoSymbol: 'HDFCBANK', last4: '7821', primary: true },
   { id: 'icici', bank: 'ICICI Bank', accountNumber: '002101554410', ifsc: 'ICIC0000021', type: 'Savings', branch: 'Powai, Mumbai', logoSymbol: 'ICICIBANK', last4: '4410' },
 ]
+
+/**
+ * A linked account at a bank that can't send money abroad for US Stocks (not an LRS partner) — "User status → Bank
+ * accounts: Three" and "SBI only" add it, to show the US Stocks bank step with an account it can't use.
+ */
+export const otherBank: LinkedBank = { id: 'sbi', bank: 'State Bank of India', accountNumber: '38201945520', ifsc: 'SBIN0000300', type: 'Savings', branch: 'Fort, Mumbai', logoSymbol: 'SBIN', last4: '5520' }
 ```
 
 ### `src/shared/prototype.ts`
@@ -15934,10 +16309,31 @@ export type Preview = {
   back?: () => boolean
   /** The screen was reached by going back (a back button, or a screen earlier in the app) — a page can come back as it was left. */
   cameBack?: boolean
+  /** An `over` screen (a sheet over the screen the user is on): the screen under it — closing the sheet goes there. */
+  under?: string
 }
 
 export const PreviewContext = createContext<Preview>({ interactive: false, go: () => {} })
 export const usePreview = () => useContext(PreviewContext)
+
+// ---- Which way the next move goes ------------------------------------------------------------------------------------
+// The preview guesses a move's direction (a screen visited before, or one earlier in the same flow, is "back"). A tap can
+// say it instead: Deposit opens Add money (listed earlier in the flow) as a page going forward; a back button's fallback
+// (nothing in the history) is back, and replaces the page instead of adding to the history.
+let intent: { id: string; direction: 'forward' | 'back' } | null = null
+
+/** Say the move to screen `id` that is about to happen is forward (a page opening) or back. */
+export const markMove = (id: string, direction: 'forward' | 'back') => {
+  intent = { id, direction }
+}
+
+/** The preview: the direction said for a move to `id`, if any. */
+export const moveIntent = (id: string) => (intent?.id === id ? intent.direction : undefined)
+
+/** The preview: the move happened. */
+export const clearMoveIntent = () => {
+  intent = null
+}
 
 /** Prototype only: after `ms`, go to `next` (loaders, "Verifying…"). */
 export function useAutoAdvance(next: string | undefined, ms: number) {
@@ -16035,7 +16431,7 @@ export function useSystemKeyboard() {
 ```css
 /*
  * Add-money amount entry (AmountEntry.tsx). FLAG: L3 has no big amount input and no in-app keypad — drawn here on L3
- * tokens. The amount is Heading 36, centred, with a brand caret (the field is always being typed into: L3's Typing
+ * tokens. The amount is Heading 36, centred, with a discover (blue) caret, as on L3's TextField (the field is always being typed into: L3's Typing
  * state has no big-number version).
  */
 .entry {
@@ -16070,7 +16466,7 @@ export function useSystemKeyboard() {
   width: 2px; /* the text caret */
   height: var(--l3-size-40);
   margin-left: var(--l3-spacing-04);
-  background: var(--l3-content-accent-brand-default);
+  background: var(--l3-content-accent-discover-default); /* L3's typing caret colour (TextField --tf-caret) */
   animation: blink 1s steps(1) infinite;
 }
 
@@ -16259,7 +16655,7 @@ import { Icon } from '@l3/components/Icon'
 import { ListCell } from '@l3/components/ListCell'
 import { Stack } from '@l3/components/Stack'
 import { msAccountBalance, msAdd, msChevronRight } from '@l3/icons/material'
-import { getCompany } from '../data/companies'
+import { bankLogoUrl } from '../data/usBanks'
 import type { LinkedBank } from '../data/user'
 import { Sheet } from './Sheet'
 
@@ -16276,7 +16672,7 @@ export type BankPickerCopy = {
   addAnother: string
 }
 
-const bankLogo = (bank: LinkedBank) => getCompany(bank.logoSymbol)?.logoUrl
+const bankLogo = (bank: LinkedBank) => bankLogoUrl(bank.logoSymbol)
 export const bankLine = (bank: LinkedBank) => `${bank.bank} ••${bank.last4}`
 
 /**
@@ -16308,7 +16704,7 @@ export function BankRow({ bank, copy, note, onChange, onAdd }: {
   return (
     <ListCell
       as="button"
-      iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 2)} shape="rounded" size={32} label={bank.bank} />}
+      iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 1)} shape="rounded" size={32} label={bank.bank} />}
       label={copy.method}
       description={note ? `${bankLine(bank)} · ${note}` : bankLine(bank)}
       iconRight={<Icon icon={msChevronRight} />}
@@ -16345,9 +16741,9 @@ export function BankSheet({ banks, selected, copy, onSelect, onAdd, onClose }: {
 
 /**
  * The sheet's body alone — the linked banks as radio rows — for a screen that hosts its own L3 BottomSheet (US Stocks).
- * `card`: each bank a bordered card row, 8 apart (the chosen one gets border-dark); `plain` (default): flat rows.
+ * `card` (default): each bank a bordered card row, 8 apart (the chosen one gets border-dark); `plain`: flat rows.
  */
-export function BankOptions({ banks, selected, name, onPick, variant = 'plain' }: {
+export function BankOptions({ banks, selected, name, onPick, variant = 'card' }: {
   banks: LinkedBank[]
   selected: string
   name: string
@@ -16362,7 +16758,7 @@ export function BankOptions({ banks, selected, name, onPick, variant = 'plain' }
           as="label"
           variant={variant}
           selected={bank.id === selected}
-          iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 2)} shape="rounded" size={32} label={bank.bank} />}
+          iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 1)} shape="rounded" size={32} label={bank.bank} />}
           label={bankLine(bank)}
           description={`${bank.type} · ${bank.branch}`}
           trailing={<Radio name={name} checked={bank.id === selected} onChange={() => onPick(bank.id)} />}
@@ -16493,6 +16889,159 @@ export function Intro({ title, description, art, align = 'start', children }: {
 }
 ```
 
+### `src/shared/ui/Keyboard.module.css`
+
+```css
+/* OS number keypad mock: 3 × 4 keys on a grey tray. */
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--app-space-key);
+  padding: var(--l3-spacing-12) var(--l3-spacing-12) var(--l3-spacing-24);
+  /* On a real phone, clear the home indicator (like the L3 button dock does). */
+  padding-bottom: calc(var(--l3-spacing-24) + env(safe-area-inset-bottom, var(--l3-spacing-00)));
+  background: var(--l3-surface-secondary);
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--l3-spacing-04);
+  height: var(--app-size-key);
+  border: 0;
+  border-radius: var(--l3-radius-08);
+  background: var(--l3-surface-primary);
+  color: var(--l3-content-primary);
+  font: var(--l3-text-description-18);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key[data-kind='fn'] {
+  background: var(--l3-surface-tertiary);
+}
+
+
+.key:active {
+  transform: scale(var(--l3-motion-scale-press-default));
+}
+
+
+/* KeypadSlide: the wrapper's height is animated; the keypad stays pinned to its top and is clipped. */
+.slide { overflow: hidden; flex: none; }
+```
+
+### `src/shared/ui/Keyboard.tsx`
+
+```tsx
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { Icon } from '@l3/components/Icon'
+import { msBackspace } from '@l3/icons/material'
+import styles from './Keyboard.module.css'
+
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'Backspace']
+
+/**
+ * The phone's own number keypad (OS chrome, NOT part of the app or L3 — real apps get the system keyboard by setting
+ * the field's input type to number). Drawn so the phone / OTP / PIN screens read like the phone. In the prototype the
+ * keys type into the screen. `data-surface` tells the OS navigation bar below it to take the keypad's grey.
+ */
+export function Keyboard({ onKey, decimal }: { onKey?: (key: string) => void; /** Show "." in the bottom-left key (amounts in $, fractional shares). */ decimal?: boolean }) {
+  const keys = decimal ? KEYS.map((k) => (k === '' ? '.' : k)) : KEYS
+  return (
+    <div className={styles.keyboard} role="group" aria-label="Number keypad" data-surface="secondary">
+      {keys.map((k) =>
+        k === '' ? <span key="blank" /> : (
+          <button key={k} type="button" className={styles.key} data-kind={k === 'Backspace' ? 'fn' : 'digit'} aria-label={k === 'Backspace' ? 'Delete' : k === '.' ? 'Decimal point' : undefined} onPointerDown={keepFocus} onClick={() => onKey?.(k)}>
+            {k === 'Backspace' ? <Icon icon={msBackspace} /> : k}
+          </button>
+        ),
+      )}
+    </div>
+  )
+}
+
+/** Like the OS keyboard, a key press doesn't take focus: the field being typed into keeps its Typing state. */
+const keepFocus = (e: PointerEvent) => e.preventDefault()
+
+/** Apply a keypad key to a digit string (max length). */
+export const typeKey = (value: string, key: string, max: number) =>
+  key === 'Backspace' ? value.slice(0, -1) : /^\d$/.test(key) && value.length < max ? value + key : value
+
+/**
+ * The drawn keypad IS the keyboard here, so the fields it types into must never open the phone's own keyboard:
+ * inputmode="none" (Android, desktop) and, on touch screens, read-only too (the only sure way on iPhone). They still
+ * take focus, so they show L3's Typing state. Real apps don't need this: the system keyboard is the keypad.
+ */
+export const keypadFieldProps = () => ({
+  inputMode: 'none' as const,
+  readOnly: typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+})
+
+/**
+ * Prototype glue: the drawn keypad types into an L3 OtpInput, so focus follows the box being typed (the next empty
+ * one) — the Typing state moves along as it would with the phone's keyboard — and the boxes never open the phone's
+ * keyboard (keypadFieldProps). Put the ref on an element around the OtpInput.
+ */
+export function useKeypadFocus(value: string, length: number, enabled: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!enabled) return
+    const boxes = ref.current?.querySelectorAll('input')
+    const { inputMode, readOnly } = keypadFieldProps()
+    boxes?.forEach((box) => { box.inputMode = inputMode; box.readOnly = readOnly })
+    boxes?.[Math.min(value.length, length - 1)]?.focus({ preventScroll: true })
+  }, [value, length, enabled])
+  return ref
+}
+
+/**
+ * The keypad sliding in and out, like the phone's own keyboard: up from the bottom when `open` turns on (260 ms,
+ * ease-out), down to the bottom when it turns off (200 ms, ease-in), then gone. The wrapper's height runs between 0 and
+ * the keypad's with the keypad pinned to its top, so what sits above it (a dock, a sheet) moves with it. A reopen
+ * mid-close turns around from where it is; reduced motion skips the slide.
+ */
+export function KeypadSlide({ open, children }: { open: boolean; children: ReactNode }) {
+  const [mounted, setMounted] = useState(open)
+  const openRef = useRef(open)
+  openRef.current = open
+  const wrap = useRef<HTMLDivElement>(null)
+  const anim = useRef<Animation | null>(null)
+  const first = useRef(true)
+  if (open && !mounted) setMounted(true)
+  useLayoutEffect(() => {
+    if (first.current) { first.current = false; return }
+    const el = wrap.current
+    const midway = anim.current
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      midway?.cancel()
+      anim.current = null
+      if (!open) setMounted(false)
+      return
+    }
+    const from = open && !midway ? 0 : el.getBoundingClientRect().height
+    midway?.cancel()
+    const full = el.getBoundingClientRect().height
+    const run = el.animate(
+      [{ height: `${from}px` }, { height: `${open ? full : 0}px` }],
+      open
+        ? { duration: 260, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+        : { duration: 200, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+    )
+    anim.current = run
+    run.finished.then(() => {
+      if (anim.current !== run) return
+      anim.current = null
+      if (!openRef.current) setMounted(false)
+    }, () => {})
+  }, [open])
+  if (!mounted) return null
+  return <div ref={wrap} className={styles.slide} inert={!open}>{children}</div>
+}
+```
+
 ### `src/shared/ui/Screen.module.css`
 
 ```css
@@ -16551,7 +17100,16 @@ export function Intro({ title, description, art, align = 'start', children }: {
   min-height: 0;
   overflow-x: hidden; /* a screen never scrolls sideways — only rails inside it do */
   overflow-y: auto;
+  padding-bottom: var(--app-body-end);
 }
+
+/* The body owns the page's end spacing: whatever comes last adds none of its own (no 24 + 24). */
+.body > :last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+/* A page's last block nested deeper (inside tabs or a panel) is marked data-page-end so it adds none either. */
+.body [data-page-end] { padding-bottom: 0; margin-bottom: 0; }
 
 /* Floating toast: sits on the bottom edge of the body, above the dock / navbar (L3 Aerobar rule). */
 .toast {
@@ -16820,17 +17378,271 @@ export function Spot({ icon, tone = 'brand', size = 'lg' }: { icon: string; tone
 }
 ```
 
+### `src/shared/ui/SupportedBanks.module.css`
+
+```css
+/* A supported bank's short name under its logo. */
+.name {
+  font: var(--l3-text-label-12);
+  color: var(--l3-content-secondary);
+}
+```
+
+### `src/shared/ui/SupportedBanks.tsx`
+
+```tsx
+import { Avatar } from '@l3/components/Avatar'
+import { Stack } from '@l3/components/Stack'
+import { bankLogoUrl, SUPPORTED_BANKS } from '../data/usBanks'
+import styles from './SupportedBanks.module.css'
+
+/**
+ * The five banks US Stocks money can go from, as logos with their short names in one row — wherever the user has to add
+ * one (activation with no supported bank, "Add bank" there, Add bank account opened from US Stocks).
+ */
+export function SupportedBanks({ label }: { /** The list's accessible name, "Supported banks for US Stocks". */ label: string }) {
+  return (
+    <Stack as="ul" direction="horizontal" justify="between" aria-label={label}>
+      {SUPPORTED_BANKS.map((bank) => (
+        <Stack as="li" key={bank.symbol} align="center" gap="08">
+          <Avatar src={bankLogoUrl(bank.symbol)} initials={bank.initials} shape="rounded" size={40} label={bank.name} />
+          <span className={styles.name}>{bank.short}</span>
+        </Stack>
+      ))}
+    </Stack>
+  )
+}
+```
+
+### `src/shared/ui/TextKeyboard.module.css`
+
+```css
+/* OS text keyboard mock (Figma "L3: System keyboard", 260 tall at 360): 5 rows of 40 tall keys on a grey tray. */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--l3-spacing-08);
+  padding: var(--l3-spacing-12) var(--l3-spacing-06) var(--l3-spacing-16);
+  /* On a real phone, clear the home indicator (like the L3 button dock does). */
+  padding-bottom: calc(var(--l3-spacing-16) + env(safe-area-inset-bottom, var(--l3-spacing-00)));
+  background: var(--l3-surface-secondary);
+}
+
+.row {
+  display: flex;
+  gap: var(--l3-spacing-04);
+}
+
+/* The A–L row is inset by about half a key, like a phone keyboard. */
+.row[data-row='2'] {
+  padding-inline: var(--l3-spacing-16);
+}
+
+.key {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: var(--l3-size-40);
+  padding: 0;
+  border: 0;
+  border-radius: var(--l3-radius-08);
+  background: var(--l3-surface-primary);
+  color: var(--l3-content-primary);
+  font: var(--l3-text-description-18);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key[data-wide] {
+  flex-grow: 1.5;
+}
+
+.key[data-kind='space'] {
+  flex-grow: 5;
+  font: var(--l3-text-label-12);
+}
+
+.key[data-kind='fn'] {
+  background: var(--l3-surface-tertiary);
+  font: var(--l3-text-label-14);
+}
+
+/* The keyboard's action key (Search) — the phone's own accent, not an app colour. */
+.key[data-kind='go'] {
+  background: var(--l3-surface-accent-discover-default);
+  color: var(--l3-content-inverted);
+}
+
+.key :is(svg, span):not(.popup) {
+  width: var(--l3-icon-size-20);
+  height: var(--l3-icon-size-20);
+}
+
+/* Function keys (Shift, Delete, ?123, Space, Enter): pressed, they darken and give a little. */
+.key:not([data-kind='letter'])[data-held] {
+  background-image: linear-gradient(var(--l3-state-layer-dark-pressed), var(--l3-state-layer-dark-pressed));
+  transform: scale(var(--l3-motion-scale-press-default));
+}
+
+/*
+ * Letter keys: while held, a magnified bubble of the key pops up above it (Gboard / iPhone): the key's width plus a
+ * little, two keys tall, the character large near its top; it grows out of the key (120 ms). The key itself dims under
+ * it. Keys at a row's ends keep the bubble inside the keyboard's edge.
+ */
+.key {
+  position: relative;
+}
+
+.key[data-kind='letter'][data-held] {
+  background: var(--l3-surface-tertiary);
+}
+
+.popup {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc(100% + var(--l3-spacing-12));
+  height: calc(var(--l3-size-40) * 2 + var(--l3-spacing-08));
+  padding-top: var(--l3-spacing-06);
+  border-radius: var(--l3-radius-12);
+  background: var(--l3-surface-primary);
+  box-shadow: var(--l3-shadow-elevation-high);
+  color: var(--l3-content-primary);
+  font: var(--l3-text-heading-28);
+  pointer-events: none;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  animation: key-pop var(--l3-motion-duration-short) var(--l3-motion-easing-decelerate) both;
+}
+
+.key[data-edge='start'] .popup {
+  left: 0;
+  transform: none;
+  transform-origin: 0 100%;
+}
+
+.key[data-edge='end'] .popup {
+  right: 0;
+  left: auto;
+  transform: none;
+  transform-origin: 100% 100%;
+}
+
+@keyframes key-pop {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key:not([data-kind='letter'])[data-held] {
+    transform: none;
+  }
+
+  .popup {
+    animation: none;
+  }
+}
+```
+
+### `src/shared/ui/TextKeyboard.tsx`
+
+```tsx
+import { useState, type PointerEvent } from 'react'
+import { Icon } from '@l3/components/Icon'
+import { msArrowUpward, msBackspace, msKeyboardTab } from '@l3/icons/material'
+import styles from './TextKeyboard.module.css'
+
+type Key = { key: string; label?: string; kind?: 'letter' | 'fn' | 'space' | 'go'; wide?: boolean }
+
+const ROWS: Key[][] = [
+  '1234567890'.split('').map((k) => ({ key: k })),
+  'QWERTYUIOP'.split('').map((k) => ({ key: k })),
+  'ASDFGHJKL'.split('').map((k) => ({ key: k })),
+  [{ key: 'Shift', kind: 'fn', wide: true }, ...'ZXCVBNM'.split('').map((k) => ({ key: k })), { key: 'Backspace', kind: 'fn', wide: true }],
+  [{ key: '?123', kind: 'fn', wide: true }, { key: ',' }, { key: ' ', label: 'EN • LV', kind: 'space' }, { key: '.' }, { key: 'Enter', kind: 'go', wide: true }],
+]
+
+/**
+ * The phone's own text keyboard (OS chrome, NOT part of the app or L3 — Figma "L3: System keyboard", isNumeric =
+ * False). Drawn so search screens read like the phone; in the prototype the keys type into the screen. Real apps get the
+ * system keyboard by focusing the text field (search: `enterKeyHint="search"`). `data-surface` tells the OS navigation
+ * bar below it to take the keyboard's grey.
+ */
+export function TextKeyboard({ onKey }: { onKey?: (key: string) => void }) {
+  // The key being held: a letter / digit / punctuation key shows its pop-up (a magnified bubble above it, like Gboard and
+  // the iPhone keyboard) until the finger lifts; function keys just darken.
+  const [held, setHeld] = useState<string | null>(null)
+  const release = () => setHeld(null)
+  return (
+    <div className={styles.keyboard} role="group" aria-label="Keyboard" data-surface="secondary">
+      {ROWS.map((row, i) => (
+        <div key={i} className={styles.row} data-row={i}>
+          {row.map((k, j) => (
+            <button
+              key={k.key}
+              type="button"
+              className={styles.key}
+              data-kind={k.kind ?? 'letter'}
+              data-wide={k.wide || undefined}
+              data-held={held === k.key || undefined}
+              data-edge={j === 0 ? 'start' : j === row.length - 1 ? 'end' : undefined}
+              aria-label={label(k)}
+              onPointerDown={(e) => {
+                keepFocus(e)
+                setHeld(k.key)
+              }}
+              onPointerUp={release}
+              onPointerLeave={release}
+              onPointerCancel={release}
+              onClick={() => onKey?.(k.key)}
+            >
+              {k.key === 'Shift' ? <Icon icon={msArrowUpward} /> : k.key === 'Backspace' ? <Icon icon={msBackspace} /> : k.key === 'Enter' ? <Icon icon={msKeyboardTab} /> : (k.label ?? k.key)}
+              {(k.kind ?? 'letter') === 'letter' && held === k.key && (
+                <span className={styles.popup} aria-hidden="true">{k.label ?? k.key}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const label = (k: Key) =>
+  ({ Shift: 'Shift', Backspace: 'Delete', Enter: 'Search', ' ': 'Space', '?123': 'Numbers and symbols' } as Record<string, string>)[k.key]
+
+/** Like the OS keyboard, a key press doesn't take focus: the field being typed into keeps its Typing state. */
+const keepFocus = (e: PointerEvent) => e.preventDefault()
+
+/** Apply a keyboard key to a text value: letters, digits, space, comma, full stop and delete (Shift / ?123 do nothing here). */
+export const typeText = (value: string, key: string) => {
+  if (key === 'Backspace') return value.slice(0, -1)
+  if (key.length !== 1) return value
+  // Like a phone keyboard: the first letter is a capital, the rest lower case.
+  return value + (value === '' ? key.toUpperCase() : key.toLowerCase())
+}
+```
+
 ### `src/shared/userStatus.ts`
 
 ```ts
 // Where the user is in the app — the prototype's app-level settings ("User status" in the preview panel, the phone's
 // settings sheet and a floating card beside the phone). Every screen that depends on it reads it here, so they all stay
-// in sync: pick "US Stocks: activated · money on the way" once and the Home's US tab, a US stock page and the wallet all
+// in sync: pick "User account state: Active · money on the way" once and the Home's US tab, a US stock page and the wallet all
 // show that state. Picking never moves on by itself; taps in the prototype don't change it.
 // In a real app these come from the user's account (KYC status, US Stocks activation, wallet, holdings).
 import type { FlowOption } from '../flows/types'
 import { setFlowOption, useFlowOption } from './prototype'
-import { linkedBanks, type LinkedBank } from './data/user'
+import { linkedBanks, otherBank, type LinkedBank } from './data/user'
 
 /** The settings' owner in the preview (as a flow id: where the picks are remembered). */
 export const USER_STATUS = 'app'
@@ -16839,7 +17651,7 @@ export type KycStatus = 'done' | 'pending'
 export type UsActivation = 'kyc' | 'off' | 'review' | 'support' | 'failed' | 'active'
 export type UsWallet = 'empty' | 'onTheWay' | 'funded'
 export type UsHoldings = 'none' | 'some'
-export type BankLinks = 'none' | 'one' | 'two'
+export type BankLinks = 'none' | 'one' | 'two' | 'three' | 'sbi'
 
 /**
  * Screens that change with the user status: the settings float beside the phone on these (desktop preview). The Home,
@@ -16847,48 +17659,34 @@ export type BankLinks = 'none' | 'one' | 'two'
  * the wallet's US tab.
  */
 /** The add-money screens and the wallet: the bank row and its sheet change with the user's linked banks. */
-const BANK_SCREENS = ['deposit-01', 'deposit-06', 'deposit-07', 'deposit-08', 'deposit-09', 'us-stocks-21', 'us-stocks-22', 'us-stocks-23', 'us-stocks-24', 'us-stocks-53', 'us-stocks-54']
+const BANK_SCREENS = ['deposit-01', 'deposit-06', 'deposit-07', 'deposit-08', 'deposit-09', 'us-stocks-21', 'us-stocks-22', 'us-stocks-23', 'us-stocks-24', 'us-stocks-53', 'us-stocks-54', 'us-stocks-95']
 
 const STATUS_SCREENS = ['stocks-01', 'stocks-09', 'stocks-10', 'stocks-13', 'stocks-14', 'stocks-15', 'stocks-16', 'stocks-17', 'stocks-19', 'stocks-20', 'stocks-21', 'us-stocks-13', 'us-stocks-54']
 
-/** The settings, parent first: each one below only matters (and shows) while the one above has the listed values. */
+/** The app-level user status settings. */
 export const userStatusOptions: FlowOption[] = [
   {
-    // One list for the whole way in, in order: Lemonn KYC first (US Stocks can't be activated until it's done), then
-    // the activation steps.
-    id: 'us',
+    // One list for the whole way in, in order — one row of states (18 Nov, the user's call; was three settings: US
+    // Stocks activation, then USD wallet and US holdings under "Active"): not active while the Lemonn KYC is pending
+    // (US Stocks can't be activated until it's done), not active, the activation steps, then active with $0, money on
+    // the way, money in the wallet, US holdings. The values are the UsJourney steps.
+    id: 'account',
     group: 'User status',
-    label: 'US Stocks activation',
+    label: 'User account state',
     picker: 'dropdown',
     values: [
-      { value: 'kyc', label: 'Lemonn KYC pending' },
-      { value: 'off', label: 'KYC done · not activated' },
-      { value: 'review', label: 'Activation under review' },
+      { value: 'kyc', label: 'Not active · KYC pending' },
+      { value: 'activate', label: 'Not active' },
+      { value: 'review', label: 'Under review' },
       { value: 'support', label: 'Under review · contact support' },
       { value: 'failed', label: 'Activation failed' },
-      { value: 'active', label: 'Activated' },
+      { value: 'activated', label: 'Active · $0' },
+      { value: 'onTheWay', label: 'Active · money on the way' },
+      { value: 'ready', label: 'Active · has money' },
+      { value: 'holding', label: 'Active · US holdings' },
     ],
     // The prototype opens on a user who's all set: activated, money in the wallet, holding US stocks.
-    default: 'active',
-    floatOn: STATUS_SCREENS,
-  },
-  {
-    id: 'usWallet',
-    group: 'User status',
-    label: 'USD wallet',
-    values: [{ value: 'empty', label: '$0' }, { value: 'onTheWay', label: 'Money on the way' }, { value: 'funded', label: 'Has money' }],
-    default: 'funded',
-    showIf: { us: ['active'] },
-    floatOn: STATUS_SCREENS,
-  },
-  {
-    id: 'usHoldings',
-    group: 'User status',
-    label: 'US holdings',
-    picker: 'toggle',
-    values: [{ value: 'none', label: 'None' }, { value: 'some', label: 'Holds NVDA' }],
-    default: 'some',
-    showIf: { usWallet: ['funded'] },
+    default: 'holding',
     floatOn: STATUS_SCREENS,
   },
   {
@@ -16896,8 +17694,10 @@ export const userStatusOptions: FlowOption[] = [
     id: 'banks',
     group: 'User status',
     label: 'Bank accounts',
-    values: [{ value: 'none', label: 'None' }, { value: 'one', label: 'One' }, { value: 'two', label: 'Two' }],
-    default: 'two',
+    picker: 'dropdown', // a dropdown like User account state (18 Nov: five choices didn't fit a segmented row)
+    // Three / SBI only: with an account at a bank US Stocks money can't go from (State Bank of India).
+    values: [{ value: 'none', label: 'None' }, { value: 'one', label: 'One' }, { value: 'two', label: 'Two' }, { value: 'three', label: 'Three (+ SBI)' }, { value: 'sbi', label: 'SBI only' }],
+    default: 'three',
     floatOn: BANK_SCREENS,
   },
 ]
@@ -16909,13 +17709,17 @@ export type UserStatus = { kyc: KycStatus; us: UsActivation; usWallet: UsWallet;
 
 /** The user status as picked (settings under one that's off keep their last pick). KYC comes from the activation list. */
 export function useUserStatus(): UserStatus {
-  const us = useStatus('us') as UsActivation
+  return { ...statusOf(useStatus('account') as UsJourney), banks: useStatus('banks') as BankLinks }
+}
+
+/** One account state as the activation, wallet and holdings it means. */
+function statusOf(step: UsJourney): Omit<UserStatus, 'banks'> {
+  const us: UsActivation = step === 'activate' ? 'off' : ['kyc', 'review', 'support', 'failed'].includes(step) ? (step as UsActivation) : 'active'
   return {
     kyc: us === 'kyc' ? 'pending' : 'done',
     us,
-    usWallet: useStatus('usWallet') as UsWallet,
-    usHoldings: useStatus('usHoldings') as UsHoldings,
-    banks: useStatus('banks') as BankLinks,
+    usWallet: step === 'activated' ? 'empty' : step === 'onTheWay' ? 'onTheWay' : 'funded',
+    usHoldings: step === 'holding' ? 'some' : 'none',
   }
 }
 
@@ -16926,12 +17730,31 @@ export function useUserStatus(): UserStatus {
  */
 export function useLinkedBanks(): LinkedBank[] {
   const picked = useStatus('banks') as BankLinks
-  const us = useStatus('us') as UsActivation
-  const usWallet = useStatus('usWallet') as UsWallet
+  const { us, usWallet } = statusOf(useStatus('account') as UsJourney)
   const moneyMoved = us === 'active' && usWallet !== 'empty'
   const banks = picked === 'none' && moneyMoved ? 'one' : picked
-  return banks === 'none' ? [] : banks === 'one' ? linkedBanks.slice(0, 1) : linkedBanks
+  const linked = { none: [], one: linkedBanks.slice(0, 1), two: linkedBanks, three: [...linkedBanks, otherBank], sbi: [{ ...otherBank, primary: true }] }[banks]
+  return addedBank ? [...linked, addedBank] : linked
 }
+
+// A bank account added in the prototype ("Add bank account" → verified). Kept in memory, so a reload starts without it.
+let addedBank: LinkedBank | undefined
+let addBankOpener: string | undefined
+let addBankForUsStocks = false
+
+/**
+ * An add-money screen (₹ or US) or the US Stocks activation opens "Add bank account": remember which, so the verified
+ * account comes back to it. `usStocks`: the account is for US Stocks, so it must be at a bank that can send money abroad.
+ */
+export const startAddBank = (fromScreen?: string, { usStocks = false }: { usStocks?: boolean } = {}) => { addBankOpener = fromScreen; addBankForUsStocks = usStocks }
+/** "Add bank account" was opened from US Stocks: only the supported banks can be added. */
+export const addBankForUs = () => addBankForUsStocks
+/** The add-money screen that opened "Add bank account" (undefined when it was opened straight from the screen list). */
+export const addBankReturnScreen = () => addBankOpener
+/** The ₹1 check passed: the account joins the linked banks, and the add-money screens pick it. */
+export const linkBank = (bank: LinkedBank) => { addedBank = bank }
+/** The account added in this session, if any. */
+export const newlyLinkedBank = () => addedBank
 
 /**
  * Where the user is with US Stocks, as one step: KYC pending → 'kyc'; not activated → 'activate'; under review /
@@ -16953,11 +17776,6 @@ export const useUsJourney = () => usJourney(useUserStatus())
 
 /** Sets the user status to one US Stocks step (a US tab screen showing its own state sets it on arrival). */
 export function setUsJourney(step: UsJourney) {
-  const us: UsActivation = step === 'activate' ? 'off' : ['kyc', 'review', 'support', 'failed'].includes(step) ? (step as UsActivation) : 'active'
-  const set = (id: string, value: string) => setFlowOption(USER_STATUS, id, option(id).default, value)
-  set('us', us)
-  if (us !== 'active') return
-  set('usWallet', step === 'activated' ? 'empty' : step === 'onTheWay' ? 'onTheWay' : 'funded')
-  if (step === 'ready' || step === 'holding') set('usHoldings', step === 'holding' ? 'some' : 'none')
+  setFlowOption(USER_STATUS, 'account', option('account').default, step)
 }
 ```

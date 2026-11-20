@@ -1,6 +1,6 @@
 # Flow: Login (`login`)
 
-> One self-contained file for converting this flow to another platform. Read https://lemonnade-design.github.io/lemonn-app-prototype/CONVERT.md first. Design system: Lemonnade V3 @ `4afbde2` (components, tokens and rules: https://lemonnade-design.github.io/lemonnade-v3-docs/llms.txt).
+> One self-contained file for converting this flow to another platform. Read https://lemonnade-design.github.io/lemonn-app-prototype/CONVERT.md first. Design system: Lemonnade V3 @ `3cd03a0` (components, tokens and rules: https://lemonnade-design.github.io/lemonnade-v3-docs/llms.txt).
 
 Welcome, mobile number + OTP, fingerprint, PIN and email — where the app starts.
 
@@ -555,7 +555,7 @@ export function Otp({ initial = '', wrong = false, resendIn = RESEND_AFTER_S, on
 
 ```tsx
 import { useState } from 'react'
-import { Actionbar, ActionbarAction } from '@l3/components/Actionbar'
+import { Actionbar } from '@l3/components/Actionbar'
 import { Button } from '@l3/components/Button'
 import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Section } from '@l3/components/Section'
@@ -568,6 +568,7 @@ import { Keyboard, keypadFieldProps, typeKey } from '../../../shared/ui/Keyboard
 import { Screen } from '../../../shared/ui/Screen'
 import styles from './Form.module.css'
 import { t } from '../copy'
+import { TopBarAction } from '../../../shared/ui/TopBarAction'
 
 /**
  * login-02 / 03 · Mobile number. The number keypad types into the field; "Get OTP" turns on at 10 digits.
@@ -580,7 +581,7 @@ export function Phone({ initial = '', onBack, onSubmit }: { initial?: string; on
   const ready = digits.length === 10
   return (
     <Screen
-      top={<Actionbar onBack={onBack} actions={<ActionbarAction icon={msHelp} label={t('phone.help')} onClick={() => {}} />} />}
+      top={<Actionbar onBack={onBack} actions={<TopBarAction icon={msHelp} label={t('phone.help')} onClick={() => {}} />} />}
       bottom={
         <>
           <ButtonGroup aria-label={t('phone.actionsLabel')}>
@@ -922,6 +923,12 @@ export const linkedBanks: LinkedBank[] = [
   { ...bankAccount, id: 'hdfc', logoSymbol: 'HDFCBANK', last4: '7821', primary: true },
   { id: 'icici', bank: 'ICICI Bank', accountNumber: '002101554410', ifsc: 'ICIC0000021', type: 'Savings', branch: 'Powai, Mumbai', logoSymbol: 'ICICIBANK', last4: '4410' },
 ]
+
+/**
+ * A linked account at a bank that can't send money abroad for US Stocks (not an LRS partner) — "User status → Bank
+ * accounts: Three" and "SBI only" add it, to show the US Stocks bank step with an account it can't use.
+ */
+export const otherBank: LinkedBank = { id: 'sbi', bank: 'State Bank of India', accountNumber: '38201945520', ifsc: 'SBIN0000300', type: 'Savings', branch: 'Fort, Mumbai', logoSymbol: 'SBIN', last4: '5520' }
 ```
 
 ### `src/shared/prototype.ts`
@@ -946,10 +953,31 @@ export type Preview = {
   back?: () => boolean
   /** The screen was reached by going back (a back button, or a screen earlier in the app) — a page can come back as it was left. */
   cameBack?: boolean
+  /** An `over` screen (a sheet over the screen the user is on): the screen under it — closing the sheet goes there. */
+  under?: string
 }
 
 export const PreviewContext = createContext<Preview>({ interactive: false, go: () => {} })
 export const usePreview = () => useContext(PreviewContext)
+
+// ---- Which way the next move goes ------------------------------------------------------------------------------------
+// The preview guesses a move's direction (a screen visited before, or one earlier in the same flow, is "back"). A tap can
+// say it instead: Deposit opens Add money (listed earlier in the flow) as a page going forward; a back button's fallback
+// (nothing in the history) is back, and replaces the page instead of adding to the history.
+let intent: { id: string; direction: 'forward' | 'back' } | null = null
+
+/** Say the move to screen `id` that is about to happen is forward (a page opening) or back. */
+export const markMove = (id: string, direction: 'forward' | 'back') => {
+  intent = { id, direction }
+}
+
+/** The preview: the direction said for a move to `id`, if any. */
+export const moveIntent = (id: string) => (intent?.id === id ? intent.direction : undefined)
+
+/** The preview: the move happened. */
+export const clearMoveIntent = () => {
+  intent = null
+}
 
 /** Prototype only: after `ms`, go to `next` (loaders, "Verifying…"). */
 export function useAutoAdvance(next: string | undefined, ms: number) {
@@ -1141,12 +1169,16 @@ export function Intro({ title, description, art, align = 'start', children }: {
 .key:active {
   transform: scale(var(--l3-motion-scale-press-default));
 }
+
+
+/* KeypadSlide: the wrapper's height is animated; the keypad stays pinned to its top and is clipped. */
+.slide { overflow: hidden; flex: none; }
 ```
 
 ### `src/shared/ui/Keyboard.tsx`
 
 ```tsx
-import { useEffect, useRef, type PointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { Icon } from '@l3/components/Icon'
 import { msBackspace } from '@l3/icons/material'
 import styles from './Keyboard.module.css'
@@ -1158,12 +1190,13 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'Backspace']
  * the field's input type to number). Drawn so the phone / OTP / PIN screens read like the phone. In the prototype the
  * keys type into the screen. `data-surface` tells the OS navigation bar below it to take the keypad's grey.
  */
-export function Keyboard({ onKey }: { onKey?: (key: string) => void }) {
+export function Keyboard({ onKey, decimal }: { onKey?: (key: string) => void; /** Show "." in the bottom-left key (amounts in $, fractional shares). */ decimal?: boolean }) {
+  const keys = decimal ? KEYS.map((k) => (k === '' ? '.' : k)) : KEYS
   return (
     <div className={styles.keyboard} role="group" aria-label="Number keypad" data-surface="secondary">
-      {KEYS.map((k) =>
+      {keys.map((k) =>
         k === '' ? <span key="blank" /> : (
-          <button key={k} type="button" className={styles.key} data-kind={k === 'Backspace' ? 'fn' : 'digit'} aria-label={k === 'Backspace' ? 'Delete' : undefined} onPointerDown={keepFocus} onClick={() => onKey?.(k)}>
+          <button key={k} type="button" className={styles.key} data-kind={k === 'Backspace' ? 'fn' : 'digit'} aria-label={k === 'Backspace' ? 'Delete' : k === '.' ? 'Decimal point' : undefined} onPointerDown={keepFocus} onClick={() => onKey?.(k)}>
             {k === 'Backspace' ? <Icon icon={msBackspace} /> : k}
           </button>
         ),
@@ -1204,6 +1237,50 @@ export function useKeypadFocus(value: string, length: number, enabled: boolean) 
     boxes?.[Math.min(value.length, length - 1)]?.focus({ preventScroll: true })
   }, [value, length, enabled])
   return ref
+}
+
+/**
+ * The keypad sliding in and out, like the phone's own keyboard: up from the bottom when `open` turns on (260 ms,
+ * ease-out), down to the bottom when it turns off (200 ms, ease-in), then gone. The wrapper's height runs between 0 and
+ * the keypad's with the keypad pinned to its top, so what sits above it (a dock, a sheet) moves with it. A reopen
+ * mid-close turns around from where it is; reduced motion skips the slide.
+ */
+export function KeypadSlide({ open, children }: { open: boolean; children: ReactNode }) {
+  const [mounted, setMounted] = useState(open)
+  const openRef = useRef(open)
+  openRef.current = open
+  const wrap = useRef<HTMLDivElement>(null)
+  const anim = useRef<Animation | null>(null)
+  const first = useRef(true)
+  if (open && !mounted) setMounted(true)
+  useLayoutEffect(() => {
+    if (first.current) { first.current = false; return }
+    const el = wrap.current
+    const midway = anim.current
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      midway?.cancel()
+      anim.current = null
+      if (!open) setMounted(false)
+      return
+    }
+    const from = open && !midway ? 0 : el.getBoundingClientRect().height
+    midway?.cancel()
+    const full = el.getBoundingClientRect().height
+    const run = el.animate(
+      [{ height: `${from}px` }, { height: `${open ? full : 0}px` }],
+      open
+        ? { duration: 260, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+        : { duration: 200, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+    )
+    anim.current = run
+    run.finished.then(() => {
+      if (anim.current !== run) return
+      anim.current = null
+      if (!openRef.current) setMounted(false)
+    }, () => {})
+  }, [open])
+  if (!mounted) return null
+  return <div ref={wrap} className={styles.slide} inert={!open}>{children}</div>
 }
 ```
 
@@ -1265,7 +1342,16 @@ export function useKeypadFocus(value: string, length: number, enabled: boolean) 
   min-height: 0;
   overflow-x: hidden; /* a screen never scrolls sideways — only rails inside it do */
   overflow-y: auto;
+  padding-bottom: var(--app-body-end);
 }
+
+/* The body owns the page's end spacing: whatever comes last adds none of its own (no 24 + 24). */
+.body > :last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+/* A page's last block nested deeper (inside tabs or a panel) is marked data-page-end so it adds none either. */
+.body [data-page-end] { padding-bottom: 0; margin-bottom: 0; }
 
 /* Floating toast: sits on the bottom edge of the body, above the dock / navbar (L3 Aerobar rule). */
 .toast {
@@ -1530,6 +1616,70 @@ export function Spot({ icon, tone = 'brand', size = 'lg' }: { icon: string; tone
     <span className={styles.spot} data-tone={tone} data-size={size} aria-hidden="true" data-illustration-slot="">
       <Icon icon={icon} className={styles.glyph} />
     </span>
+  )
+}
+```
+
+### `src/shared/ui/TopBarAction.module.css`
+
+```css
+/* Home's round top-bar button (stocks TopBar .wallet): 38 circle, border/light edge, no shadow. L3 gap: see TopBarAction.tsx. */
+.action.action {
+  --btn-radius: var(--l3-radius-full);
+  --btn-border: var(--l3-border-light);
+  --btn-icon-size: var(--l3-icon-size-20);
+  width: var(--app-stocks-topbar-control);
+  height: var(--app-stocks-topbar-control);
+  padding: 0;
+}
+
+/* A toggled action (pressed) takes border-dark, like any selected bordered control (as L3's ActionbarAction). */
+.action.action[aria-pressed='true'] {
+  --btn-border: var(--l3-border-dark);
+}
+```
+
+### `src/shared/ui/TopBarAction.tsx`
+
+```tsx
+import { Button } from '@l3/components/Button'
+import { Icon } from '@l3/components/Icon'
+import { Stack } from '@l3/components/Stack'
+import { msAccountBalanceWallet, msSearch } from '@l3/icons/material'
+import styles from './TopBarAction.module.css'
+
+/**
+ * The app's icon button in a top bar (Actionbar `actions`): the same round button as Home's top bar — a 38 circle with
+ * a 1px border/light edge, a 20 icon and no shadow — so every page's top-bar icons match.
+ * It's L3's Tertiary Small button with three local changes (L3 gap: ActionbarAction is a 32 rounded square with
+ * the tertiary border and a soft raise, no round option): fully round, border/light, raised none.
+ * Icon-only actions with no box keep L3's `ActionbarAction variant="ghost"`.
+ */
+export function TopBarAction({ icon, label, onClick, pressed }: { icon: string; label: string; onClick: () => void; pressed?: boolean }) {
+  return (
+    <Button
+      size="sm"
+      variant="tertiary"
+      raised="none"
+      className={styles.action}
+      iconLeft={<Icon icon={icon} size={20} />}
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+    />
+  )
+}
+
+/**
+ * The top bar's search and wallet, in this order, 8 apart — the same pair on every navbar tab (Stocks home, Market,
+ * Portfolio, Mutual Fund), so nothing moves when you switch tabs. Copy it as is; don't redraw it per screen.
+ */
+export function SearchWalletActions({ searchLabel, walletLabel, onSearch, onWallet }: { searchLabel: string; walletLabel: string; onSearch: () => void; onWallet: () => void }) {
+  return (
+    <Stack direction="horizontal" align="center" gap="08">
+      <TopBarAction icon={msSearch} label={searchLabel} onClick={onSearch} />
+      <TopBarAction icon={msAccountBalanceWallet} label={walletLabel} onClick={onWallet} />
+    </Stack>
   )
 }
 ```

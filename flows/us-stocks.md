@@ -1,6 +1,6 @@
 # Flow: US Stocks (`us-stocks`)
 
-> One self-contained file for converting this flow to another platform. Read https://lemonnade-design.github.io/lemonn-app-prototype/CONVERT.md first. Design system: Lemonnade V3 @ `4afbde2` (components, tokens and rules: https://lemonnade-design.github.io/lemonnade-v3-docs/llms.txt).
+> One self-contained file for converting this flow to another platform. Read https://lemonnade-design.github.io/lemonn-app-prototype/CONVERT.md first. Design system: Lemonnade V3 @ `3cd03a0` (components, tokens and rules: https://lemonnade-design.github.io/lemonnade-v3-docs/llms.txt).
 
 Activate US Stocks, add money to the USD wallet, buy and sell, withdraw (teammate import, under review).
 
@@ -29,8 +29,9 @@ Prototype: https://lemonnade-design.github.io/lemonn-app-prototype/#/us-stocks �
 | Section | Screens | What |
 |---|---|---|
 | Entry points | `us-stocks-02`, `05`–`07` | Ways into US Stocks: S&P 500, Portfolio, MF (the Home entry is `stocks-09`; Search is the Search flow's US tab, `search-29`) |
-| FTUX | `13`–`15`, `20`–`28`, `74` | Stock page (not activated; KYC not done), risk disclosure, confirm details, $0 wallet, add money (the Home screens of the flow are `stocks-11`…`18`) |
+| FTUX | `13`, `20`–`28`, `74`, `94`–`97` | Stock page (not activated; KYC not done), activation (declarations, bank), $0 wallet, add money (the Home screens of the flow are `stocks-11`…`18`) |
 | Activated user | `31`–`52` | Stock page (no holdings / holding), buy (amount / shares / limit / SL / AMO / errors), results, sell |
+| Product pages | `71`, `78`, `98`, `99` | ETF list, ETF Top holdings, Stock · ETFs with the stock, **Fractional shares** (`99`, from Home's Fractional card: intro, $10 example, stocks to slice, FAQ) |
 | USD wallet | `53`–`70` | Wallet states, balance details, withdraw, withdrawal tracking |
 
 ### How the folder is put together
@@ -107,6 +108,19 @@ meaning (below minimum / above LRS) with $ limits; the ₹ limits in the Figma h
 **L3 gaps:** no big amount input and no in-app number keypad (both drawn in `AmountEntry`, on L3 tokens, flagged there);
 quick-add chips are L3 Tabs (pill, action) used as buttons.
 
+### Portfolio (`us-stocks-05`, `06`, `77`, `screens/entry/PortfolioScreen.tsx`)
+
+- `PortfolioScreen` is the frame only: Actionbar (search, wallet) with the Positions · Holdings · Orders tabs in its
+  bottom slot, swiping between tabs, the navbar, and the Sort sheet (screen level, in `Phone`'s overlay).
+- Each tab is its own page in `screens/entry/portfolio/`: `PortfolioPage` gives the grey top and the white sheet under
+  it (rounded top; Orders' is square). `PositionsTab` (Market Indices rail, Your positions + Refresh, empty state →
+  F&O), `HoldingsTab` (summary cards rail, IN / US tabs, Your holdings + Sort, the list or the US empty state for the
+  user status), `HoldingCard` (one holding: logo, name, qty, 1D; Current · Invested · Returns). Laid out with L3
+  Stack / Section / Inset / Grid; strings in `copy.json` under `portfolio.*`.
+- Differences from Figma (L3 wins): Sort and Refresh are L3 Ghost Small buttons (Label/12, primary text — Figma: blue
+  Label/14). A US holding is a clickable L3 Card (raised, opens its stock page); Indian ones are static Cards, and every holding card has L3's soft shadow `--l3-shadow-elevation-soft` (from L3 on the clickable US cards; added locally on the static Indian ones — L3 gap: no shadow option on a static Card). The index
+  cards' width comes from the shared Rail (1.85 visible). Orders' sheet ends 16 below its content (was 24).
+
 ### Orders & Positions (`screens/orders/`, Portfolio's Orders and Positions tabs)
 
 Layout from the F&O dev-handoff file's "Positions & orders" (Figma `nLs24dTJdPz9A5pu3AWMbe`, `6754:65598`), drawn there
@@ -144,13 +158,190 @@ tags, timeline and dock follow from it.
   with a grey title strip (Position Details uses a section header over a KeyValueList card); a clickable Card announces
   itself as a toggle (`aria-pressed`). No sell Limit / SL pad yet, so Modify / Retry on a sell open the plain sell pad.
 
+### Activate US Stocks (`us-stocks-94`…`97`, `screens/activate/`)
+
+Two bottom sheets, like the app's Terms & Conditions sheet, that open over the screen the user tapped Activate on (Home's
+US tab, the FTUX sheet's Home, a stock page, the wallet …) — no new page. In the registry they are `over: 'us-stocks-13'`
+screens (FlowScreen.over): the preview keeps the screen the user was on under the sheet, each step only swaps the sheet,
+and closing (✕, scrim, drag, back) goes back to that screen (Preview.under). Opened straight from the screen list, they
+sit over the stock page. Every Activate US Stocks / Retry (Home card, FTUX sheet, stock page, Portfolio's US empty states) opens
+`us-stocks-94`. Not in Figma — built from the brief; they replace the risk disclosure sheet (removed).
+
+**L3 gap:** IDFC FIRST Bank has no logo in `@l3/assets/company-logos`; its mark (cropped from the Wikimedia Commons
+logo, 128 px) is kept in `screens/activate/assets/idfcfirstb.png` until L3 adds it.
+
+- **94 · Declarations** — header "Agree to invest abroad", then two checkbox rows, the declaration written beside each
+  box: LRS (resident, own money, $250,000 a year, allowed purposes) and US tax (Form W-8BEN: not a US person, 25% on
+  dividends, report in your ITR). The scheme / form name is an inline link to the full text; the rest of the row is a
+  label, so tapping anywhere on it ticks the box. "I agree and continue" (Large, full width) turns on once both are
+  ticked → 95.
+- **95 · Bank** — only ICICI, HDFC, Kotak, IDFC FIRST and Axis can send money abroad for us (`screens/activate/data.ts`).
+  Their logos show only where the user has to add a bank (none supported, or "Add bank"), not over a list that already
+  has an eligible bank.
+  - A supported bank linked (User status → Bank accounts): every linked bank as a card row — supported ones with a Radio
+    and an "Eligible" Tag (the first picked already), others greyed out with a disabled "Not supported" Tag (can't be
+    picked); Verify and activate (always on) → 97. No consent checkbox. "Add bank" (Tertiary Small, the sheet header's
+    trailing slot) swaps the sheet to "Add a supported bank": the five logos + Add bank account (→ `deposit-12`). No back
+    arrow there (L3: the first sheet over a screen has none), so closing it closes the sheet.
+  - None supported (or `us-stocks-96`): a card on top explains it ("<bank> can't send money abroad for US Stocks yet.
+    Supported banks are ICICI, HDFC, Kotak, IDFC FIRST and Axis Bank. Add an account with one of them." + the five logos), then the user's own banks greyed out and tagged "Not
+    supported", Add bank account (the
+    Deposit flow's `deposit-12`, which comes back to 95) — no Not now: closing the sheet (back, scrim) returns to the stock page.
+  - The user always has a bank (KYC adds one): with Bank accounts: None, the sheet shows the sample SBI account.
+  - "Three (+ SBI)" and "SBI only" in User status → Bank accounts add a State Bank of India account to show both cases.
+- **97 · Verifying** — the bank check as a loader sheet (we run it on the bank details we already have: no money sent,
+  nothing for the user to do) (can't be closed); moves on by itself to activation submitted
+  (`stocks-18`).
+
 ### Navigation
 
-Every tap he wired is kept. The main path: FTUX sheet → Activate → Risk disclosure → Under review → Approved → Add money
+Every tap he wired is kept. The main path: FTUX sheet → Activate → Declarations → Bank (automatic check) → Under review → Approved → Add money
 → Pay on bank → Money ready → Stock → Buy → Executed → Wallet → Withdraw.
 
 ### Changelog
+- 20 Nov 2026 — Order pad V2, Indian pad (flow option "Order pad" = india): the pad is now an Indian stock's — RELIANCE from the company catalogue, its price live from the market snapshot — and everything on it is in ₹ (`padMoney.tsx` sets the pad's currency for the header price, the amount, chips, Balance · Req., the limit / trigger prices, the TP/SL, fee and leverage sheets). Each US state maps over (`indianPad.ts`): $ ×100 (+₹1,000 · +₹5,000 · +₹10,000 · Max, balance ₹52,040), shares ×10 and whole (Indian stocks trade in whole shares); the empty-wallet, short and sell-more-than-held states keep their errors in ₹. No "≈ ₹" on the Buy button (it's ₹ already). The US pad stays NVDA in $. After Buy, the result screens are still the US ones ($).
+- 20 Nov 2026 — Indian pad: V3 is the default validity switch (was V2); V1 and V2 stay for the A/B test.
+- 20 Nov 2026 — Indian pad, validity switch V3 (third value of "Validity switch"; the bubble now cycles V1 → V2 → V3): the Amount / Shares switch moves above the number, and the validity sits on its right after a short hairline divider ("Amount ⇕ | Day ⇕", both subtle Selects, centred); Market / Limit / SL stays alone and centred. Each switch hugs its label; when one changes size (Day → Instant, Amount → Shares) the row re-centres and every part slides to its new place (250 ms, standard easing; a FLIP in OrderPadV2, no jump; none with reduced motion). Intraday (no validity) shows only Amount ⇕ there. In V3 the Market / Limit / SL pills hug their labels (`Tabs width="hug"`), not equal widths.
+- 20 Nov 2026 — Indian pad, validity switch V2: the validity pill has no fill and no border, like the see-through Market / Limit / SL pills in the track. L3 gap: the action pill has no see-through version; the pad borrows the pill group's see-through look (OrderPadV2.module.css `.validityPill`).
+- 20 Nov 2026 — Indian pad, validity switch V2: the validity is an L3 action pill (`Tab appearance="pill" emphasis="tertiary" action`, the ↕ icon on the right), like Market / Limit / SL, at one fixed width (as wide as the "Instant ↕" pill), its label and icon centred together, so the track doesn't wobble when it cycles or the order type changes. V1 keeps the Select. L3 gap: an action pill has no aria-selected, so `emphasis="tertiary"` doesn't give it the tertiary (track-grey) fill; it shows white with a light border, unlike the see-through pills beside it.
+- 20 Nov 2026 — Indian pad, validity switch A/B (flow option "Validity switch"): V2 (default) · the validity sits inside the Market / Limit / SL grey track, after a short hairline divider, and the whole track is centred; V1 · alone at the row's right edge, the pills centred. L3 gap: a pill group can't hold a trailing control, so the pad adds the track fill around the Tabs (OrderPadV2.module.css `.typeTrack`). Phone (app mode): a floating "V2" / "V1" bubble on every order pad screen flips it (the preview's quick switch, under the "IN" / "US" bubble).
+- 20 Nov 2026 — Indian pad, Limit orders: the validity is Day / Instant / Year (Year by default; production's). Tapping the swap cycles Day → Instant → Year → Day, no sheet. Market keeps Day ⇄ Instant, SL Day ⇄ Year, each its own choice. Notes start "Valid for 1 year ·" / "Day order ·" / "Instant order ·".
+- 20 Nov 2026 — TP/SL card, set: the edit (pencil) icon is 20, up from 16 (a Medium ghost button; Small draws its icon at 16 whatever the Icon's size).
+- 20 Nov 2026 — Leverage card: the title is "Boost returns by 4x" (4x in green; production's), not "Enable leverage upto 3x". The sheet's example still compares 1x and 3x.
+- 20 Nov 2026 — Indian pad: no leverage card ("Boost returns by 4x") on BSE; it's MTF, which BSE doesn't have. NSE Delivery Market keeps it.
+- 20 Nov 2026 — Indian pad, Market orders: the validity is Day ⇄ Instant (Day by default; production's), not Day / Year, which stays on Limit / SL. Each keeps its own choice. Instant's note starts "Instant order ·".
+- 20 Nov 2026 — Indian pad: Market / Limit / SL stays centred on Delivery and MTF too; the Day ⇄ Year validity sits at the row's right edge, out of the flow (it pushed the pills left).
+- 20 Nov 2026 — TP/SL card (both pads, off and on): the tile icon is the candle with its TP and SL lines from the Figma "Auto TP/SL" icon (node 4292:35082), which L3 already has as `lmAutoTpSl` (`@l3/icons/lemonnade`); it was the generic Material "adjust" icon.
+- 20 Nov 2026 — Indian pad, the production pad's controls in the V2 layout: NSE ⇄ BSE switch at the header's top right (BSE a touch off NSE's price); Delivery / Intraday / MTF underline tabs in the Actionbar's bottom slot (no MTF on BSE; on MTF, switching to BSE falls back to Delivery), their underline merged with the bar's line (no bar padding under them); Day ⇄ Year validity at the right of Market / Limit / SL on Delivery and MTF (Year by default; Limit / SL notes start "Valid for 1 year ·" / "Day order ·", Intraday's "Intraday ·"); SL's second price switches Limit ⇄ Market, at Market a fixed "At market" with no Stepper (PriceField `fixed`) and the note "Order will be triggered at ₹…"; Intraday shows "Margin (5x)" = a fifth of the order in place of Req. and the note "5x margin on this stock · squared off at 3:20 PM if still open"; MTF needs a quarter of the order; the leverage card ("Boost returns") only on Delivery Market. Product, exchange, validity and SL-at-market stay put across the Market / Limit / SL screens. FLAG: prototype numbers (5x / 4x for every stock).
+- 20 Nov 2026 — Order pad V2: Buy / Sell is disabled while nothing is entered (the amount or the shares empty or 0), in both modes; it comes back as soon as a value is typed or a chip tapped. Add money (an empty or short wallet) stays live.
+- 20 Nov 2026 — US pad, Stop loss on fractional shares: every tap on the card shakes the red "Stop loss isn’t available on fractional shares" line (side to side, 4 each way, 400 ms), so a repeat tap isn't lost; the first tap waits for the line to open, then shakes. No motion with reduced motion on. L3 gap: no shake / error-attention motion.
+- 20 Nov 2026 — Phone (app mode): a floating "IN" / "US" button on every order pad screen (Buy / Sell, every type and state) flips the flow option "Order pad" between the Indian and the US pad; one tap each way. It's the preview's generic quick switch (`quickSwitch` on the option, `preview/AppMode.tsx`): draggable, starts on the left opposite the settings button, not shown on other screens. On a laptop the option already floats beside the phone (`floatOn`).
+- 20 Nov 2026 — TP/SL sheet B: the first time it opens, Take profit is on and Stop loss off (both were off); the US pad's one leg, the stop loss, still opens on. Once saved, the sheet opens as saved.
+- 20 Nov 2026 — Order pad V2, buy: the quick chips stay in both modes, so the layout doesn't change when the amount ⇄ shares switch flips. Shares show +1 · +5 · +10 · +20 (added to the shares typed; also on the pads that start in shares, T02 and BRK.B's whole shares). An amount on a pad with no amount chips of its own (T02 switched to amount) shows +$10 · +$50 · +$100 · Max. Sell pads keep 25% · 50% · Max.
+- 20 Nov 2026 — One TP/SL design for both pads (Tpsl.tsx, `TpslFeatures`): the US-only pad now uses the same PadCard and sheet as the Indian pad, with its own content and features (`TPSL_US`): "Stop loss" as the card title and sheet heading, the stop-loss leg only, no trailing, and none on fractional shares (the red "Stop loss isn’t available on fractional shares" line; a set SL clears when the quantity turns fractional). The US-only `Sl.tsx` is gone. Trailing SL starts off. The trail follows the trigger's Points ⇄ Percentage switch (sheet B: no unit of its own; converted at the last price in 0.5 steps when the unit changes). Sheet A still has its own trailing sheet (unit switch + the "Make trailing … your default" checkbox).
+- 19 Nov 2026 — Order processing (V2, both loader variants): no progress bar; the result's hairline keeps its place, hidden until done. The running ring, its glow, ripple and drop are discover blue (L3 content/accent/discover); the done badge and burst stay success green.
+- 19 Nov 2026 — Asset pages' floating dock: the strip under Buy / Sell (its 8 bottom padding) is solid page colour, so page content no longer shows through below the buttons while scrolling; the fade above and behind the buttons is unchanged.
+- 19 Nov 2026 — Order result V2: the summary takes the top half of the page and the details sheet the bottom half; the status glow is bigger and breathes in and out (3.2 s, slow). Back on a result now leaves the whole order, to the page it was started from (the stock or ETF page; the stock page when opened from the list), via nav.leave. The processing screen (T12) has no top bar and no back.
+- 19 Nov 2026 — Order result V2: the line under the heading is now a subtle solid hairline in L3's light border (--l3-border-light, as on cards), not Minted's dark fading gradient.
+- 19 Nov 2026 — Order result V2: the status glow now rises from behind the details sheet's top edge; the sheet is plain white (surface default), no drag handle; the result badge uses Lemonnade L3 success / error colours (solid disc, white mark, light plate) instead of Minted's gradient.
+- 19 Nov · Order processing + result screens (V2) are edge to edge: the status glow runs up under the top bar and the OS status bar (no fill on either). FLAG (L3 gap): Actionbar has no transparent option, cleared locally. Phone gets an edgeToEdge prop.
+- 19 Nov · Buy processing (T12) + order result screens (V2) rebuilt from Minted's: the processing screen shows Minted's loader over Buy NVDA, Order in progress, a thin bar and It will take less than a minute. New flow option Processing animation (Trade): Glass ring (default; it turns into the tick badge and the result lines, then T14 takes over on the same page, no slide, and its summary rises to the top while the details sheet comes up), Radar pulse, Stocks orbit, Candles rise, Ticker tape + order card (these show Processing your order with rotating steps, then T14 plays its own entrance: badge pops, lines fade in, summary rises). Result screens: status glow from the top, tick or alert badge, side line, heading, a fading hairline, one line, then a rounded sheet with a handle holding the order rows; actions in the dock. Minted's brand-mark loaders (P1, P6) skipped. FLAG (L3 gap): loader art, status glow, badge and Minted's motion timings are local (OrderLoader.tsx, OrderResultV2.module.css).
+- 19 Nov: Order pad V2: the amount's "$" is 34 (2 under the amount's 36), local token --app-orderpad-currency-size. L3 gap: no 34 size.
+- 19 Nov: Order pad V2: the amount's "$" is the amount's size (Heading/36, was 24), still secondary grey.
+- 19 Nov: PriceField (screens/trade/PriceField.tsx): one component for every price card — the pad's Limit / SL prices (one box or merged with a hairline), the TP/SL trigger / limit rows (unit switch, empty state, red with an error) and the trailing sheet's box (hint over the unit, Stepper only). Every row is 12 padded all round (the trailing box was 16, the pad's merged card spaced rows by 12 + a line). L3 gaps: no inline price field, no Card error state, no on-grey Stepper.
+- 19 Nov: TP/SL error copy made short: "Enter trigger price", "TP should be above buy price, $X" / "SL should be below …", "SL should be above $0.00", "TP should be 0.25%+ above buy price", "Enter limit price", "Limit should be at or above trigger" (SL: below), "Limit should be above $0.00", "Trail should be under $X".
+- 19 Nov: TP/SL errors sit inside the card, right under the trigger box (4 below it); the Est. row under the card stays and shows "--" while there's an error.
+- 19 Nov: TP/SL price fields: with the placeholder showing, the typing caret sits at the start of it (before "Enter price"), and after the text once typed.
+- 19 Nov: TP/SL leg cards expand and collapse (one card; the body and the Est. row slide open / shut on L3's medium motion, MKT / LMT fades in). L3 gap: no Collapse part, done with a 0fr ⇄ 1fr grid row.
+- 19 Nov: TP/SL sheet errors, checked against the buy price (Market: last price; Limit / SL: the limit price): no trigger, TP not above / SL not below the buy price, SL at $0, a trigger closer than 0.25%, no limit price, a limit on the wrong side of its trigger, a trail as big as the gap. The message replaces the Est. row and Save stays off. A leg that's off shows only its name and switch (no MKT / LMT), and a tap anywhere on the card turns it on.
+- 19 Nov: Leverage sheet — the liquidation warning's line in content/secondary (Aerobar's own is secondary at 60%). L3 gap: Aerobar has no full-strength paragraph option.
+- 19 Nov: Leverage sheet's example at 3x (was 4x), to match the card: +$3 / −$3 per 1%, liquidation at a 33% drop.
+- 19 Nov: Leverage card — a tap on its info strip opens the explainer sheet ("How leverage works", the Activate sheet read-only: Got it, no checkbox).
+- 19 Nov: "Order pad" option archived — V2 (Minted layout) is the only pad; V1 (commodity pad layout) code kept, unused.
+- 19 Nov: Leverage card is a simple toggle at a fixed 3x — no rolling 2x / 3x / 4x, no leverage chips when on (only the info strip).
+- 19 Nov: Order pad V2 quick-amount chips (+$10 … Max) use the big (md) pill tabs.
+- 19 Nov: A stock, ETF or bank with no logo shows one letter (its first), not two or three — app-wide (companies, market list, US banks, every Avatar / disc fallback).
+- 19 Nov: ETF tables (ETFs with the stock, fund peers): logo 24 → 32, so rows are 48 like Peers.
+- 19 Nov: Share bars (Key Holders, ETF allocation) end on the panel's 12 (last row's bottom 8 dropped). Peers: logo 24 → 32, name Label 14. Analyst Ratings card rows and footer follow the page (Description 12 names, Heading 12 figures) instead of Figma's 10. View Order History Label 14.
+- 2026-11-19 — US order pad: "Set SL" is an L3 tertiary Button at Medium (40; was Large, the user's call) with the quick chips' light border and 4 between the plus and the label (was an md pill chip; L3 gap: no button with border/light). The fractional-share warning is flat — Aerobar placed inline (no shadow), 16 in from the sides. The Indian order pad is the default.
+- 2026-11-19 — Asset pages' floating trade dock: the fade starts higher — 40 above the buttons (was 32), the page's colour at 90% at the buttons' top edge and solid under them — so the content has faded before it reaches Buy / Sell.
+- 2026-11-19 — Stock page: in Related ETFs and Company financials the Long / Short (statement) filters sit 8 under the section title and 16 above the table, so the title and its filters read as one header.
+- 2026-11-19 — Order pad: the Actionbar keeps its 1px border-light line from the start (`Phone topLine`), not only once the page scrolls, with 6 below the two-line title so it does not sit on the line. A tap in the dock (market note, Balance · Req.) no longer closes the keypad; only the page and header above it do. Order pad versions (flow option "Order pad", group Trade): **US** — stop loss only (Sl.tsx: a "Set SL" chip, a Stop loss sheet with MKT ⇄ LMT, trigger in points ⇄ %, Est. loss, Clear, and Remove when editing; once set an "SL ✓" card), no take profit, no trailing, no leverage card; SL isn't available on fractional shares: tapping Set SL with a qty that isn't whole shows a floating warning Aerobar for 4 s (SlFractionalToast, above the dock), and a set SL is cleared (same toast) once the qty turns fractional. **Indian** (the default since 19 Nov) — as Indian stocks will have it: the leverage card on Market and TP + SL + trailing (Tpsl.tsx, kept as it was). Switching Market / Limit / SL keeps the keypad as it was: up stays up (no slide), closed stays closed; only the part under the amount (chips, prices, SL) drops and fades — the tabs, the amount and the dock stay put.
+- 2026-11-19 — L3 moved to BottomSheet 2.4.0: the sheet's 16 top / 24 bottom spaces are the content's own padding and scroll with it, so the TP/SL sheet's local workaround is gone.
+- 2026-11-19 — TP/SL sheet: take profit and stop loss both start on Market (MKT); the LMT ⇄ MKT switch at the top of each card is discover blue; Points ⇄ Percentage and the trail unit stay primary. L3 gap: Select has no discover tone. The "Trigger at" / "Limit at" labels are Description 12. The sheet's 24 above the dock is the end of its scroll, not a fixed gap, so scrolled content runs up to the dock (L3 BottomSheet 2.4.0 does this for every sheet). Trailing sheet: the box is outlined like the leg cards, not grey, with the same Stepper. In the sheet, as on the order pad, a tap outside a price (label + price) and the keypad closes the keypad; tapping a price opens it again; it slides in and out (shared `KeypadSlide`). The sheet's heading is "TP SL & More" (was "Set TP/SL"). The order moved into the TP/SL sheet header: "Qty 0.6405" is the description (was "Applies to this order only."), the stock with its last price and change sits at the right (differs from L3: the header's right slot is meant for one icon button or a Tag).
+- 2026-11-19 — Order pad V2: a tap anywhere outside the typable areas (the amount row, a price card's label + price, the keypad) closes the keypad and the field loses its caret; tapping a field opens it again on that field. The keypad slides up from the bottom when it opens (260 ms, ease-out) and down to the bottom when it closes (200 ms, ease-in), the dock moving with it; reduced motion skips the slide. TP/SL summary card: the head row has 12 on all four sides.
+- 2026-11-19 — Trailing sheet (Figma 4494:29124): "Trailing TP / SL"; one filled box with "Trailing TP will move in" over "Points ⇅" (its own points ⇄ percentage switch, converted at the last price) at the left and a Small Stepper on a white pill at the right; the dock holds the centred "Make trailing … your default" checkbox over Save. Set TP/SL now shows on all three order types (Market under the leverage card, Limit / SL under the prices).
+- 2026-11-19 — Order pads (V1, V2, TP/SL sheet): the Small Stepper's ± buttons on its grey pill are white (surface/primary) with the blue icon (content/accent/discover), not dark / light-blue. L3 gap: no on-grey Stepper option. TP/SL sheet: the trigger / limit box is outlined like the pad's cards, not grey. Trailing sheet (Figma 4292:33108): the value is Heading 24 and "Trail will move in …" sits under the box.
+- 2026-11-19 — Stock page: "View Order History" is Label 14 (was 16).
+- 2026-11-19 — ShareBars rows (Key Holders, the ETF page's Allocation) use Label 14 for the name and the share, not Heading 14.
+- 2026-11-19 — Stock page: Related ETFs is one section with **Long / Short** pill sub-tabs (as Company financials) instead of "Related ETFs" + "Bet against …". A side with no funds has no tab; with one side only (AMD, Netflix …) no tabs.
+- 2026-11-19 — Key Holders uses the ETF Allocation panel (ShareBars: "4 holder types · Weight", name, short bar, share) instead of the bar-behind-the-number rows. The share column is a fixed 48 wide ("100.0%" in heading-14 measures 48), right-aligned, so every bar lines up — Allocation, Top holdings / Tracks and Key Holders. Holding rows show the short name only ("Broadcom", no "Inc" and no ticker).
+- 2026-11-19 — Stock page: Key Holders rows sit in a card (title outside), bars 24 high (were 28). The rising-side Boosted section is titled **Related ETFs** (was "Boosted ETFs on {stock}"); "Bet against …" stays. Every table (Peers, ETFs with …, Related ETFs, ETF peers) drops the yellow best-figure highlight.
+- 2026-11-19 — Stock page Key Holders: the donut is replaced by concentration rows (like a fund app's "Stocks concentration") — each holder's name, then its share on a light `surface-secondary` bar behind the number, the bar's length relative to the biggest holder (which fills 60% of the row).
+- 2026-11-19 — Related ETFs on every US stock page (was NVIDIA and Tesla only): real single-stock Boosted funds added for Apple (AAPU / AAPD), Microsoft (MSFU / MSFD), Amazon (AMZU / AMZD), Google (GGLL / GGLS), Meta (METU / METD), AMD (AMDL), Broadcom (AVL), Palantir (PLTU), Netflix (NFXL), Coinbase (CONL); every other stock shows the Boosted index / sector funds that hold it most — **Boosted ETFs on chip stocks / tech stocks / bank stocks / the Nasdaq-100 / China's big companies**, and the S&P 500 pair for the rest (`boostedOn` returns `on`). Funds shown there aren't repeated in "ETFs with …".
+- 2026-11-19 — Long stock / ETF lists are edge-to-edge rows split by a hairline (StockListCard `look="list"`, as Market and the theme pages; were cards 12 apart): ETFs (Regular and Boosted), ETF · Top holdings, Fractional shares' popular stocks. ETFs list filters: the Country / Sector switcher is an L3 primary pill (tap to switch) and the country / sector filters secondary (outline) pills, as Home's US ETFs chips (was an outlined hand-made chip + primary pills). Stock page and "ETFs with …" titles use each stock's short name (`usShortName`, src/shared/data/usShortNames.ts: the names the app's lists already show, e.g. "Procter & Gamble", "Qualcomm"; any other falls back to its full name without "The" and legal endings).
+- 2026-11-19 — Stock page: Related ETFs, as two sections after "ETFs with …" — **Boosted ETFs on {stock}** (funds that aim for 1.2x–2x the stock's daily move: gain when it rises) and **Bet against {stock}** (gain when it falls), each in the funds table (Leverage · Today · Expense, or Returns); a tap opens the ETF. Shown only for stocks with such funds (NVIDIA, Tesla). The catalogue gains NVIDIA's other single-stock funds (NVDU, NVDX, NVDW, NVDG, NVDD, NVDQ, NVDS — from another app's NVDA page); until the US snapshot has them, their day move is NVIDIA's real move × the leverage (the other way for short ones). These funds no longer appear in "ETFs with {stock}". Section titles call the company by its name without "The" and the legal ending ("ETFs with The" → "ETFs with Walt Disney").
+- 2026-11-19 — Asset pages: the dock's gradient runs behind the buttons in three stops: the page's colour at 100% at the bottom, 80% halfway, 0% at the top.
+- 2026-11-19 — Asset pages (stock, ETF, every state): the dock's fade now shows. The page was cut at the dock's top edge, so nothing passed behind it; the frame now lays the dock over the scrolling page (`data-float-dock`), the dock is solid behind the buttons and fades over the 24 above them, and the page's end stays clear of the buttons.
+- 2026-11-19 — US stock page: the Company financials statement tabs (Income · Balance sheet · Cashflow) moved out of the card to sit with the section header, between the title and the card.
+- 2026-11-18 — **Order pad V2 · Minted layout (the default).** New prototype setting **Order pad** (group Trade): V1 · Commodity pad layout, V2 · Minted layout. V2 takes the layout of Minted's order pad (`~/minted`, screens s05 / s13 / s14 / s06 / s16): stock header, a centred Market / Limit / SL switch, a big centred amount with the quick chips and one helper line under it, limit / trigger prices as filled cards with the Stepper, the note as a grey strip, then Balance · Approx. req., the Buy / Sell button and the app keypad. Results and processing take Minted's result layout (status icon over a tinted top, big heading, details below). Same states, data and navigation as V1 (`orderPads.tsx`, `orderResults.ts`); only the layout differs. Minted's Futures tab, leverage card, SIP and "sell automatically at a profit" are left out: US stocks are cash, Day orders only. Code: `screens/trade/version.ts` (`useOrderPadVersion()`), `OrderPadV2.tsx`, `OrderResultV2.tsx`; V1 stays in `OrderPad.tsx` / `OrderResult.tsx`. Header: no line under it, title centred (a 24 spacer balances the back button), stock logo 16. L3 gap: Avatar has no 16 size (smallest 24) — sized down locally (`.logo16`). Built from L3: Actionbar, Avatar, PriceChange, Tabs (order type, chips), Select (Amount ⇄ Shares, swap icon), Card filled (limit / trigger price), Stepper, Button (Buy / Sell, ghost Req.), Stack. Other L3 gaps: Stepper has no on-grey fill (set to surface/primary locally); no large amount field (raw input); no centred logo + price Actionbar title; no note strip (a token-styled line); a pill group has no equal-width hug option (order-type pills made equal locally, `.orderTypes`). Order-type tabs are Medium and their pill slides from the type you came from.
+- 2026-11-18 — Order pad V2: the amount's typing caret is drawn (a blinking discover-blue 2px bar, L3 TextField's Typing colour) so it shows on Market, Limit and SL; the line under the amount always shows the ≈ ₹ value of the order (live USDINR rate) in the same line, 8 apart, no separator dot; SL is now an amount in $ with the $ / shares switch, like Market and Limit; the amount field has a fixed 48 height so emptying it no longer moves the cards; the Buy / Sell button shows the order’s ₹ value after a dot ("Buy · ₹9,345"), the ₹ in Description 14 (2 smaller than the label, regular weight), just the label when the amount is empty; the $ before the amount is Heading 24 (the amount stays Heading 36); the price cards' labels (Limit, Trigger Price) are Description 12; every field takes typing: tap the amount or a price (Limit, Trigger Price) and the keypad types into it (first key replaces the value, the blue caret moves there, a typed price sets its Stepper %; a Stepper tap keeps the field you were typing in). The whole left part of a price card (label + price, out to the card's edges, up to the Stepper) is the tap target for typing. The order note above the balance line has no grey band. The price cards are L3 default cards (white, 1px border/light) instead of grey filled ones, so the Steppers keep L3's own grey pill (the local on-grey override is gone) with dark ± buttons (surface/inverted, local: L3 gap, its Small buttons are light blue and merge with the grey pill). On SL, "Req." is underlined in secondary text (a link, local style: L3 gap) and opens the Fee Breakdown sheet over the same SL page (us-stocks-42 is now a sheet over us-stocks-41: no slide, typed values kept; closing returns to it). The line under the amount (shares hint + ≈ ₹) is gone — the ₹ value is in the button; only an error shows there. Switching order type dissolves the fields instead of sliding them sideways: the old ones drop 8 (spacing 08) and fade out (140 ms), then the new ones rise 8 into place and fade in (220 ms); none with reduced motion. Price cards merged: on SL (two prices) both sit in one bordered card with a hairline between them, inset 12 like the text; the earlier card-per-price layout stays as the prototype setting "Price cards" (Trade → Separate) for A/B testing. The ₹ amount in the Buy / Sell button now has the label's weight (Heading/14 beside Heading/16), and a hairline separates the dock from the page above. FLAG: the price is a raw input like the amount (L3 has no inline price field), whatever the app's ₹ setting.
+- 2026-11-18 — Stock and ETF pages (Classic, F1 and the previous ETF page): one bottom dock in every user state, `AssetDock` in `screens/activation/details.tsx`. Same padding, floating over the page's end on a gradient of the page's colour (the body shows through as it scrolls under); only the buttons inside change: Buy · Sell, Go Long · Go Short, or the one activation button (Complete KYC, Activate US Stocks, Under review, Contact support, Retry activation). It was L3 ButtonGroup on the ETF page and the activation states. L3 gap: no floating dock / fade.
 
+- 2026-11-18 — New page **Fractional shares** (`us-stocks-99`, `screens/etf/FractionalScreen.tsx`, no Figma): behind the Stocks home's Fractional product card. Intro, a worked example from today's price ($10 in NVDA = 0.053 shares, `<Usd>`), the 8 highest-priced stocks you can slice (shared `StockListCard`; a row opens its stock page), a short FAQ. Copy in `copy.json` (`fractional.*`). L3 gaps: no accordion / info list (FAQ is plain text), no heading + paragraph block.
+- 2026-11-18 — Stock and ETF pages: the trade dock is Buy · Sell only, the price-alert bell before them hidden.
+- 2026-11-18 — Prototype settings: the "₹ equivalent" setting left the floating card beside the phone (still in the settings list). User status is one row of states, **User account state**: Not active · KYC pending → Not active → Under review → Under review · contact support → Activation failed → Active · $0 → Active · money on the way → Active · has money → Active · US holdings (was "US Stocks" with USD wallet and US holdings under Active). The phone pill over the Home is one pill for it too.
+- 2026-11-18 — Portfolio → Holdings: the market tabs match the home's (V18) — L3 underline tabs with round flags, "IN Stocks / US Stocks" (was the IND / US glyphs and "Indian Stocks").
+- 2026-11-18 — Logos: no border on any stock / ETF logo or avatar (L3 Avatar 1.2.0 dropped its 1px edge — design system moved to 4a58bf1; Peers table plates too).
+- 2026-11-18 — Stock page "ETFs with {stock}": the first 5 funds, then an Others row (the next funds' logos, +N, chevron — as the ETF page's Top holdings) that opens the full list, us-stocks-98 (9001:13): the same table, every fund that holds the stock; back returns to the stock page.
+- 2026-11-18 — Archived (the user's call): "Stock / ETF page" (Classic kept, F1 off — its code stays), "Boosted line" (Grey kept) and "Leverage tag" (V5 · After heading kept).
+- 2026-11-18 — Trade dock: Buy / Sell are Large (48), the app's big buttons (Figma has md).
+- 2026-11-18 — Analyst ratings ring (Classic stock page): no grey border round the ring (was a 6 wide band).
+- 2026-11-18 — Analyst ratings ring: the arcs have round ends, 2 apart as before.
+- 2026-11-18 — Stock page header: the logo comes from the US logo catalogue too (Amazon, Apple … showed only their initial).
+- 2026-11-18 — Trade dock: sits on a gradient of the page's colour (full at the bottom, clear at the top) and floats over the page's end, so the page shows through as it scrolls under.
+
+- 2026-11-17 — ETF list filled with real US-listed funds in every category: Regular 25 → 54 (Country chips: US 10 → 21, new India chip 4, China 5, Japan 5, Europe 6, Korea 2; Sector chips: Financials, Healthcare, Energy 1 → 4 each, Industrials 2 → 4), Boosted 8 → 19 (UPRO / SPXU, TECL / TECS, FAS / FAZ, YINN / YANG, KORU, TSLL, TSLQ added; groups list the long first). Issuer logos mapped in `src/shared/data/etfIssuers.ts`; prices and day change from `npm run us:snapshot`. L3 gaps / data gaps: no Global X wordmark (the file is the BOTZ robot-arm icon), no Franklin (FLKR) or Tradr (TSLQ) logo yet; Korea has only two US-listed regular funds.
+- 2026-11-17 — Allocation V2 (prototype option "Allocation", ETFs): the split as Top holdings' panel — "N sectors · Weight", then rows of name, short bar and share, no icon (`ShareBars`); V1 donut stays the default. About Company / About Fund: the title moves inside the card. ETFs list: the Regular tab gets a chart icon, like Boosted's bolt.  "How Boosted ETFs work" sheet: no extra side padding (content 16 from the edges, like other sheets). Peers / ETF tables: column names line up with the numbers under them (same 4 inset as the highlight box; wide figures spill left). "Holding weight" versions archived: Top holdings keeps V3 (small bar before the %), the setting is gone. "Stock / ETF page" setting is a dropdown.
+- 2026-11-17 — Similar ETFs on the F1 ETF page too (before News). Stock pages (both layouts) get "ETFs with {stock}" after Peers: every catalogue ETF that holds the stock, biggest weight first (Weight · Today · Expense, or Returns), tap opens the ETF; hidden when none holds it (`etfsHolding` in etf/data.ts, `EtfsHolding` in EtfPeers.tsx).
+- 2026-11-17 — Stock and ETF pages: names, captions and notes now use L3 description text instead of label text: stat
+  names (Daily Performance, Fundamentals, key–value rows), rating names, the chart legend and axis, FY and YoY, the
+  ratings footnote, the news "why" line, ETF names, the ETF ticker line and the ETF parts' sub-lines, lede, notes and
+  facts. Values, buttons, tags, table names and titles stay labels. Two tertiary rating texts are now secondary.
+- 2026-11-08 — Stock page and ETF page (classic layout): the body rebuilt as one column with two containers, 24 apart —
+  the summary + chart + periods in the page's 16 gutter (L3 Inset), then the section tabs edge to edge and the open
+  tab's content in the gutter. No section pads or margins itself any more (the old assetHeader / tabsAndContent /
+  tabsBlock padding, the chart's margins and the tabs' negative-margin bleed are gone). Same spacing as before.
+- 2026-11-08 — The F1 stock and ETF pages (from the jojo branch) are a flow option here, **Stock / ETF page**: Classic
+  (default, the earlier page, its rating ring as it was) or F1 (one page, candles, Figma's rating ring). The Boosted
+  line stays Grey by default (jojo made Gold its default).
+- 2026-11-04 — ETF page: a Similar ETFs section after Fundamentals — the stock page's Peers table for funds (this ETF first, five like it by `similarEtfs`; Overview: Today / Expense / AUM, Returns: 1M / 3M / 1Y; rows by ticker; a tap opens that ETF).
+- 2026-11-04 — Stock and ETF pages: the "≈ ₹" line under the price is hidden (`SHOW_PRICE_INR = false` in StockPage.tsx / EtfPage.tsx), not deleted.
+- 2026-11-04 — US stock page: the NASDAQ exchange switch beside the TradingView button is gone (US stocks trade on one listing; nothing to switch).
+- 2026-11-04 — Money on the way sheet: when it'll be ready is an orange tag (clock, "By Thu 8 PM") beside the heading; the description reads "Expected to be ready to trade".
+- 2026-11-04 — Donut (ETF Allocation, stock page Key Holders): no text in the centre; the legend carries the numbers.
+- 2026-11-04 — Sheets no longer draw their own gesture bar (the device mockup has the system navbar): removed from the
+  withdrawable-balance and fee-breakdown sheets. The withdrawable breakdown is the L3 card KeyValueList with its total
+  row (Withdrawable). Order result buttons go somewhere: Holdings → Portfolio · Holdings (9001:30), View Orders →
+  Portfolio · Orders (9001:31), Order Details → the executed NVDA buy (9001:46), or for a sell the NVDA limit sell
+  (9001:44, partly filled — there's no executed-sell sample).
+- 2026-11-04 — Order result screens (processing, created, executed, failed): the content is centred in the space
+  above the dock, with no top / bottom padding. Processing uses the L3 Loader (Large) instead of the hand-spun arc. Their buttons
+  (View Orders, Holdings, Retry …) are Primary, not Brand.
+- 2026-11-04 — Deposit explainer (`shared/ui/DepositProgressSheet`, also opened from Home's "Money on the way") is
+  shorter, and its story is that the money has already left India: Paid → Sent to the US → US bank processing (current,
+  "US banks usually take 1–2 working days") → Ready to trade. Header: "$… on the way · Ready to trade by Thu 8 PM".
+  **L3 gap:** Steps has no warning (yellow) or pulsing in-progress marker, so the running step is `current`.
+  Pay from lists banks as card rows.
+- 2026-11-04 — Add money's Pay from lists only the banks that can send money abroad; the user's others show greyed
+  out, tagged "Not supported". Add another bank account opens the Deposit flow's Add bank in its US mode (deposit-16):
+  the five supported banks, and an error for any other bank's IFSC (deposit-17).
+- 2026-11-04 — Back from Add bank account (opened from the bank sheet) slides that page out and lands on the page the
+  sheet was opened on (Home or the stock page) with the bank sheet open, not the sheet over Add bank.
+- 2026-11-04 — **User status renamed by where US Stocks are:** the setting is "US Stocks": Not active · KYC pending,
+  Not active, Under review, Under review · contact support, Activation failed, Active (values unchanged).
+- 2026-11-04 — Card shadows no longer cut off in sideways scrollers: a sideways scroller clips top and bottom too, so the shared `Rail`, the US Home's Top Movers / Brands scrollers, Portfolio's market cards, the MF scroller and the stock page's related ETFs pad 12 above and below and take it back with a negative margin (same layout; horizontal and page scrolling unchanged). L3 gap: L3 Tabs (pill, raised) leaves 4 for a shadow that reaches 5.
+- 2026-11-04 — Stock list cards (shared `StockListCard`) all wear L3's soft shadow now (`elevation-soft`), instead of flat border-only: tappable ones are raised L3 ListCells; static ones get it locally (L3 gap: a static ListCell card has no shadow).
+- 2026-11-04 — **Activation opens where the user is:** the sheets open over Home / the stock page / wherever Activate was tapped (FlowScreen `over`), instead of jumping to the stock page first. IDFC FIRST Bank shows its logo (kept in `screens/activate/assets/` — L3 gap).
+- 2026-11-04 — **One-tap bank check:** no "we'll send ₹1" line — the check runs on our side with the bank details we
+  already have; the verifying sheet says so. Add bank is Tertiary Small.
+- 2026-11-04 — **Bank sheet, eligible case cleaned up:** no logos over the list; Add bank moved to the sheet header,
+  opening the supported-banks view. Sheets over Home now sit above its sticky search bar, action bar and marquee.
+- 2026-11-04 — **Bank sheet, two cases:** supported banks shown up front as logos; linked banks tagged Eligible (pre-picked) or Not supported (greyed out); ₹1 consent checkbox removed. New User status bank values Three (+ SBI) / SBI only.
+- 2026-11-04 — **Activation as bottom sheets:** the declarations and bank pages are now two sheets over the stock page (T&C-sheet style): two checkbox rows with the text beside them (whole row ticks), CTA on once both are ticked; the bank step and ₹1 check swap in on the same sheet. Stage bar removed.
+- 2026-11-04 — **Declarations simplified:** one card per declaration with its "I agree" row and checkbox at the foot of the card (no section headers), three short points each (TCS line dropped), Continue always on with a tooltip + red edges when something is unticked.
+- 2026-11-04 — **Activation is two pages now** (`us-stocks-94`…`97`): declarations (LRS, US tax), then the bank — a supported bank (ICICI, HDFC, Kotak, IDFC FIRST, Axis) + the ₹1 check, or add one. The risk disclosure sheet (`us-stocks-14`, and the Stocks flow's `stocks-12`) is gone; Confirm details (`us-stocks-15`) is hidden. Every Activate / Retry goes to 94.
+- 2026-11-04 — L3 moved to 6de43c8: the soft shadow is now L3's `--l3-shadow-elevation-soft` (default on clickable cards); the local `--app-shadow-elevation-soft` is gone. Holding cards use surface primary.
+- 2026-11-04 — Big clickable cards all wear L3's soft shadow: order cards (the 3 Nov border-only override is gone) and the Portfolio market carousel cards (hand-made, so set locally). Chips, pills and list rows stay flat.
+- 2026-11-04 — The ETF cards' "what's inside" lines moved to `src/shared/data/etfInside.ts` so Home's Discover ETFs shows the same line.
+- 2026-11-04 — Portfolio: every holding card (Indian too) has L3's `elevation-soft` shadow (0 1 8, 4%) — L3 gap: a static Card has no shadow.
+- 2026-11-04 — **Portfolio code cleanup**: the screen is now a frame plus one component per tab (`screens/entry/portfolio/`), each owning its grey top and white sheet; L3 layout blocks instead of hand-written flex and negative margins; the holding as an L3 Card, Sort / Refresh as L3 buttons, the Sort sheet at screen level; strings in copy.json; `PortfolioScreen.module.css` and the unused `live` prop are gone. Same look (1–3px shifts).
+- 2026-11-04 — **Deposit comes back from the bank**: the bank's page (us-stocks-27) hands back to Lemonn after 1 s; the USD wallet opens (us-stocks-93, new) with a sheet: "$50.00 is on its way", ₹ that left which bank, Paid → Sent to US → Ready to trade (expected by Thu 8 PM), and we'll notify when it lands. Got it leaves the wallet's pending banner, now with the amount paid. The safe note is a success-light box with a 24 lock, one line: safe, held in your name. Deposit / Withdraw / Full details push in from the right; Add money's back with no history slides back to the wallet instead of looping (shared/prototype `markMove`).
+- 2026-11-04 — **Wallet is one page with two views**: W0 · Indian tab no longer jumps to another screen for USD — every wallet screen carries both views (INR + its USD state from the user status) and only the body switches; the USD tab's NEW tag always shows (it's just a tag).
+- 2026-11-04 — Add money: the amount's caret is L3's discover blue (as on TextField); the money sheets (Pay from, charges, withdraw breakdown) lose their hand-drawn grabber — the mockup's system navbar is enough.
+- 2026-11-04 — **Add bank account now finishes**: Verify → Verifying (₹1 check) → Bank account added → back to this Add money with the new bank (SBI ••5526) picked; the name-mismatch failure too (deposit flow, deposit-13 … 15).
+- 2026-11-04 — **Add money opens on $50** (was $1,000): the amount screen and the screens shown over it (charges breakdown, bank mismatch, pick a bank).
+- 2026-11-08 — **Stock and ETF pages rebuilt to Figma (Stocks Playground 6538:84949 stock, 6538:107342 ETF).** Shared pieces in `screens/activation/details.tsx`: title (logo · name ⇕ · $ price + change, green / red), a sideways row of stat chips, candlestick chart with Figma's ranges 1H · 24H · 7D · 1M · 3M · 1Y (full screen icon, line / candle switch), About at the end of the page with the logo, and an alert bell · Buy · Sell dock (L3 buy / sell, 40 tall). One long page, no Overview / News tabs. Stock page order: Your Holdings (held) · Daily Performance · Analyst Ratings · Fundamentals · Company financials · News · Peers · Key Holders · About. ETF page: search in the bar, ETF tag and bookmark in the title, a live Pre Market countdown chip, then Asset info (10 facts) · Top holdings ("Top 10 make up X%", ten-step bar, five rows, View all) · Allocation (Market cap · Sectors · Countries) · Daily Performance · News · About (`etf/EtfDetailsF1.tsx`). The user's calls: $ only (no ≈ ₹ line; Figma shows ₹), ranges exactly as Figma, and Your Holdings, Daily Performance and Key Holders kept though Figma doesn't draw them. Differences: Events (the old News & Events tab) aren't on the pages; Market cap and Countries splits are sample data; the ETF chips say Total Assets · Expense Ratio · 52W High / Low (Figma's Market Cap / P/E don't apply to a fund); the Allocation donut is the existing side-by-side card, not Figma's centred ring. `F1_DETAILS` in StockPage.tsx switches back to the earlier pages. Polish the same day: the page is `surface="primary"` with the bar see-through over it (no cut), no glow behind the logo (Figma's brand-colour bloom dropped, the user's call), the chart and sections on a black sheet with a rounded rim; plain-word ranges; a ruled time axis; and the Analyst Ratings ring rebuilt from Figma's layers (gradient disc on a 4px track, stacked round-ended Sell · Hold · Buy arcs from 12 o'clock with a gap at the end). Conflict board: `figma/audits/details-6538/` in the US STOCKS folder.
 - 2026-11-04 — **Wallet tabs stay on the page:** the wallet's INR and USD screens (us-stocks-53 / 54) are one page (screen group `wallet`), so tapping USD Wallet no longer pushes a new screen. Only the wallet content swaps, as it already did going back to INR.
 - 2026-11-04 — **Order type switch stays on the page:** the order pads are one page (screen group `order-pad`), so Market / Limit / SL no longer pushes a new screen. The header, tabs and dock stay put and only the fields under the tabs slide in: from the right going Market → Limit → SL, from the left going back.
 - 2026-11-03 — **Analyst Ratings ring has gaps between its arcs:** Buy, Hold and Sell are drawn from their shares (78.13 / 18.75 / 3.12%), starting at the top, with a small gap between each one like the Allocation donut. Before, three fixed overlapping paths.
@@ -306,6 +497,27 @@ Every tap he wired is kept. The main path: FTUX sheet → Activate → Risk disc
 - 2026-10-30 — Market now uses the app's Market flow (US list + picker); E3 screen removed (69 screens). US logos and catalogue moved to `src/shared`.
 - 2026-10-30 — Imported from `US-Stocks-Happy-Flow (1).html` (his L3 update with Raised). Rebuilt from the compiled
   bundle into source; flag GIF converted to WebP; Figma-screenshot fallbacks dropped.
+- 2026-11-17 · Page end: every scrolling body ends 24 above the dock / navbar (`--app-body-end`, applied in Phone `.body`); SpxIndex's and Mutual funds' own trailing padding removed, Order details' last section marked `data-page-end`.
+- 2026-11-17 · Top bars: Portfolio's search and wallet are the shared `SearchWalletActions` (shared/ui/TopBarAction: round 38, border/light, no shadow, Material search / wallet icons) instead of its own SVG icons. Mutual Fund home's top bar is now an Actionbar like Market's: "Mutual Fund" title, then the same search (→ Search) and wallet (→ the wallet); the search field is gone.
+- 2026-11-17 · Mutual Fund home: 16 between the top bar and the holdings (was 0, set for the old search-field bar).
+- 2026-11-18 — Archived the app setting "₹ equivalent" (User status → US Stocks money): US money shows in $ only; the ₹ below / $ ⇄ ₹ switch code stays in shared/money.tsx (INR_DISPLAY). Stock and ETF pages keep their ≈ ₹ under the price.
+- 2026-11-19 — Order pad V2: the "US market is live till 2:30 AM IST" note sits above the dock's hairline (outside the button dock).
+- 2026-11-19 — Order pad V2, Market: Minted's leverage card (Figma 8870:209735) — bolt tile, "Enable leverage upto 2x/3x/4x" (rolling while off), switch; on: 2x · 3x · 4x choices and an info strip. Prototype only: the dock numbers don't change.
+- 2026-11-19 — Leverage card: the first switch-on opens Minted's "Activate leverage" sheet ($100 example at 1x / 4x, liquidation risk, "Don't show this again" ticked, Confirm); the card switches on only on Confirm. It grows open / shut (0.2s), and the 2x · 3x · 4x chips are L3 secondary pill chips. Plain card and bolt (no gradients); shut, the card is only its header. The sheet's content doesn't scroll (the checkbox row is its 48 tap target tall).
+- 2026-11-19 — Order pad V2: "Req." is always an underlined link and opens the Fee Breakdown sheet over the pad with the fees on this order (brokerage 0.25%, GST 18% on it, IFSCA turnover fee 0.005% — the 0.3% Req. adds); SL still goes to its Fee Breakdown screen.
+- 2026-11-19 — Fee breakdown sheet (SL's View Charges and V2's Req.) rebuilt as the app's other breakdowns (Add money's Charges breakdown): one L3 KeyValueList — Brokerage (0.25% of the order value), GST (18% on brokerage), IFSCA turnover fee, Estimated fee as its total — the "approximate" note as the header description, and a Got it button. Differs from Figma: its separate groups, "•" sub-rows, hand-drawn dividers, notes and ✕ are gone.
+- 2026-11-19 — Order pad V2, Market: TP/SL (from the Lemonn auto TP/SL designs, Figma 4292:34063 · 4292:33108 · 4292:35483; Tpsl.tsx). A "Set TP/SL" chip (L3 pill chip with a plus, like the +$10 chips), centred under the leverage card, opens **Set TP/SL**: a card each for Take profit and Stop loss — Switch on / off, LMT ⇄ MKT, trigger in Points ⇄ Percentage (converted at the last price) on a Stepper, a Limit Stepper (limit orders), the target, and "Trailing take profit / stop loss" (ticked: "Trail 1.0 pts" + Edit). The trailing option opens a second sheet, **Trailing take profit / stop loss**: the trail on a large Stepper typed from the keypad, "Make trailing … your default", Done. Save replaces the chip with a full-width **TP/SL ✓** card (edit button; each leg that's on with a Limit / Market tag, its target price and % from the last price); both legs off brings the chip back. Differs from Figma: per order ("Applies to this order only", not the auto setting), $ and points, "TP/SL" for "Advance options", Limit / Market tags for "Auto", a Done button on the trailing sheet, no ⓘ tooltips. Prototype only: the dock and order don't change.
+- 2026-11-19 — Set TP/SL sheet: content from the production app. The stock row (symbol, last price, day change; Qty at the right, the pad's shares) under the header. Each field (Trigger at · Limit at) shows its $ price, typed from the keypad (tap the price; the caret and keypad appear) or set by the Stepper, which shows the move in points / % ("--" while empty; "Enter price" / "Enter limit price" placeholders). Under each card: Est. profit / Est. loss on the order's qty (from the limit on LMT, the trigger on MKT), or the error in red with the field box outlined red — "Take profit must be above $…", "Stop loss must be below $…", "Limit price is required" — and Clear (empties the leg). Save is off while a leg that's on is empty or wrong. LMT ⇄ MKT and Points ⇄ Percentage selects are primary, not subtle. Not taken from production: Disclose Qty (an Indian-exchange feature; US orders have none), the "TPSL & more" title.
+- 2026-11-19 — How leverage works / Activate leverage sheet: the "Liquidation risk" note under the example table is hidden (the user's call); the table stays.
+- 2026-11-19 — US order pad: "Set SL" loses its border (a tertiary Button at Medium with no outline) and gets a decorative separator above it — a border/light hairline, full strength in the middle, fading to 0% at both ends — so it no longer reads as another chip under the quick chips. L3 gap: no fading Divider.
+- 2026-11-19 — Order pad, both versions: the Set SL / Set TP/SL chip is replaced by a full-width card with the name ("Stop loss" on US, "TP/SL" on Indian) and an L3 Switch (sm); the whole row is the tap target. Turning it on opens the sheet; closing it without Save leaves it off. Once saved the card keeps its title with a green check, the Switch becomes the edit button and the applied rows show. US: no more fractional-shares toast (SlFractionalToast removed) — turning SL on with a fractional qty, or the qty turning fractional with an SL set, shows a red line under the card, "Stop loss isn’t available on fractional shares", until the qty is whole again.
+- 2026-11-19 — Order pad (buy): when the order plus charges (Req.) is more than the balance, the button reads "Add money" — no amount, no ₹ — and goes to Add money (M01, us-stocks-21); back under the balance it is Buy · ₹… again.
+- 2026-11-19 — Leverage card (Indian pad): L3 Raised at the soft level (the white-fill sheen, the card's border-light kept as the stroke). L3 gap: Card has no `raised` prop, so LeverageCard sets the attribute on the card's element from a display: contents wrapper.
+- 2026-11-19 — TP/SL sheet, A/B test (flow option "TP/SL sheet", group Trade, the Indian pad). **B** (the default, TpslSheetB.tsx) keeps A's layout and order item for item: the header (TP SL & More, Qty, the stock), then per leg the name with Market ⇄ Limit and its Switch, the trigger (Points ⇄ Percentage, typed or stepped), the limit on Limit, Trailing, and Est. profit / loss with Clear under the card. What changes is the boxes: A puts a price box inside each leg's card; in B each leg is one price card, the order pad's (PriceFieldBox + PriceField rows, a hairline between rows), so nothing is boxed twice and it reads like the Limit / SL pad. Switched off, a leg is just its head row. An error turns the card red and takes the Est. line's place under it. Trailing is set in its own row: tick it and a % Stepper appears (no second sheet; A's points ⇄ % trail unit and "make default" are dropped). Order types read "Market" / "Limit" (A: MKT / LMT). **A** (TpslSheet in Tpsl.tsx) is unchanged. L3 gaps: no inline price field (raw input, as PriceField), no link-style Button (Clear), Select has no discover colour, Stepper has no on-grey button option.
+- 2026-11-19 — Order pad (Indian): the leverage and TP/SL cards are one component, PadCard (trade/PadCard.tsx): an L3 Card with Raised soft, a 56 head row with an icon on a 32 tile, the title in Label 14 (leverage was Label 12) and the control at the right. TP/SL's tile is msAdjust in discover blue (leverage keeps the green bolt). Once TP/SL is set, the same card shows a check and an edit button in the Switch's place, with the targets under its head. FLAG: the tile is hand-made; L3 has none.
+- 2026-11-19 — Pad cards: the icon tiles are their accent's default surface at 20% (not the -light surface); in dark the Raised look is a step stronger (10% sheen, 15% top edge, 30% bottom shade) because L3's soft raise barely shows there. L3 gap: Raised has no level between soft and strong.
+- 2026-11-19 — US pad Stop loss: changes animate. The red "not on fractional shares" line opens and closes (0fr ⇄ 1fr) instead of popping in, and a saved SL card's body grows open. TP/SL sheet B: trailing is on the stop loss only (no Trailing TP); its checkbox reads Trailing SL, with the name dotted-underlined: a tap on the name (not the box) opens the **Trailing SL** info sheet (TrailInfoSheet.tsx) over TP/SL: content as the production Lemonn app (Pixel screenshot, 19 Nov): the definition (Description 16), then a filled grey box with this order's trail ("When the price rises by 1%, the stop loss will also trail by 1% …", or "1 point" / "N points" when the trail is in points; 1 while none is set) and I understand. Differs from production: L3's sheet header keeps its hairline, the button is L3 primary, sentence case.
+- 2026-11-19 — TP/SL sheet B: both legs open switched off the first time (A's start values come in when one is turned on). The Switch's tap area is the right half of the head row when on and the whole row when off. Leg cards are surface/primary with a border/intense edge (so they show on the sheet in dark). Every change animates: a leg's rows and Limit at slide open and closed (the 0fr ⇄ 1fr collapse), the Switch is one element so its knob slides, and Market ⇄ Limit, the trailing %, Clear and the Est. ⇄ error line fade in.
 
 
 ## Source — this flow
@@ -348,8 +560,6 @@ branch `jojo`, **as he built it**. Nothing below is fixed: every item is marked 
 |---|---|---|
 | FTUX sheet + scrim + close button | `src/flows/stocks/components/us/sheets/UsFtuxSheet.tsx` (moved from `screens/ftux`) | BottomSheet (large header + icon) |
 | Sort sheet radio rows | `screens/entry/sheets/SortSheet.tsx` | — (L3 has no radio: gap) |
-| Activation sheets' own layer + hand-drawn gesture bar | `screens/activation/sheets/SheetFrame.tsx` | BottomSheet |
-| Sheet grabbers drawn by hand in the `utility` slot | `screens/money/Money.module.css`, `wallet/sheets` | BottomSheet's own handle |
 | Chips / pills / filter buttons | money (Tab used as chip) | Tag / Tabs (pill) / Button |
 | Market tabs (SVG outline), underline tabs with sliding bar, tab "thumb" over Tabs | entry `SlidingTabs.tsx`, wallet `WalletScreen.tsx` | Tabs |
 | Text / icon / round buttons | stock page tools | Button (Ghost / Tertiary) |
@@ -2990,6 +3200,48 @@ UAq�oZ�+����}gc�Vti�\�MbXg	�֖,Asb��@���!y�d�
 
 ```tsx
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+```
+
+### `src/flows/us-stocks/assets/details/bell.svg`
+
+```tsx
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame">
+<path id="Vector" d="M5.25 18.8845C5.0375 18.8845 4.85942 18.8127 4.71575 18.669C4.57192 18.5252 4.5 18.3469 4.5 18.1343C4.5 17.9218 4.57192 17.7437 4.71575 17.6C4.85942 17.4565 5.0375 17.3848 5.25 17.3848H6.30775V9.923C6.30775 8.57817 6.72283 7.38908 7.553 6.35575C8.383 5.32242 9.44867 4.6615 10.75 4.373V3.75C10.75 3.40283 10.8714 3.10767 11.1143 2.8645C11.3571 2.6215 11.6519 2.5 11.9988 2.5C12.3458 2.5 12.641 2.6215 12.8845 2.8645C13.1282 3.10767 13.25 3.40283 13.25 3.75V4.373C14.5513 4.6615 15.617 5.32242 16.447 6.35575C17.2772 7.38908 17.6923 8.57817 17.6923 9.923V17.3848H18.75C18.9625 17.3848 19.1406 17.4566 19.2843 17.6003C19.4281 17.7441 19.5 17.9223 19.5 18.135C19.5 18.3475 19.4281 18.5256 19.2843 18.6693C19.1406 18.8128 18.9625 18.8845 18.75 18.8845H5.25ZM11.9983 21.6923C11.5008 21.6923 11.0754 21.5153 10.7223 21.1613C10.3689 20.8073 10.1923 20.3817 10.1923 19.8845H13.8077C13.8077 20.3833 13.6306 20.8093 13.2762 21.1625C12.9219 21.5157 12.4959 21.6923 11.9983 21.6923ZM7.80775 17.3848H16.1923V9.923C16.1923 8.76533 15.783 7.77725 14.9645 6.95875C14.1458 6.14008 13.1577 5.73075 12 5.73075C10.8423 5.73075 9.85417 6.14008 9.0355 6.95875C8.217 7.77725 7.80775 8.76533 7.80775 9.923V17.3848ZM11.25 12.8078V14.0578C11.25 14.2703 11.3219 14.4483 11.4658 14.592C11.6096 14.7358 11.7878 14.8078 12.0003 14.8078C12.2129 14.8078 12.391 14.7358 12.5345 14.592C12.6782 14.4483 12.75 14.2703 12.75 14.0578V12.8078H14C14.2125 12.8078 14.3906 12.7358 14.5343 12.592C14.6781 12.4482 14.75 12.2699 14.75 12.0573C14.75 11.8448 14.6781 11.6667 14.5343 11.523C14.3906 11.3795 14.2125 11.3078 14 11.3078H12.75V10.0578C12.75 9.84525 12.6781 9.66708 12.5343 9.52325C12.3904 9.37958 12.2122 9.30775 11.9997 9.30775C11.7871 9.30775 11.609 9.37958 11.4655 9.52325C11.3218 9.66708 11.25 9.84525 11.25 10.0578V11.3078H10C9.7875 11.3078 9.60942 11.3797 9.46575 11.5235C9.32192 11.6673 9.25 11.8455 9.25 12.058C9.25 12.2707 9.32192 12.4488 9.46575 12.5923C9.60942 12.7359 9.7875 12.8078 10 12.8078H11.25Z" fill="#E8E8E8" style="fill:#E8E8E8;fill:color(display-p3 0.9098 0.9098 0.9098);fill-opacity:1;"/>
+</g>
+</svg>
+```
+
+### `src/flows/us-stocks/assets/details/chart-toggle.svg`
+
+```tsx
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame">
+<path id="Vector" d="M2.69434 17.0397C2.69434 16.8332 2.777 16.6473 2.94234 16.4819L8.25784 11.1667C8.60267 10.8217 9.02959 10.6492 9.53859 10.6492C10.0476 10.6492 10.4745 10.8217 10.8193 11.1667L13.3078 13.6549C13.3718 13.7191 13.4488 13.7496 13.5386 13.7464C13.6283 13.7433 13.702 13.7064 13.7598 13.6359L20.0636 6.45894C20.2021 6.2936 20.3771 6.21094 20.5886 6.21094C20.8001 6.21094 20.9834 6.28527 21.1386 6.43394C21.2771 6.57244 21.3505 6.73719 21.3588 6.92819C21.3672 7.11919 21.3021 7.29227 21.1636 7.44744L14.8231 14.6799C14.4783 15.0749 14.0482 15.2833 13.5328 15.3049C13.0175 15.3268 12.5707 15.1486 12.1923 14.7704L9.75984 12.3377C9.702 12.28 9.62825 12.2512 9.53859 12.2512C9.44875 12.2512 9.375 12.28 9.31734 12.3377L4.05784 17.5974C3.89884 17.7563 3.7145 17.8374 3.50484 17.8407C3.29534 17.8439 3.10784 17.7628 2.94234 17.5974C2.777 17.4319 2.69434 17.246 2.69434 17.0397Z" fill="#37AD75" style="fill:#37AD75;fill:color(display-p3 0.2157 0.6784 0.4588);fill-opacity:1;"/>
+</g>
+</svg>
+```
+
+### `src/flows/us-stocks/assets/details/fullscreen.svg`
+
+```tsx
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="SVG">
+<path id="Vector" d="M7.28592 5.14062C6.7176 5.14063 6.17256 5.36639 5.77069 5.76825C5.36883 6.17012 5.14307 6.71516 5.14307 7.28348V9.42634H6.00021V7.28348C6.00021 6.57205 6.57449 5.99777 7.28592 5.99777H9.42878V5.14062H7.28592ZM5.14307 14.5692V16.7121C5.14307 17.2804 5.36883 17.8254 5.77069 18.2273C6.17256 18.6291 6.7176 18.8549 7.28592 18.8549H9.42878V17.9978H7.28592C6.94493 17.9978 6.6179 17.8623 6.37679 17.6212C6.13567 17.3801 6.00021 17.053 6.00021 16.7121V14.5692H5.14307ZM16.7145 5.99777H14.5716V5.14062H16.7145C17.2828 5.14063 17.8279 5.36639 18.2297 5.76825C18.6316 6.17012 18.8574 6.71516 18.8574 7.28348V9.42634H18.0002V7.28348C18.0002 6.57205 17.4259 5.99777 16.7145 5.99777ZM18.8574 16.7121V14.5692H18.0002V16.7121C18.0002 17.4235 17.4259 17.9978 16.7145 17.9978H14.5716V18.8549H16.7145C17.2828 18.8549 17.8279 18.6291 18.2297 18.2273C18.6316 17.8254 18.8574 17.2804 18.8574 16.7121Z" fill="#E8E8E8" style="fill:#E8E8E8;fill:color(display-p3 0.9098 0.9098 0.9098);fill-opacity:1;"/>
+</g>
+</svg>
+```
+
+### `src/flows/us-stocks/assets/details/info.svg`
+
+```tsx
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon Shapes">
+<path id="Vector (Stroke)" d="M6 2C3.79086 2 2 3.79086 2 6C2 8.20914 3.79086 10 6 10C8.20914 10 10 8.20914 10 6C10 3.79086 8.20914 2 6 2ZM1 6C1 3.23858 3.23858 1 6 1C8.76142 1 11 3.23858 11 6C11 8.76142 8.76142 11 6 11C3.23858 11 1 8.76142 1 6Z" fill-rule="evenodd" clip-rule="evenodd" fill="#E8E8E8" fill-opacity="0.6" style="fill:#E8E8E8;fill:color(display-p3 0.9098 0.9098 0.9098);fill-opacity:0.6;"/>
+<path id="Vector (Stroke)_2" d="M6 5.5C6.27614 5.5 6.5 5.72386 6.5 6V7.8C6.5 8.07614 6.27614 8.3 6 8.3C5.72386 8.3 5.5 8.07614 5.5 7.8V6C5.5 5.72386 5.72386 5.5 6 5.5Z" fill-rule="evenodd" clip-rule="evenodd" fill="#E8E8E8" fill-opacity="0.6" style="fill:#E8E8E8;fill:color(display-p3 0.9098 0.9098 0.9098);fill-opacity:0.6;"/>
+<path id="Vector (Stroke)_3" d="M5.5 4.2C5.5 3.92386 5.72386 3.7 6 3.7H6.0045C6.28064 3.7 6.5045 3.92386 6.5045 4.2C6.5045 4.47614 6.28064 4.7 6.0045 4.7H6C5.72386 4.7 5.5 4.47614 5.5 4.2Z" fill-rule="evenodd" clip-rule="evenodd" fill="#E8E8E8" fill-opacity="0.6" style="fill:#E8E8E8;fill:color(display-p3 0.9098 0.9098 0.9098);fill-opacity:0.6;"/>
+</g>
+</svg>
 ```
 
 ### `src/flows/us-stocks/assets/entry/index/back.svg`
@@ -21940,11 +22192,13 @@ export function InlineSvg({ src, w, h = w, className }: { src: string; w?: numbe
   height: 100%;
   isolation: isolate;
   overflow: clip;
-  background: var(--l3-surface-default);
+  /* The page's colour, also read by parts that fade into it (the trade dock's gradient, 18 Nov). */
+  --page-surface: var(--l3-surface-default);
+  background: var(--page-surface);
 }
 
-.phone[data-surface='primary'] { background: var(--l3-surface-primary); }
-.phone[data-surface='secondary'] { background: var(--l3-surface-secondary); }
+.phone[data-surface='primary'] { --page-surface: var(--l3-surface-primary); }
+.phone[data-surface='secondary'] { --page-surface: var(--l3-surface-secondary); }
 
 .page {
   position: relative;
@@ -21955,6 +22209,11 @@ export function InlineSvg({ src, w, h = w, className }: { src: string; w?: numbe
 }
 
 .art { position: absolute; inset: 0 0 auto; z-index: 0; pointer-events: none; }
+
+/* Edge to edge (edgeToEdge): the screen runs under both OS bars (the preview gives their heights); the art starts at
+   the very top, the top bar clears the status bar, the page ends above the navigation bar. */
+.phone[data-edge-to-edge] { padding-bottom: var(--os-inset-bottom, 0); box-sizing: border-box; }
+.phone[data-edge-to-edge] .top { padding-top: var(--os-inset-top, 0); }
 
 .top { position: relative; z-index: 2; flex: none; }
 /* FLAG (L3 gap): L3 Actionbar always draws its 1px line below; here it shows only once the page has scrolled under it. */
@@ -21968,7 +22227,12 @@ export function InlineSvg({ src, w, h = w, className }: { src: string; w?: numbe
   overflow: hidden auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
+  padding-bottom: var(--app-body-end); /* the app's page end (src/local-tokens.css) */
 }
+
+.body > :last-child { padding-bottom: 0; margin-bottom: 0; }
+/* A page's last block nested deeper (inside tabs or a panel) is marked data-page-end so it adds none either. */
+.body [data-page-end] { padding-bottom: 0; margin-bottom: 0; }
 
 .body::-webkit-scrollbar { display: none; }
 
@@ -21976,6 +22240,20 @@ export function InlineSvg({ src, w, h = w, className }: { src: string; w?: numbe
 
 .sheets { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .sheets > * { pointer-events: auto; }
+
+/* A floating dock (the asset pages' trade dock, data-float-dock): the footer lies over the bottom of the body, so the
+   page scrolls on behind the dock's fade instead of stopping at its top edge. The body's end keeps the last content
+   clear of the buttons: the dock's 8 below, its Large buttons and its 8 above them (the 24 of fade may sit over it). */
+.page:has(> .footer [data-float-dock]) > .footer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.page:has(> .footer [data-float-dock]) > .body {
+  padding-bottom: calc(var(--app-body-end) + var(--l3-spacing-08) + var(--l3-size-control-lg) + var(--l3-spacing-08));
+}
 ```
 
 ### `src/flows/us-stocks/components/Phone.tsx`
@@ -22005,6 +22283,7 @@ export function Phone({
   label,
   bodyRef,
   topLine,
+  edgeToEdge,
   className,
   style,
 }: {
@@ -22022,6 +22301,9 @@ export function Phone({
   bodyRef?: Ref<HTMLDivElement>
   /** The top bar's line from the start (L3's own default), not only once the page has scrolled under it. */
   topLine?: boolean
+  /** Draw under the OS status and navigation bars (the preview's data-edge-to-edge): the backdrop art shows through
+   *  both, the top bar clears the status bar and the page ends above the navigation bar. */
+  edgeToEdge?: boolean
   className?: string
   style?: CSSProperties
 }) {
@@ -22030,7 +22312,7 @@ export function Phone({
   const [scrolled, setScrolled] = useState(false)
   return (
     <SheetLayer.Provider value={layer}>
-      <section className={[styles.phone, className].filter(Boolean).join(' ')} data-surface={surface} aria-label={label} style={style}>
+      <section className={[styles.phone, className].filter(Boolean).join(' ')} data-surface={surface} data-edge-to-edge={edgeToEdge ? '' : undefined} aria-label={label} style={style}>
         {/* data-part="page" + the footer last: on a tab switch the preview slides the page and holds the navbar still. */}
         <div className={styles.page} data-part="page">
           {layer && (
@@ -22083,11 +22365,101 @@ export function UsMainNav({ value }: { value: Section }) {
   "addMoney.mismatchText": "The name on HDFC Bank ••1861 does not match your PAN. Banks reject transfers abroad when names differ.",
   "addMoney.landsBy": "lands by Thu 8 PM",
   "addMoney.addTitle": "Add a bank account",
-  "addMoney.addDescription": "Only from an account in your name",
+  "addMoney.addDescription": "ICICI, HDFC, Kotak, IDFC FIRST or Axis Bank, in your name",
   "addMoney.sheetTitle": "Pay from",
   "addMoney.addAnother": "Add another bank account",
+  "addMoney.notSupported": "Not supported",
   "addMoney.addBankCta": "Add bank account",
-  "addMoney.ctaInr": "({inr})"
+  "addMoney.ctaInr": "({inr})",
+  "portfolio.title": "Portfolio",
+  "portfolio.search": "Search",
+  "portfolio.wallet": "Wallet",
+  "mf.title": "Mutual Fund",
+  "portfolio.sections": "Portfolio sections",
+  "portfolio.tab.positions": "Positions",
+  "portfolio.tab.holdings": "Holdings",
+  "portfolio.tab.orders": "Orders",
+  "portfolio.indices": "Market Indices",
+  "portfolio.expiresToday": "Expires today",
+  "portfolio.positions": "Your positions",
+  "portfolio.refresh": "Refresh",
+  "portfolio.positionsEmpty.title": "Build Wealth Daily",
+  "portfolio.positionsEmpty.text": "Seems like you don’t have any positions right now",
+  "portfolio.positionsEmpty.button": "Explore F&O",
+  "portfolio.holdings": "Your holdings",
+  "portfolio.sort": "Sort",
+  "portfolio.markets": "Holdings market",
+  "portfolio.market.in": "IN Stocks",
+  "portfolio.market.us": "US Stocks",
+  "portfolio.holding.qty": "Qty {qty}",
+  "portfolio.holding.day": "1D Returns",
+  "portfolio.holding.current": "Current",
+  "portfolio.holding.invested": "Invested",
+  "portfolio.holding.returns": "Returns",
+  "portfolio.holding.open": "{name}, open its stock page",
+  "portfolio.usEmpty.kyc.title": "Complete your KYC",
+  "portfolio.usEmpty.kyc.text": "Finish your Lemonn KYC to activate US Stocks",
+  "portfolio.usEmpty.kyc.button": "Complete KYC",
+  "portfolio.usEmpty.activate.title": "Build Wealth in Dollars",
+  "portfolio.usEmpty.activate.text": "Activate US Stocks to start investing in US companies",
+  "portfolio.usEmpty.activate.button": "Activate US Stocks",
+  "portfolio.usEmpty.review.title": "Activation under review",
+  "portfolio.usEmpty.review.text": "We’re reviewing your US Stocks activation. You’ll see your holdings here once it’s done",
+  "portfolio.usEmpty.review.button": "Explore US Market",
+  "portfolio.usEmpty.failed.title": "Activation failed",
+  "portfolio.usEmpty.failed.text": "We couldn’t activate US Stocks for you. Please try again",
+  "portfolio.usEmpty.failed.button": "Retry",
+  "portfolio.usEmpty.none.title": "Build Wealth in Dollars",
+  "portfolio.usEmpty.none.text": "Seems like you don’t have any US holdings right now",
+  "portfolio.usEmpty.none.button": "Explore US Market",
+  "declarations.title": "Agree to invest abroad",
+  "declarations.description": "Needed by RBI and US tax rules before you buy US Stocks",
+  "declarations.lrs.before": "I declare under RBI's ",
+  "declarations.lrs.link": "Liberalised Remittance Scheme",
+  "declarations.lrs.after": " that I'm a resident Indian sending my own money, within $250,000 a year across all my banks and apps, and not for margin trading or other barred uses.",
+  "declarations.tax.before": "I sign ",
+  "declarations.tax.link": "Form W-8BEN",
+  "declarations.tax.after": ": I'm not a US citizen, green card holder or US tax resident. 25% US tax is withheld on dividends, and I'll report my US holdings in my ITR.",
+  "declarations.actionsLabel": "Declarations",
+  "declarations.cta": "I agree and continue",
+  "bankCheck.title": "Pick the bank you'll invest from",
+  "bankCheck.description": "US Stocks need an eligible bank account",
+  "bankCheck.supportedLabel": "Supported banks for US Stocks",
+  "bankCheck.addAnother": "Add bank",
+  "bankCheck.add.title": "Add a supported bank",
+  "bankCheck.add.description": "Only these banks can send money abroad for US Stocks",
+  "bankCheck.eligible": "Eligible",
+  "bankCheck.notEligible": "Not supported",
+  "bankCheck.yourBanksLabel": "Your bank accounts",
+  "bankCheck.actionsLabel": "Verify bank",
+  "bankCheck.cta": "Verify and activate",
+  "bankCheck.none.title": "Add a supported bank to invest",
+  "bankCheck.none.description": "US Stocks need a bank that can send money abroad",
+  "bankCheck.none.why": "{bank} can't send money abroad for US Stocks yet. Supported banks are {banks}. Add an account with one of them.",
+  "bankCheck.none.yourBanks": "Your bank accounts",
+  "bankCheck.none.cta": "Add bank account",
+  "bankVerifying.title": "Verifying your bank account",
+  "bankVerifying.description": "Checking {bank} — nothing for you to do",
+  "bankVerifying.fine": "Takes a few seconds — please keep the app open",
+  "fractional.title": "Fractional shares",
+  "fractional.heading": "Own a slice of any US stock",
+  "fractional.intro": "You don't need the price of a whole share. Buy any US stock or ETF from $1 and own a slice of it, with the same gains and dividends, in proportion.",
+  "fractional.how.title": "How it works",
+  "fractional.how.description": "The example uses today's price",
+  "fractional.how.amount": "You invest",
+  "fractional.how.price": "{sym} price per share",
+  "fractional.how.shares": "You own",
+  "fractional.how.sharesValue": "{shares} shares",
+  "fractional.how.note": "Enter an amount in $ or a number of shares on the buy screen. Fractional orders are placed as market orders.",
+  "fractional.popular.title": "Popular stocks you can slice",
+  "fractional.popular.description": "Priced high, bought from $1",
+  "fractional.faq.title": "Good to know",
+  "fractional.faq.q1": "What is a fractional share?",
+  "fractional.faq.a1": "A part of one share. $10 in a $500 stock is 0.02 of a share.",
+  "fractional.faq.q2": "Do I get dividends?",
+  "fractional.faq.a2": "Yes, in proportion to the part you own.",
+  "fractional.faq.q3": "Which stocks can I buy this way?",
+  "fractional.faq.a3": "Most US stocks and ETFs on Lemonn. The buy screen tells you if one isn't available."
 }
 ```
 
@@ -22209,6 +22581,9 @@ import { registry } from './registry'
 import { allScreens } from './screens'
 import { orderPads } from './screens/trade/orderPads'
 
+/** The preview screens that are order pads (Buy / Sell, every type and state): where the pad switch floats. */
+const ORDER_PAD_SCREEN_IDS = registry.filter((s) => s.figma in orderPads).map((s) => s.id)
+
 /**
  * US Stocks — happy flow, imported from the teammate's prototype (US-Stocks-Happy-Flow.html, 2026-10-30) on branch
  * jojo. Kept as he built it so we can review it against the system: everything that isn't L3 / app-standard is marked
@@ -22226,6 +22601,100 @@ export const usStocks: Flow = {
     { id: 'wallet', title: 'USD wallet' },
   ],
   options: [
+    // "Order pad" archived 19 Nov (the user's call): V2 · Minted layout kept; V1 · Commodity pad layout archived.
+    // useOrderPadVersion() returns 'v2'; the V1 code stays in OrderPad.tsx / OrderResult.tsx.
+    // The V2 order pad's price cards (18 Nov): merged (one card, a line between the prices) or separate (a card each).
+    {
+      id: 'priceCards',
+      group: 'Trade',
+      label: 'Price cards',
+      picker: 'dropdown',
+      values: [
+        { value: 'merged', label: 'Merged · one card, a line between' },
+        { value: 'separate', label: 'Separate · a card per price' },
+      ],
+      default: 'merged',
+      floatOn: ['us-stocks-41'],
+    },
+    // Order pad version (19 Nov, the user's call): US · stop loss only (no take profit, no trailing, no SL on fractional
+    // shares) and no leverage card; Indian (the default) · the pad as Indian stocks will have it: the leverage card on
+    // Market and TP + SL + trailing (Tpsl.tsx, kept as it was).
+    {
+      id: 'padVersion',
+      group: 'Trade',
+      label: 'Order pad',
+      picker: 'dropdown',
+      values: [
+        { value: 'us', label: 'US · SL only, no leverage' },
+        { value: 'india', label: 'Indian · leverage + TP/SL + trailing' },
+      ],
+      default: 'india', // Indian by default (19 Nov, the user's call)
+      floatOn: ['us-stocks-33'],
+      // Phone (app mode): a floating "IN" / "US" button on every order pad screen flips the pad (20 Nov, the user's call).
+      quickSwitch: {
+        on: ORDER_PAD_SCREEN_IDS,
+        values: [
+          { value: 'india', label: 'Indian pad', short: 'IN' },
+          { value: 'us', label: 'US pad', short: 'US' },
+        ],
+      },
+    },
+    // Indian pad's validity (Day / Instant / Year), an A/B test (20 Nov, the user's call): V2 · inside the Market / Limit /
+    // SL track, after a short divider; V1 · on its own at the row's right edge, the pills centred.
+    {
+      id: 'validityPlace',
+      group: 'Trade',
+      label: 'Validity switch',
+      picker: 'dropdown',
+      values: [
+        { value: 'v1', label: 'V1 · at the right edge' },
+        { value: 'v2', label: 'V2 · in the order type track' },
+        { value: 'v3', label: 'V3 · above the amount, with Amount / Shares' },
+      ],
+      default: 'v3',
+      floatOn: ORDER_PAD_SCREEN_IDS,
+      // Phone (app mode): a floating "V1" / "V2" / "V3" bubble on every order pad screen flips it, for the A/B test (20 Nov, the
+      // user's call). It sits under the "IN" / "US" pad bubble.
+      quickSwitch: {
+        on: ORDER_PAD_SCREEN_IDS,
+        values: [
+          { value: 'v1', label: 'Validity V1 · at the right edge', short: 'V1' },
+          { value: 'v2', label: 'Validity V2 · in the track', short: 'V2' },
+          { value: 'v3', label: 'Validity V3 · above the amount', short: 'V3' },
+        ],
+      },
+    },
+    // The TP/SL sheet, an A/B test (19 Nov, the user's call: "keep this version intact for AB testing"): B · A's layout, each
+    // leg one pad-style price card, no box inside a box (TpslSheetB); A · a card per leg with a box inside (TpslSheet).
+    // Shows on the Indian pad.
+    {
+      id: 'tpslSheet',
+      group: 'Trade',
+      label: 'TP/SL sheet',
+      picker: 'dropdown',
+      values: [
+        { value: 'b', label: 'B · one price card per leg' },
+        { value: 'a', label: 'A · box inside each leg card' },
+      ],
+      default: 'b',
+      floatOn: ['us-stocks-33'],
+    },
+    // The processing screen's loader (19 Nov, from Minted): glass ring (default) or Minted's other processing animations.
+    {
+      id: 'procAnim',
+      group: 'Trade',
+      label: 'Processing animation',
+      picker: 'dropdown',
+      values: [
+        { value: 'glass', label: 'Glass ring · turns into the tick' },
+        { value: 'radar', label: 'Radar pulse' },
+        { value: 'orbit', label: 'Stocks orbit' },
+        { value: 'candles', label: 'Candles rise' },
+        { value: 'ticker', label: 'Ticker tape + order card' },
+      ],
+      default: 'glass',
+      floatOn: ['us-stocks-43'],
+    },
     // The Boosted tab's note (3 Nov): one line on a strip, a small card, or a chip.
     {
       id: 'boostNote',
@@ -22273,56 +22742,25 @@ export const usStocks: Flow = {
       default: 'sentence',
       floatOn: ['us-stocks-72'],
     },
-    // How a Top holdings row shows its share of the fund (3 Nov): five versions to test.
+    // How Allocation shows the fund's split (17 Nov): the donut, or Top holdings' rows with a short bar (no icon).
     {
-      id: 'holdingWeight',
+      id: 'allocationLook',
       group: 'ETFs',
-      label: 'Holding weight',
+      label: 'Allocation',
       picker: 'dropdown',
       values: [
-        { value: 'bar', label: 'V1 · Bar under name' },
-        { value: 'none', label: 'V2 · No bar' },
-        { value: 'mini', label: 'V3 · Small bar before % (current)' },
-        { value: 'fill', label: 'V4 · % on a filled pill' },
-        { value: 'pill', label: 'V5 · % on a Discover pill' },
+        { value: 'donut', label: 'V1 · Donut (current)' },
+        { value: 'bars', label: 'V2 · Rows with bars' },
       ],
-      default: 'mini',
+      default: 'donut',
       floatOn: ['us-stocks-72'],
     },
-    // The Boosted note's colour (3 Nov).
-    {
-      id: 'boostTone',
-      group: 'ETFs',
-      label: 'Boosted line',
-      values: [
-        { value: 'grey', label: 'Grey' },
-        { value: 'green', label: 'Green' },
-        { value: 'gold', label: 'Gold' },
-        { value: 'blue', label: 'Blue' },
-        { value: 'purple', label: 'Purple' },
-      ],
-      default: 'grey',
-      floatOn: ['us-stocks-71'],
-    },
-    // Where a leveraged fund's leverage shows on its card (3 Nov): eight versions to compare (and A/B test).
-    {
-      id: 'levTag',
-      group: 'ETFs',
-      label: 'Leverage tag',
-      picker: 'dropdown',
-      values: [
-        { value: 'foot', label: 'V1 · Logo foot' },
-        { value: 'badge', label: 'V2 · Logo badge' },
-        { value: 'ring', label: 'V3 · Logo ring' },
-        { value: 'corner', label: 'V4 · Card corner' },
-        { value: 'heading', label: 'V5 · After heading (current)' },
-        { value: 'pill', label: 'V6 · Pill on foot' },
-        { value: 'slice', label: 'V7 · Slice' },
-        { value: 'notch', label: 'V8 · Notch' },
-      ],
-      default: 'heading',
-      floatOn: ['us-stocks-71'],
-    },
+    // "Holding weight" (3 Nov, five versions) archived 17 Nov: Top holdings keeps V3, a small bar before the %.
+    // Archived 18 Nov (the user's call): "Stock / ETF page" (Classic · tabs, line chart kept; F1 · one page, candles from
+    // Figma 6538:84949 / 6538:107342 archived). useF1Details() returns false; the F1 code stays in StockPage / EtfPage.
+    // Archived 18 Nov (the user's call): "Boosted line" (Grey kept; Green, Gold, Blue, Purple archived) and "Leverage
+    // tag" (V5 · After heading kept; V1–V4, V6–V8 archived). EtfListScreen draws the kept ones; the other looks stay in
+    // its code and Etf.module.css.
   ],
   screens: registry.map((s) => ({
     id: s.id,
@@ -22337,6 +22775,7 @@ export const usStocks: Flow = {
     // Every order pad (Buy / Sell, Market / Limit / SL, amount / shares) is one page in different states: switching the
     // order type swaps the body in place instead of pushing a new screen. Same for the wallet's INR / USD tabs.
     group: s.figma in orderPads ? 'order-pad' : s.group,
+    over: s.over,
     render: (go) => {
       const Screen = allScreens[s.figma]
       return (
@@ -22355,7 +22794,7 @@ export const usStocks: Flow = {
 // Navigation for the imported screens. The teammate's screens move by Figma node id (go('5837:95201')) and can go back;
 // this maps those calls onto the app prototype's `go` (screen ids 'us-stocks-NN', see registry.ts).
 import { createContext, useContext, type ReactNode } from 'react'
-import { usePreview } from '../../shared/prototype'
+import { markMove, usePreview } from '../../shared/prototype'
 import type { Go } from '../types'
 import { idForFigma } from './registry'
 
@@ -22387,8 +22826,13 @@ export const FIGMA_IN_OTHER_FLOWS: Record<string, string> = {
 export type UsNav = {
   /** Go to a screen by its Figma node id. */
   go: (figma: string) => void
+  /** Open a page on top of this one (pushes in from the right), even one listed earlier in the flow (Deposit → Add money). */
+  open: (figma: string) => void
   /** Back to the screen shown before this one (or `fallback`). */
   back: (fallback?: string) => void
+  /** Leave a run of screens (e.g. order pad → processing → result): back to the last screen before them that `skip`
+   *  doesn't match — the page the user started from — or `fallback`. Slides back like `back`. */
+  leave: (skip: (figma: string) => boolean, fallback?: string) => void
   /** Figma node id of the screen being shown. */
   current: string
   /** Figma node id of the screen shown before. */
@@ -22397,7 +22841,7 @@ export type UsNav = {
   via: 'jump' | 'tap'
 }
 
-const UsNavContext = createContext<UsNav>({ go: () => {}, back: () => {}, current: '', via: 'jump' })
+const UsNavContext = createContext<UsNav>({ go: () => {}, open: () => {}, back: () => {}, leave: () => {}, current: '', via: 'jump' })
 export const useUsNav = () => useContext(UsNavContext)
 
 // Screens shown in this flow, oldest first (Figma ids) — what `back` walks.
@@ -22411,15 +22855,23 @@ export function UsNavProvider({ figma, go, children }: { figma: string; go: Go; 
     else history.push(figma)
   }
   const prev = history.length > 1 ? history[history.length - 2] : undefined
-  const to = (f: string) => go(FIGMA_IN_OTHER_FLOWS[f] ?? idForFigma.get(f) ?? f)
+  const screenOf = (f: string) => FIGMA_IN_OTHER_FLOWS[f] ?? idForFigma.get(f) ?? f
+  const to = (f: string) => go(screenOf(f))
   const value: UsNav = {
     go: to,
+    open: (f) => { markMove(screenOf(f), 'forward'); to(f) },
     // Back = the screen shown before in the app (the preview's history spans flows, e.g. back to the Stocks home);
     // a screen opened straight from the list goes to `fallback`.
     back: (fallback) => {
       if (preview.back?.()) return
+      // Nothing to go back to: the fallback replaces this page, sliding in from the left (so its own back doesn't return here).
       const target = fallback ?? prev
-      if (target) to(target)
+      if (target) { markMove(screenOf(target), 'back'); to(target) }
+    },
+    leave: (skip, fallback) => {
+      const from = [...history].reverse().find((f) => f !== figma && !skip(f))
+      const target = from ?? fallback
+      if (target) { markMove(screenOf(target), 'back'); to(target) }
     },
     current: figma,
     prev,
@@ -22443,7 +22895,9 @@ export type UsScreenEntry = {
   /** A state the user-status settings already show on another screen (the stock page, the wallet's US tab): not listed in the preview, still a screen taps go to. */
   hidden?: boolean
   /** Screens of one group are one page in different states: moving between them doesn't push (the wallet's INR / USD tabs). */
-  group?: string }
+  group?: string
+  /** A sheet over the screen the user is on (FlowScreen.over): the screen drawn under it when opened from the list. */
+  over?: string }
 
 export const registry: UsScreenEntry[] = [
   { figma: '5796:89422', id: 'us-stocks-02', section: 'entry', name: "E1a · S&P 500 index · market open", note: "S&P 500 index page while the US market is open." },
@@ -22455,8 +22909,11 @@ export const registry: UsScreenEntry[] = [
   { figma: '5796:88163', tab: 'mutualFund', id: 'us-stocks-07', section: 'entry', name: "E5 · Mutual Fund home · US banner", note: "Mutual Fund home with a US Stocks on Lemonn banner." },
   { figma: '5826:93627', id: 'us-stocks-13', badge: 'changed', badgeNote: "Follows the user status in the prototype settings", section: 'ftux', name: "S03 · Stock page", note: "The US stock page in the user status picked in the prototype settings (User status): KYC pending → Complete KYC (as us-stocks-74); not activated, under review or failed → Activate US Stocks in place of Buy / Sell; activated → Buy / Sell (us-stocks-31), with Your Holdings when the user holds NVDA (us-stocks-32). Home, Search and Market open this page." },
   { figma: '9001:10', id: 'us-stocks-74', hidden: true, badge: 'new', badgeNote: "Not in Jojo's Figma: a user whose Lemonn KYC isn't done", section: 'ftux', name: "Stock page · KYC not done", note: "Stock page for a user whose Lemonn (Indian) KYC isn't complete: US Stocks can't be activated yet, so the button is Complete KYC (→ the KYC flow, kyc-01) in place of Activate. Back → the US tab with the KYC card (stocks-21)." },
-  { figma: '5756:71475', id: 'us-stocks-14', section: 'ftux', name: "Risk disclosure sheet", note: "Risk disclosure sheet. Agree and Continue submits the activation and lands on the under-review home (or wallet); Confirm Details and the result sheet are skipped." },
-  { figma: '5756:72486', id: 'us-stocks-15', section: 'ftux', name: "Confirm details", note: "Confirm KYC details and accept the declarations before activating." },
+  { figma: '9001:60', id: 'us-stocks-94', over: 'us-stocks-13', badge: 'new', badgeNote: "Not in Figma: replaces the risk disclosure sheet", section: 'ftux', name: "Activate · Declarations", note: "Activate US Stocks, step 1 of 2, as a bottom sheet over the screen the user tapped Activate on (Home, a stock page, the wallet …): two checkbox rows — the LRS declaration and the US tax (W-8BEN) declaration, each written beside its checkbox with the scheme / form as a link; tapping anywhere on a row ticks it. I agree and continue turns on once both are ticked → the bank sheet (us-stocks-95). Closing it goes back to the stock page. Every Activate US Stocks / Retry in the app comes here." },
+  { figma: '9001:61', id: 'us-stocks-95', over: 'us-stocks-13', badge: 'new', badgeNote: "Not in Figma: follows User status → Bank accounts", section: 'ftux', name: "Activate · Bank", note: "Step 2 of 2, swapped in on the same sheet. The user's linked banks: supported ones as radio cards tagged Eligible (the first picked already), others greyed out and tagged Not supported. Add bank (Tertiary Small, header) shows the five supported banks' logos + Add bank account. Verify and activate → the automatic bank check (us-stocks-97). With no supported bank linked it shows us-stocks-96. User status → Bank accounts: Three (+ SBI) / SBI only show both cases." },
+  { figma: '9001:62', id: 'us-stocks-96', over: 'us-stocks-13', badge: 'new', badgeNote: "Not in Figma: no supported bank linked", section: 'ftux', name: "Activate · Bank · no supported bank", note: "No supported bank linked (the user always has one — KYC adds it): a card on top says their bank can't send money abroad and shows the five supported banks' logos; then the user's own banks greyed out and tagged Not supported. Add bank account → Add bank account (deposit-12), which comes back to us-stocks-95 once verified; no Not now — closing the sheet (back, scrim) returns to the stock page." },
+  { figma: '9001:63', id: 'us-stocks-97', over: 'us-stocks-13', badge: 'new', badgeNote: "Not in Figma: the bank check", section: 'ftux', name: "Activate · Bank · verifying", note: "The bank check (run by us on the bank details we already have, no money sent, nothing for the user to do) as a loader sheet over the stock page, as in account setup; can't be closed. Moves on by itself to activation submitted (stocks-18)." },
+  { figma: '5756:72486', id: 'us-stocks-15', hidden: true, section: 'ftux', name: "Confirm details", note: "Confirm KYC details and accept the declarations before activating." },
   { figma: '5776:83524', id: 'us-stocks-20', badge: 'changed', badgeNote: "Nudge copy: the dollar has historically gained against the rupee", section: 'ftux', name: "W1 · Wallet · US tab · $0 balance", note: "USD Wallet with $0 balance. Add Money and Withdraw." },
   { figma: '5776:84630', id: 'us-stocks-21', badge: 'changed', badgeNote: "Timing is now in the bank row: “lands by Thu 8 PM”", section: 'ftux', name: "M01 · Add money · enter $", note: "Add money: type the $ to land in the US wallet on the app keypad; the ₹ you pay (incl. charges) is the line under it. Groww-style $ entry replaces Figma's ₹ field (3 Nov)." },
   { figma: '5776:85779', id: 'us-stocks-22', badge: 'changed', badgeNote: "Timing is now in the bank row: “lands by Thu 8 PM”", section: 'ftux', name: "M02 · Add money · charges breakdown", note: "Charges breakdown expanded before confirming the amount." },
@@ -22465,7 +22922,8 @@ export const registry: UsScreenEntry[] = [
   { figma: '5796:86009', id: 'us-stocks-25', badge: 'changed', badgeNote: "Timing is now in the bank row: “lands by Thu 8 PM”", section: 'ftux', name: "M05 · Add money · bank name mismatch", note: "Edge case: bank account name doesn't match KYC. Prompts a bank update." },
   { figma: '9001:20', id: 'us-stocks-75', badge: 'new', badgeNote: "Not in Figma: no bank account linked", section: 'ftux', name: "Add money · no bank account", note: "No bank linked (User status → Bank accounts: None): the bank row reads “Add a bank account” and the button is “Add bank account” → Add bank account (deposit-12), which comes back here." },
   { figma: '9001:21', id: 'us-stocks-76', badge: 'new', badgeNote: "Not in Figma: change the bank", section: 'ftux', name: "Add money · change bank", note: "The bank row (chevron) opens “Pay from”: linked banks as radio rows, picking one closes it; “Add another bank account” → Add bank account (deposit-12)." },
-  { figma: '5796:86336', id: 'us-stocks-27', section: 'ftux', name: "Bank app (placeholder)", note: "Placeholder for the bank's payment page." },
+  { figma: '5796:86336', id: 'us-stocks-27', section: 'ftux', name: "Bank app (placeholder)", note: "Placeholder for the bank's payment page. After 1 s (or a tap) it hands back to Lemonn: us-stocks-93." },
+  { figma: '9001:22', id: 'us-stocks-93', badge: 'new', badgeNote: "Back from the bank: “$50.00 is on its way” sheet", section: 'ftux', name: "Wallet · back from the bank · money sent", note: "Not in Figma. The bank's page (us-stocks-27) hands back after 1 s: the USD wallet opens with a sheet saying the payment went through, the money is on its way and lands in 1–2 working days (Paid → Sent to US → Ready to trade). Got it leaves the wallet with its pending banner (us-stocks-28)." },
   { figma: '5776:84195', id: 'us-stocks-28', badge: 'changed', badgeNote: "Pending card: “Arrives in your wallet by Thu 8 PM”", section: 'ftux', name: "Wallet · US tab · Add money transfer in progress", note: "Back from the bank. USD Wallet shows the transfer status." },
   { figma: '5826:94125', id: 'us-stocks-31', hidden: true, badge: 'changed', badgeNote: "Overview / News & Events tabs; Related ETFs and Key Holders sections", section: 'activated', name: "S03b · Stock page · activated · no holdings", note: "Stock page, activated with no holdings. Buy only." },
   { figma: '5837:94648', id: 'us-stocks-32', hidden: true, badge: 'changed', badgeNote: "Overview / News & Events tabs; Related ETFs and Key Holders sections", section: 'activated', name: "S03c · Stock page · holding", note: "Stock page when the user already holds the stock. Buy and Sell." },
@@ -22478,10 +22936,10 @@ export const registry: UsScreenEntry[] = [
   { figma: '5837:96042', id: 'us-stocks-39', section: 'activated', name: "T06 · Buy · Whole shares only", note: "Fractional shares not available for this stock. Whole shares only." },
   { figma: '5837:95972', id: 'us-stocks-40', section: 'activated', name: "T07 · Buy · Limit", note: "Limit order: buys only at the limit price or lower today." },
   { figma: '5837:95888', id: 'us-stocks-41', section: 'activated', name: "T08 · Buy · SL", note: "Stop-loss order: a trigger price places a limit order." },
-  { figma: '5852:98171', id: 'us-stocks-42', section: 'activated', name: "T11 · Buy · Fee breakdown", note: "Fee breakdown for the required amount." },
-  { figma: '5837:95677', id: 'us-stocks-43', section: 'activated', name: "T12 · Order result · Processing", note: "Order processing loader." },
+  { figma: '5852:98171', id: 'us-stocks-42', over: 'us-stocks-41', section: 'activated', name: "T11 · Buy · Fee breakdown", note: "Fee breakdown for the required amount." },
+  { figma: '5837:95677', id: 'us-stocks-43', group: 'order-status', section: 'activated', name: "T12 · Order result · Processing", note: "Minted's processing screen (19 Nov): its loader (flow option Processing animation; glass ring by default) (its running ring in discover blue) over Buy NVDA and Order in progress, no progress bar. The glass ring turns into the tick and the result lines, then T14 takes over on the same page (no slide) and rises into place." },
   { figma: '5837:95657', id: 'us-stocks-44', section: 'activated', name: "T13 · Order result · Created (US market closed)", note: "Order created while the US market is closed. Sent when it opens." },
-  { figma: '5837:95638', id: 'us-stocks-45', section: 'activated', name: "T14 · Order result · Executed", note: "Buy order executed." },
+  { figma: '5837:95638', id: 'us-stocks-45', group: 'order-status', section: 'activated', name: "T14 · Order result · Executed", note: "Buy order executed." },
   { figma: '5837:95619', id: 'us-stocks-46', section: 'activated', name: "T15 · Order result · Rejected", note: "Buy order rejected." },
   { figma: '5837:95560', id: 'us-stocks-47', section: 'activated', name: "H03 · Sell · Holding", note: "Sell sheet for a user who holds the stock." },
   { figma: '5837:95507', id: 'us-stocks-48', section: 'activated', name: "H04 · Sell · no shares", note: "Account has no shares of this stock to sell." },
@@ -22489,7 +22947,7 @@ export const registry: UsScreenEntry[] = [
   { figma: '5837:95391', id: 'us-stocks-50', section: 'activated', name: "H11 · Sell · Open buy order", note: "An open buy order exists, so some shares are on hold." },
   { figma: '5837:95371', id: 'us-stocks-51', section: 'activated', name: "H06 · Sell result · executed", note: "Sell order executed. Proceeds withdrawable after 1 working day." },
   { figma: '5837:95352', id: 'us-stocks-52', section: 'activated', name: "H07 · Sell result · rejected", note: "Sell order rejected." },
-  { figma: '5852:99084', id: 'us-stocks-53', group: 'wallet', section: 'wallet', name: "W0 · Wallet · Indian tab", note: "Wallet opens on the INR tab. USD Wallet tab is marked NEW." },
+  { figma: '5852:99084', id: 'us-stocks-53', group: 'wallet', section: 'wallet', name: "W0 · Wallet · Indian tab", note: "Wallet opens on the INR tab; tapping USD Wallet flips the body in place (same page) to the US state the user status picks. USD Wallet is tagged NEW." },
   { figma: '5852:99057', id: 'us-stocks-54', group: 'wallet', badge: 'changed', badgeNote: "Follows the user status in the prototype settings", section: 'wallet', name: "W0 · Wallet · US tab", note: "The USD wallet in the user status picked in the prototype settings (User status): not activated → Activate US Stocks card; under review, contact support, failed (us-stocks-55–57); activated → $0 (us-stocks-58), money on the way (us-stocks-28) or funded (us-stocks-59). The Indian tab's USD tab opens it." },
   { figma: '5852:99028', id: 'us-stocks-55', hidden: true, badge: 'changed', badgeNote: "Nudge copy: the dollar has historically gained against the rupee", section: 'wallet', name: "W0 · Wallet · US tab · Activation under review", note: "Activation under review, up to 1 working day." },
   { figma: '5852:98999', id: 'us-stocks-56', hidden: true, badge: 'changed', badgeNote: "Nudge copy: the dollar has historically gained against the rupee", section: 'wallet', name: "W0 · Wallet · US tab · Activation failed", note: "Activation failed: PAN couldn't be verified. Retry Activation." },
@@ -22511,6 +22969,8 @@ export const registry: UsScreenEntry[] = [
   { figma: '9001:2', id: 'us-stocks-72', badge: 'new', badgeNote: "ETF page: price, chart, Overview / Events, Buy / Sell", section: 'activated', name: "ETF page", note: "An ETF in the stock page layout: price and chart, Overview (1D and 52W range, fund details) and Events. Leveraged ETFs trade long or short." },
   { figma: '9001:6', id: 'us-stocks-73', badge: 'new', badgeNote: "Jojo's first ETF page, kept to compare", section: 'activated', name: "ETF page · previous", note: "The first ETF page (31 Oct): price line, about, opposite side and holdings, kept to compare." },
   { figma: '9001:12', id: 'us-stocks-78', badge: 'new', badgeNote: "Top holdings: the full list behind the ETF page's Others row", section: 'activated', name: "ETF · Top holdings", note: "Tap Others in the ETF page's Top holdings: a full page of the fund's top 50 holdings (as many as the sample has), biggest first — logo, name, ticker, a weight bar and the share. A row opens its stock page; back returns to the ETF page." },
+  { figma: '9001:13', id: 'us-stocks-98', badge: 'new', badgeNote: "ETFs with the stock: the full list behind the stock page's Others row", section: 'activated', name: "Stock · ETFs with the stock", note: "The stock page lists the first 5 ETFs that hold the stock, then an Others row (the next funds' logos, +N). Tapping it opens this page: every fund that holds it, in the same table (Weight / Today / Expense, or Returns). A row opens that ETF's page; back returns to the stock page." },
+  { figma: '9001:14', id: 'us-stocks-99', badge: 'new', badgeNote: "Not in Figma: the page behind Home's Fractional product card", section: 'activated', name: "Fractional shares", note: "Behind the Stocks home's Fractional card (US tab, “$1 to start”). Intro (buy any US stock or ETF from $1), a worked example from today's price ($10 in NVDA = 0.05 shares), the high-priced stocks you can buy a slice of (a row opens its stock page) and a short FAQ. Back returns to the Stocks home." },
   { figma: '9001:40', id: 'us-stocks-79', badge: 'new', badgeNote: "Order Details, from the F&O Positions & orders design", section: 'activated', name: "Order Details", note: "Tap an order in Portfolio → Orders (US): the order's page in its status — open, queued, partly filled, executed, partly executed, failed, cancelled or expired — with its details, the Order Status timeline and the actions that status allows." },
   { figma: '9001:41', id: 'us-stocks-80', badge: 'new', badgeNote: "Position Details, from the F&O Positions & orders design", section: 'activated', name: "Position Details", note: "Tap a US position in Portfolio → Positions: what was bought or sold today, the returns, Buy more / Exit position." },
   { figma: '9001:42', id: 'us-stocks-81', badge: 'new', section: 'activated', name: "Order Details · Open · Limit buy", note: "AAPL: a limit buy waiting for its price. Cancel order / Modify." },
@@ -22526,6 +22986,412 @@ export const registry: UsScreenEntry[] = [
 ]
 
 export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
+```
+
+### `src/flows/us-stocks/screens/activate/Activate.module.css`
+
+```css
+/* US Stocks activation pages: layout is L3 Section / Stack; only text styles and what those blocks don't cover. */
+
+.fine {
+  margin: 0;
+  font: var(--l3-text-description-12);
+  color: var(--l3-content-secondary);
+}
+
+.fineCentre {
+  text-align: center;
+}
+
+/* A declaration in a sheet: its checkbox, and the text beside it (the scheme / form name is a link). */
+.declaration {
+  display: block;
+  cursor: pointer;
+}
+
+.declaration > * > :first-child {
+  flex: none;
+}
+
+.declarationText {
+  display: block;
+  font: var(--l3-text-description-14);
+  color: var(--l3-content-secondary);
+}
+
+/* FLAG: inline text link — L3 Button has no inline link variant. */
+.inlineLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--l3-content-accent-discover-default);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A supported bank's short name under its logo (no-supported-bank sheet). */
+/* A linked bank US Stocks can't use: the row greyed out (its Tag says why). FLAG: ListCell has no disabled state. */
+.unsupported {
+  opacity: var(--l3-opacity-60);
+}
+```
+
+### `src/flows/us-stocks/screens/activate/ActivateSheet.tsx`
+
+```tsx
+// The frame of every Activate US Stocks step: an L3 BottomSheet over the screen the user tapped "Activate US Stocks" on
+// (Home, a stock page, the wallet …). The steps are `over` screens in the registry: the preview keeps that screen under
+// the sheet, and moving between steps only swaps the sheet. Closing it (✕, scrim, drag, back) goes back to that screen.
+// Drawn on its own (the board, or as another screen's backdrop) it sits over the stock page.
+// FLAG: own sheet layer (activation/Activation.module.css .frame / .sheets) — the screens under it have no `sheet` slot.
+import { useState, type ReactNode } from 'react'
+import { BottomSheet } from '@l3/components/BottomSheet'
+import { usePreview } from '../../../../shared/prototype'
+import { ScreenBackdrop } from '../activation/components/ScreenBackdrop'
+import { STOCK_NOT_ACTIVATED } from '../activation/ids'
+import frame from '../activation/sheets/Activation.module.css'
+
+/** How long the sheet takes to slide away before the stock page comes back (≈ L3 motion/duration-medium). */
+const CLOSE_MS = 250
+
+type ActivateSheetProps = {
+  /** Drawn behind another screen: only the stock page. */
+  backdrop?: boolean
+  header: ReactNode
+  /** The heading's id (BottomSheetHeader `headingId`). */
+  labelledBy: string
+  footer?: ReactNode
+  /** `false`: can't be closed (the bank check running). */
+  dismissible?: boolean
+  children?: ReactNode
+}
+
+export function ActivateSheet({ backdrop, header, labelledBy, footer, dismissible = true, children }: ActivateSheetProps) {
+  const { go, under } = usePreview()
+  const [layer, setLayer] = useState<HTMLDivElement | null>(null)
+  const [open, setOpen] = useState(true)
+  if (backdrop) return <ScreenBackdrop id={STOCK_NOT_ACTIVATED} />
+  // In the prototype the screen under the sheet is the one the user was on (Preview.under); on its own, the stock page.
+  const close = () => {
+    if (!dismissible) return
+    setOpen(false)
+    window.setTimeout(() => go(under ?? 'us-stocks-13'), CLOSE_MS)
+  }
+  return (
+    <div className={frame.frame}>
+      {!under && <ScreenBackdrop id={STOCK_NOT_ACTIVATED} />}
+      <div className={frame.sheets} ref={setLayer} />
+      {layer && (
+        <BottomSheet open={open} onClose={close} container={layer} aria-labelledby={labelledBy} header={header} footer={footer}>
+          {children}
+        </BottomSheet>
+      )}
+    </div>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/activate/BankCheckScreen.tsx`
+
+```tsx
+// us-stocks-95 / 96 / 97 · Activate US Stocks, step 2: the bank money for US Stocks will go from, as a bottom sheet over
+// the stock page (swapped in for the declarations sheet). Only ICICI, HDFC, Kotak, IDFC FIRST and Axis can send it (LRS
+// partners), so there are two cases (User status → Bank accounts picks which):
+// - At least one of the user's banks is supported: every linked bank is listed — the supported ones as radio rows tagged
+//   "Eligible" (the first picked already), the others greyed out and tagged "Not supported" (can't be picked). Verify and
+//   activate → we check the bank on our side (us-stocks-97, nothing for the user to do) → activation submitted. "Add bank" sits in the sheet's header: it swaps
+//   the sheet to the five supported banks' logos and Add bank account (no back arrow: L3 gives the first sheet over a
+//   screen none, so closing it closes the sheet).
+// - None is (us-stocks-96): a card on top says why — their bank can't send money abroad, these five can (logos) — then
+//   the user's own banks greyed out and tagged "Not supported", and Add bank account (the Deposit flow's, which comes
+//   back here); closing the sheet (back, scrim) returns to the stock page. The user always has a bank (KYC adds one).
+// The five supported banks' logos show only where the user has to add one (no supported bank, or "Add bank"), so the
+// list stays simple when they already have one.
+// Not in Jojo's Figma: built on 4 Nov from the brief.
+import { useId, useState } from 'react'
+import { Avatar } from '@l3/components/Avatar'
+import { BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { Card } from '@l3/components/Card'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Radio } from '@l3/components/Checkbox'
+import { Icon } from '@l3/components/Icon'
+import { ListCell } from '@l3/components/ListCell'
+import { Loader } from '@l3/components/Loader'
+import { Stack } from '@l3/components/Stack'
+import { Tag } from '@l3/components/Tag'
+import { msAdd } from '@l3/icons/material'
+import { getCompany } from '../../../../shared/data/companies'
+import { otherBank, type LinkedBank } from '../../../../shared/data/user'
+import { useAutoAdvance } from '../../../../shared/prototype'
+import { supportedBanksLine, supportedOf } from '../../../../shared/data/usBanks'
+import { bankLine } from '../../../../shared/ui/BankPicker'
+import { SupportedBanks } from '../../../../shared/ui/SupportedBanks'
+import { startAddBank, useLinkedBanks } from '../../../../shared/userStatus'
+import { useUsNav } from '../../nav'
+import { ActivateSheet } from './ActivateSheet'
+import { t } from './copy'
+import { ACTIVATE_BANK_SCREEN, ACTIVATE_VERIFYING, ACTIVATION_SUBMITTED, ADD_BANK } from './ids'
+import styles from './Activate.module.css'
+
+// The bank picked here, kept for the verifying sheet that follows (a screen of its own in the prototype).
+let pickedBankId: string | undefined
+
+/**
+ * `none`: show the no-supported-bank case whatever the user status. `verifying`: the bank check runs and moves on to
+ * activation submitted by itself.
+ */
+export function BankCheckScreen({ none = false, verifying = false, backdrop }: { none?: boolean; verifying?: boolean; backdrop?: boolean }) {
+  const { go } = useUsNav()
+  const headingId = useId()
+  // KYC needs a bank account, so the user always has at least one: with none picked (or on us-stocks-96), they show the
+  // sample account at a bank US Stocks can't use.
+  const statusBanks = useLinkedBanks()
+  const linked = none || statusBanks.length === 0 ? [otherBank] : statusBanks
+  const supported = supportedOf(linked)
+  const unsupported = linked.filter((b) => !supported.includes(b))
+  const addBank = () => { startAddBank(ACTIVATE_BANK_SCREEN, { usStocks: true }); go(ADD_BANK) }
+
+  const [picked, setPicked] = useState(() => supported.find((b) => b.id === pickedBankId)?.id ?? supported[0]?.id)
+  // "Add bank" tapped: the sheet shows which banks can be added.
+  const [adding, setAdding] = useState(false)
+
+  if (supported.length === 0) {
+    return (
+      <ActivateSheet
+        backdrop={backdrop}
+        labelledBy={headingId}
+        header={<BottomSheetHeader size="sm" heading={t('bankCheck.none.title')} headingId={headingId} description={t('bankCheck.none.description')} />}
+        footer={
+          <ButtonGroup aria-label={t('bankCheck.none.cta')}>
+            <Button size="lg" fullWidth iconLeft={<Icon icon={msAdd} />} onClick={addBank}>{t('bankCheck.none.cta')}</Button>
+          </ButtonGroup>
+        }
+      >
+        <Stack gap="24">
+          {/* Why: the user's bank can't be used, and which ones can. */}
+          <Card surface="secondary">
+            <Stack gap="16">
+              <p className={styles.declarationText}>{t('bankCheck.none.why', { bank: unsupported[0].bank, banks: supportedBanksLine() })}</p>
+              <SupportedBanks label={t('bankCheck.supportedLabel')} />
+            </Stack>
+          </Card>
+          <Stack gap="08">
+            <p className={styles.fine}>{t('bankCheck.none.yourBanks')}</p>
+            {unsupported.map((bank) => <UnsupportedBankRow key={bank.id} bank={bank} />)}
+          </Stack>
+        </Stack>
+      </ActivateSheet>
+    )
+  }
+
+  const bank = supported.find((b) => b.id === picked) ?? supported[0]
+
+  // us-stocks-97 · The bank check, run by us with the bank details we already have (no money sent). Can't be closed; moves on by itself.
+  if (verifying) return <VerifyingSheet backdrop={backdrop} bank={bankLine(bank)} />
+
+  if (adding) {
+    return (
+      <ActivateSheet
+        backdrop={backdrop}
+        labelledBy={headingId}
+        header={<BottomSheetHeader size="sm" heading={t('bankCheck.add.title')} headingId={headingId} description={t('bankCheck.add.description')} />}
+        footer={
+          <ButtonGroup aria-label={t('bankCheck.none.cta')}>
+            <Button size="lg" fullWidth iconLeft={<Icon icon={msAdd} />} onClick={addBank}>{t('bankCheck.none.cta')}</Button>
+          </ButtonGroup>
+        }
+      >
+        <SupportedBanks label={t('bankCheck.supportedLabel')} />
+      </ActivateSheet>
+    )
+  }
+
+  return (
+    <ActivateSheet
+      backdrop={backdrop}
+      labelledBy={headingId}
+      header={
+        <BottomSheetHeader
+          size="sm"
+          heading={t('bankCheck.title')}
+          headingId={headingId}
+          description={t('bankCheck.description')}
+          trailing={<Button variant="tertiary" size="sm" iconLeft={<Icon icon={msAdd} />} onClick={() => setAdding(true)}>{t('bankCheck.addAnother')}</Button>}
+        />
+      }
+      footer={
+        <ButtonGroup aria-label={t('bankCheck.actionsLabel')}>
+          <Button size="lg" fullWidth onClick={() => { pickedBankId = bank.id; go(ACTIVATE_VERIFYING) }}>{t('bankCheck.cta')}</Button>
+        </ButtonGroup>
+      }
+    >
+      <Stack gap="08" aria-label={t('bankCheck.yourBanksLabel')}>
+        {supported.map((b) => (
+          <ListCell
+            key={b.id}
+            as="label"
+            variant="card"
+            selected={b.id === bank.id}
+            iconLeft={<BankLogo bank={b} />}
+            label={bankLine(b)}
+            description={`${b.type} · ${b.branch}`}
+            trailing={
+              <Stack direction="horizontal" align="center" gap="12">
+                <Tag variant="secondary" color="success" size="sm">{t('bankCheck.eligible')}</Tag>
+                <Radio name="activate-bank" checked={b.id === bank.id} onChange={() => setPicked(b.id)} />
+              </Stack>
+            }
+          />
+        ))}
+        {unsupported.map((b) => <UnsupportedBankRow key={b.id} bank={b} />)}
+      </Stack>
+    </ActivateSheet>
+  )
+}
+
+const BankLogo = ({ bank }: { bank: LinkedBank }) => (
+  <Avatar src={getCompany(bank.logoSymbol)?.logoUrl} initials={bank.bank.slice(0, 1)} shape="rounded" size={32} label={bank.bank} />
+)
+
+/** A linked bank US Stocks money can't go from: its logo, greyed out, tagged "Not supported" — can't be picked. */
+function UnsupportedBankRow({ bank }: { bank: LinkedBank }) {
+  return (
+    <ListCell
+      variant="card"
+      className={styles.unsupported}
+      iconLeft={<BankLogo bank={bank} />}
+      label={bankLine(bank)}
+      description={`${bank.type} · ${bank.branch}`}
+      trailing={<Tag size="sm" disabled>{t('bankCheck.notEligible')}</Tag>}
+    />
+  )
+}
+
+function VerifyingSheet({ bank, backdrop }: { bank: string; backdrop?: boolean }) {
+  useAutoAdvance(backdrop ? undefined : ACTIVATION_SUBMITTED, 2200)
+  const id = useId()
+  return (
+    <ActivateSheet
+      backdrop={backdrop}
+      labelledBy={id}
+      dismissible={false}
+      header={<BottomSheetHeader size="lg" headingId={id} icon={<Loader size="lg" label={null} />} heading={t('bankVerifying.title')} description={t('bankVerifying.description', { bank })} />}
+    >
+      <p className={`${styles.fine} ${styles.fineCentre}`}>{t('bankVerifying.fine')}</p>
+    </ActivateSheet>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/activate/DeclarationsScreen.tsx`
+
+```tsx
+// us-stocks-94 · Activate US Stocks, step 1: the two declarations as a bottom sheet over the stock page, like the app's
+// "agree to our Terms & Conditions" sheet — one checkbox each with the declaration written beside it: LRS (RBI's scheme
+// for sending money abroad) and US tax (Form W-8BEN), the scheme / form as links to the full text. Not in Jojo's Figma:
+// built on 4 Nov from the brief. "I agree and continue" turns on once both are ticked → the bank sheet (us-stocks-95).
+import { useId, useState } from 'react'
+import { BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Checkbox } from '@l3/components/Checkbox'
+import { Stack } from '@l3/components/Stack'
+import { useUsNav } from '../../nav'
+import { ActivateSheet } from './ActivateSheet'
+import { t } from './copy'
+import { ACTIVATE_BANK } from './ids'
+import styles from './Activate.module.css'
+
+const DECLARATIONS = ['lrs', 'tax'] as const
+type DeclarationId = (typeof DECLARATIONS)[number]
+
+export function DeclarationsScreen({ backdrop }: { backdrop?: boolean }) {
+  const { go } = useUsNav()
+  const headingId = useId()
+  const [agreed, setAgreed] = useState<Record<DeclarationId, boolean>>({ lrs: false, tax: false })
+  const allAgreed = DECLARATIONS.every((id) => agreed[id])
+  return (
+    <ActivateSheet
+      backdrop={backdrop}
+      labelledBy={headingId}
+      header={<BottomSheetHeader size="sm" heading={t('declarations.title')} headingId={headingId} description={t('declarations.description')} />}
+      footer={
+        <ButtonGroup aria-label={t('declarations.actionsLabel')}>
+          <Button size="lg" fullWidth disabled={!allAgreed} onClick={() => go(ACTIVATE_BANK)}>{t('declarations.cta')}</Button>
+        </ButtonGroup>
+      }
+    >
+      <Stack gap="24">
+        {DECLARATIONS.map((id) => (
+          // The whole row ticks the box (a label); the link opens the full text without ticking it.
+          <label key={id} className={styles.declaration}>
+            <Stack direction="horizontal" align="start" gap="12">
+            <Checkbox checked={agreed[id]} onChange={(e) => setAgreed({ ...agreed, [id]: e.target.checked })} />
+            <span className={styles.declarationText}>
+              {t(`declarations.${id}.before`)}
+              {/* The full scheme / form text (not in the prototype). */}
+              <button type="button" className={styles.inlineLink} onClick={(e) => e.preventDefault()}>{t(`declarations.${id}.link`)}</button>
+              {t(`declarations.${id}.after`)}
+            </span>
+            </Stack>
+          </label>
+        ))}
+      </Stack>
+    </ActivateSheet>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/activate/copy.ts`
+
+```ts
+import { makeCopy } from '../../../../shared/copy'
+import copy from '../../copy.json'
+
+/** US Stocks strings for the activation pages: t('declarations.title'). */
+export const t = makeCopy('us-stocks', copy)
+```
+
+### `src/flows/us-stocks/screens/activate/ids.ts`
+
+```ts
+// The US Stocks activation pages (not in Jojo's Figma: made on 4 Nov from the brief, in the KYC flow's patterns).
+// Ids in the 9001: range like the other screens Figma doesn't have.
+export const ACTIVATE_DECLARATIONS = '9001:60'
+/** Bank verification, following "User status → Bank accounts": a supported bank linked → pick + automatic check; none → add one. */
+export const ACTIVATE_BANK = '9001:61'
+/** Bank verification with no supported bank linked, whatever the user status (to show that state in the list). */
+export const ACTIVATE_BANK_NONE = '9001:62'
+/** The bank check running over the bank page; moves on by itself. */
+export const ACTIVATE_VERIFYING = '9001:63'
+
+/** Activation submitted: the Stocks home's under-review US tab with its "activation under review" sheet. */
+export const ACTIVATION_SUBMITTED = 'stocks-18'
+/** Add bank account (the Deposit flow); it comes back here once the account is verified. */
+export const ADD_BANK = 'deposit-12'
+/** The app's screen id of the bank page, which "Add bank account" returns to. */
+export const ACTIVATE_BANK_SCREEN = 'us-stocks-95'
+```
+
+### `src/flows/us-stocks/screens/activate/index.tsx`
+
+```tsx
+// Activate US Stocks: two bottom sheets over the stock page — the declarations (LRS, US tax), then the bank (pick a
+// supported one, checked automatically, or add one). They replace the risk disclosure sheet (removed 4 Nov). Every "Activate US
+// Stocks" / "Retry" goes here.
+import type { UsScreenMap } from '../types'
+import { BankCheckScreen } from './BankCheckScreen'
+import { DeclarationsScreen } from './DeclarationsScreen'
+import { ACTIVATE_BANK, ACTIVATE_BANK_NONE, ACTIVATE_DECLARATIONS, ACTIVATE_VERIFYING } from './ids'
+
+export const screens: UsScreenMap = {
+  [ACTIVATE_DECLARATIONS]: DeclarationsScreen,
+  [ACTIVATE_BANK]: ({ backdrop }) => <BankCheckScreen backdrop={backdrop} />,
+  [ACTIVATE_BANK_NONE]: ({ backdrop }) => <BankCheckScreen none backdrop={backdrop} />,
+  [ACTIVATE_VERIFYING]: ({ backdrop }) => <BankCheckScreen verifying backdrop={backdrop} />,
+}
 ```
 
 ### `src/flows/us-stocks/screens/activation/StockPage.module.css`
@@ -22544,13 +23410,6 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
   width: var(--l3-size-tap-target);
   height: var(--l3-size-tap-target);
   position: absolute;
-}
-
-.assetHeader {
-  gap: var(--l3-spacing-24);
-  padding: var(--l3-spacing-08) var(--l3-spacing-16) 0;
-  flex-direction: column;
-  display: flex;
 }
 
 /* ≈ ₹ under the $ price: 10, secondary. */
@@ -22645,8 +23504,6 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 /* FLAG: hand-drawn price chart (svg line + positioned dot/halo) — L3 has a Chart component */
 .chart {
   height: 184px; /* FLAG: raw px */
-  margin: var(--l3-spacing-24) 0 var(--l3-spacing-16);
-  padding: 0 var(--l3-spacing-16);
   display: flex;
   position: relative;
 }
@@ -22711,25 +23568,6 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 
 .yAxis span:first-child {
   color: var(--l3-content-primary);
-}
-
-.tabsAndContent {
-  gap: var(--l3-spacing-24);
-  padding: 0 var(--l3-spacing-16) var(--l3-spacing-14);
-  flex-direction: column;
-  display: flex;
-}
-
-.tabsBlock {
-  gap: var(--l3-spacing-24);
-  flex-direction: column;
-  display: flex;
-}
-
-.tabsBlock > .flatTabs.flatTabs {
-  width: calc(100% + 2 * var(--l3-spacing-16));
-  max-width: none;
-  margin-inline: calc(-1 * var(--l3-spacing-16));
 }
 
 /* FLAG: hand-made range meter */
@@ -22854,7 +23692,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 }
 
 .statLabel {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12); /* a stat's name is description text, not a label (17 Nov) */
   color: var(--l3-content-secondary);
 }
 
@@ -22925,7 +23763,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
   border-radius: var(--l3-radius-12);
   background: var(--l3-surface-primary);
   box-shadow: inset 0 0 0 1px var(--l3-border-light);
-  font: var(--l3-text-label-16);
+  font: var(--l3-text-label-14);
   color: var(--l3-content-primary);
   text-align: left;
   cursor: pointer;
@@ -23014,7 +23852,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 
 .ratingLabel {
   width: var(--l3-size-32);
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
 }
 
@@ -23095,7 +23933,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 }
 
 .kv dt {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
 }
 
@@ -23152,7 +23990,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 
 .legend {
   gap: var(--l3-spacing-16);
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   display: flex;
 }
@@ -23190,7 +24028,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 
 .grid span {
   width: var(--axis);
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   text-align: right;
   white-space: nowrap;
@@ -23234,7 +24072,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 }
 
 .fy {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   white-space: nowrap;
   position: absolute;
@@ -23271,7 +24109,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 
 .yoy {
   width: 72px; /* FLAG: raw px */
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   text-align: right;
 }
@@ -23387,19 +24225,6 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
   color: var(--l3-content-accent-discover-default);
 }
 
-/* FLAG: hand-made exchange picker (L3 Select / Tag) */
-.exchange {
-  align-items: center;
-  gap: var(--l3-spacing-04);
-  font: var(--l3-text-label-12);
-  color: var(--l3-content-accent-discover-default);
-  cursor: pointer;
-  background: 0 0;
-  border: 0;
-  padding: 0;
-  display: inline-flex;
-}
-
 /* FLAG: hand-made logo disc (L3 Avatar / BrandLogo) */
 .logoDisc {
   border-radius: var(--l3-radius-full);
@@ -23460,28 +24285,29 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
   rotate: 0deg;
 }
 
-.ringTrack {
-  stroke: var(--l3-border-intense);
-  stroke-width: 4px; /* FLAG: raw px */
+.ring .ringTrack {
+  stroke: none; /* no grey border round the disc (18 Nov, the user's call; was a 6 wide band) */
 }
 
+/* The disc's gradient (Figma Ellipse 6890: #101110 at the top to #153023 at the foot in dark): the page's darkest
+   surface to a dark green — 25% of the success green on the card's surface. */
 .discTop {
-  stop-color: var(--l3-surface-primary);
+  stop-color: var(--l3-surface-default);
 }
 
 .discFoot {
   stop-color: color-mix(
     in srgb,
-    var(--l3-content-accent-success-default) 18%,
+    var(--l3-content-accent-success-default) 25%,
     var(--l3-surface-primary)
   );
 }
 
-/* One arc per rating (butt ends, gaps come from the dash lengths, as in the ETF Allocation donut). */
+/* One arc per rating (round ends since 18 Nov, gaps come from the dash lengths, as in the ETF Allocation donut). */
 .ring .arc {
   fill: none;
   stroke-width: 5px; /* FLAG: raw px (svg units) */
-  stroke-linecap: butt;
+  stroke-linecap: round; /* round ends (18 Nov, the user's call; was butt) */
 }
 
 .ring .arc[data-tone='up'] {
@@ -23522,20 +24348,20 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 
 .rateCard .ratingLabel {
   width: auto;
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
 }
 
 .rateCard .ratingValue {
   width: auto;
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-heading-12);
   text-align: left;
 }
 
 .rateFoot {
   padding-top: var(--l3-spacing-12);
   border-top: 1px solid var(--l3-border-light);
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   justify-content: space-between;
   align-items: center;
@@ -23567,7 +24393,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 }
 
 .fundCell dt {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12); /* a stat's name is description text, not a label (17 Nov) */
   color: var(--l3-content-secondary);
 }
 
@@ -23593,7 +24419,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
   align-items: center;
   gap: var(--l3-spacing-06);
   margin: var(--l3-spacing-04) 0 0;
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-accent-indicator-up-default);
   display: flex;
 }
@@ -23663,6 +24489,10 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
   scrollbar-width: none;
   display: flex;
   overflow-x: auto;
+  /* Room for the cards' shadow: a sideways scroller clips vertically too, so it pads 12 above and below and takes it
+     back with a negative margin (same layout, shadow not cut). */
+  padding-block: var(--l3-spacing-12);
+  margin-block: calc(-1 * var(--l3-spacing-12));
 }
 
 .etfs::-webkit-scrollbar {
@@ -23716,7 +24546,7 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 }
 
 .etfName {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -23737,6 +24567,47 @@ export const idForFigma = new Map(registry.map((s) => [s.figma, s.id]))
 .etfPrice [data-change][data-up] {
   color: var(--l3-content-accent-indicator-up-default);
 }
+
+/* Figma 6538:84949: the sections sit straight on the page (no tabs), 16 at the sides, 32 apart and 32 under the chart. */
+.overview[data-details] {
+  padding: var(--l3-spacing-32) var(--l3-spacing-16);
+}
+
+/* The rating ring as Figma's layers (6538:85139). Its own classes, so the older `.ring circle` rule (fill: none, a 6px
+   grey stroke) no longer wipes the disc's gradient and track. FLAG: raw SVG units. */
+.ratingRing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ratingDisc {
+  stroke: var(--l3-border-intense); /* Figma #292C2B in dark */
+  stroke-width: 4px; /* FLAG: raw px (svg units) */
+}
+.ratingArc {
+  fill: none;
+  stroke-width: 4.5px; /* FLAG: raw px (svg units) — Figma's band, 31.5 to 36 */
+  stroke-linecap: round;
+}
+.ratingArc[data-tone='up'] {
+  stroke: var(--l3-content-accent-indicator-up-default); /* Figma #37AD75 */
+}
+.ratingArc[data-tone='warning'] {
+  stroke: var(--l3-surface-accent-warning-default); /* Figma #F6C12F */
+}
+.ratingArc[data-tone='down'] {
+  stroke: var(--l3-content-accent-indicator-down-default); /* Figma #E5505F */
+}
+
+/* Analyst Ratings card as Figma 6538:85135: surface/primary with the intense border, bars 6 tall. Its rows and footer
+   were 10 here (Figma); 19 Nov they follow the page instead — names Description 12 secondary, figures Heading 12, as
+   the stat cards (the rules above). */
+.rateCard {
+  background: var(--l3-surface-primary);
+  box-shadow: inset 0 0 0 1px var(--l3-border-intense);
+}
 ```
 
 ### `src/flows/us-stocks/screens/activation/StockPage.tsx`
@@ -23751,29 +24622,45 @@ import { emailSupport } from '../../../../shared/support'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { Actionbar, ActionbarAction } from '@l3/components/Actionbar'
 import { Button } from '@l3/components/Button'
-import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Icon } from '@l3/components/Icon'
 import { PriceChange } from '@l3/components/PriceChange'
+import { Stack } from '@l3/components/Stack'
+import { Inset } from '@l3/components/Inset'
 import { Tabs } from '@l3/components/Tabs'
 import { Tag } from '@l3/components/Tag'
 import { Phone } from '../../components/Phone'
 import { asset } from '../../asset'
 import { currentStock } from '../../data'
+import { useFlowOption } from '../../../../shared/prototype'
 import { useLiveQuote } from '../../../../shared/data/live'
-import { usQuote } from '../../../../shared/data/usStocks'
+import { usLogo, usQuote } from '../../../../shared/data/usStocks'
+import { usShortName } from '../../../../shared/data/usShortNames'
 import { Usd, formatInr, useUsd, useUsdInrRate } from '../../../../shared/money'
 import { useUsNav } from '../../nav'
 import { ImgIcon } from './components/ImgIcon'
 import { NEWS, PERIODS, periodReturn, priceSeries, type NewsItem } from './data'
-import { swapIcon } from './icons'
 import {
-  AboutCompany, AnalystRatings, DailyPerformance, Events, Financials, Fundamentals, HoldingsSection, KeyHolders, News, Peers, RelatedEtfs, stockDayStats,
+  AboutCompany, AnalystRatings, DailyPerformance, Events, Financials, Fundamentals, HoldingsSection, KeyHolders, News, Peers, EtfsWithStock, BoostedOnStock, stockDayStats,
 } from './sections'
 import {
   BUY_PAD, KYC_START, RISK_DISCLOSURE, SELL_PAD_HOLDING, SELL_PAD_NO_HOLDINGS,
 } from './ids'
 import { EtfMove } from '../etf/parts'
+import { COMPANY_PROFILES } from './companyProfiles'
+import { FUNDAMENTALS } from './data'
+import { AboutBlock, AssetDock, AssetTitle, CandleChart, DetailsSheet, LogoImg, StatChips, TradeDock, detailsPhone } from './details'
+import { msBookmark } from '@l3/icons/material'
 import styles from './StockPage.module.css'
+import { TopBarAction } from '../../../../shared/ui/TopBarAction'
+
+/** The "≈ ₹" line under the price: hidden for now (4 Nov), kept to turn back on. */
+const SHOW_PRICE_INR = false
+/** The detail page from Figma 6538:84949 (8 Nov, from the jojo branch), "F1". Archived 18 Nov (the user's call): the
+ *  Classic page (tabs, line chart) is the only one; the F1 code stays, switched off here. Shared with the ETF page. */
+const F1_DETAILS = false
+export function useF1Details() {
+  return F1_DETAILS
+}
 
 /** kyc-pending: the user's Lemonn KYC isn't done, so US Stocks can't be activated yet (not in Jojo's Figma). */
 export type StockState = 'kyc-pending' | 'not-activated' | 'review' | 'support' | 'failed' | 'no-holdings' | 'holding'
@@ -23794,10 +24681,12 @@ export function activationFooter(state: StockState, go: (figma: string) => void)
     : state === 'failed' ? <Button variant="primary" size="lg" fullWidth onClick={() => go(RISK_DISCLOSURE)}>Retry activation</Button>
     : null
   if (!button) return null
-  return <ButtonGroup aria-label="US Stocks" direction="horizontal" scrollIndicator>{button}</ButtonGroup>
+  return <AssetDock label="US Stocks">{button}</AssetDock>
 }
 
+
 export function StockPage({ state, backdrop, emptyWallet }: { state: StockState; backdrop?: boolean; emptyWallet?: boolean }) {
+  const f1Details = useF1Details()
   const { go, back } = useUsNav()
   const usd = useUsd()
   const snapshotStock = currentStock()
@@ -23807,7 +24696,7 @@ export function StockPage({ state, backdrop, emptyWallet }: { state: StockState;
   const usdInr = useUsdInrRate()
   const quote = usQuote(stock.sym)
   const isNvda = stock.sym === 'NVDA'
-  const shortName = isNvda ? 'NVIDIA' : stock.name.split(' ')[0]
+  const shortName = usShortName(stock.sym, stock.name)
   // The day's range is real (the snapshot) when it has one, else the NVDA sample scaled to this price.
   const scale = snapshotStock.price / 188.42
   const low = Math.min(quote?.dayLow ?? 185.9 * scale, stock.price)
@@ -23849,141 +24738,203 @@ export function StockPage({ state, backdrop, emptyWallet }: { state: StockState;
       onBack={() => back('stocks-01')}
       title={scrolled ? stock.name : undefined}
       description={scrolled ? <><Usd value={stock.price} layout="inline" /> <EtfMove change={stock.change} /></> : undefined}
-      actions={<ActionbarAction icon={asset('assets/activation/watchlist.svg')} label={`Add ${stock.sym} to watchlist`} onClick={() => {}} />}
+      actions={<TopBarAction icon={asset('assets/activation/watchlist.svg')} label={`Add ${stock.sym} to watchlist`} onClick={() => {}} />}
     />
   )
 
+  // Figma 6538:84949: the alert bell · Buy · Sell dock (L3 buy / sell, 40 tall as in Figma).
   const footer = activationFooter(state, go) ?? (
-    <ButtonGroup aria-label={`Trade ${shortName}`} direction="horizontal" scrollIndicator>
-      <Button variant="buy" size="lg" onClick={() => go(emptyWallet ? BUY_PAD_EMPTY_WALLET : BUY_PAD)}>Buy</Button>
-      <Button variant="sell" size="lg" onClick={() => go(state === 'holding' ? SELL_PAD_HOLDING : SELL_PAD_NO_HOLDINGS)}>
-        Sell
-      </Button>
-    </ButtonGroup>
+    <TradeDock
+      buy="Buy"
+      sell="Sell"
+      onBuy={() => go(emptyWallet ? BUY_PAD_EMPTY_WALLET : BUY_PAD)}
+      onSell={() => go(state === 'holding' ? SELL_PAD_HOLDING : SELL_PAD_NO_HOLDINGS)}
+    />
   )
+  // The company's real logo: the stock's own, else the shared US logos (Microsoft's had fallen back to an "M").
+  const logoSrc = isNvda ? asset('assets/activation/nvda-logo.svg') : stock.logo ? (/^(\/|https?:)/.test(stock.logo) ? stock.logo : asset(stock.logo)) : usLogo(stock.sym)
+  const logo = <LogoImg src={logoSrc} plate={stock.plate} size={32} fallback={stock.sym[0]} />
+  const aboutLogo = <LogoImg src={logoSrc} plate={stock.plate} size={40} fallback={stock.sym[0]} />
+  const fundamental = (label: string) => FUNDAMENTALS.find(([k]) => k === label)?.[1] ?? '—'
+
+  // Figma 6538:84949 (8 Nov): one long page, no Overview / News tabs. Title · stat chips · candles, then the sections in
+  // Figma's order with the three it doesn't draw kept (the user's call): Your Holdings (when held) and Daily Performance
+  // first, Analyst Ratings, Fundamentals, Company financials, News, Peers, Key Holders, and About at the end.
+  // Events (the old News & Events tab) aren't on this page.
+  if (f1Details) {
+    // Figma: the bar's icons are plain (no boxes) — back and the bookmark.
+    const f1Header = (
+      <Actionbar
+        onBack={() => back('stocks-01')}
+        title={scrolled ? stock.name : undefined}
+        description={scrolled ? <><Usd value={stock.price} layout="inline" /> <EtfMove change={stock.change} /></> : undefined}
+        actions={<ActionbarAction icon={msBookmark} variant="ghost" label={`Add ${stock.sym} to watchlist`} onClick={() => {}} />}
+      />
+    )
+    return (
+      <Phone label={stock.name} header={f1Header} footer={footer} surface="primary" gesture="none" bodyRef={setBody} className={[detailsPhone, backdrop && styles.still].filter(Boolean).join(' ')}>
+        <AssetTitle logo={logo} name={stock.name} price={stock.price} changePct={stock.change} />
+        <StatChips
+          items={[
+            { label: 'Market Cap', value: <Usd text={fundamental('Mkt Cap')} /> },
+            { label: 'P/E Ratio (TTM)', value: fundamental('P/E Ratio (TTM)'), info: true },
+            { label: '24H High / Low', value: <><Usd value={high} layout="inline" /> / <Usd value={low} layout="inline" /></> },
+            // Figma's row has four cards, the last running off the edge (it scrolls); its fourth repeats "24 High / Low",
+            // so the 52-week range here.
+            { label: '52W High / Low', value: <><Usd value={Math.max(quote?.high52 ?? high, stock.price)} layout="inline" /> / <Usd value={Math.min(quote?.low52 ?? low, stock.price)} layout="inline" /></> },
+          ]}
+        />
+        <DetailsSheet>
+          <CandleChart sym={stock.sym} name={shortName} price={stock.price} dayPct={stock.change} />
+          <div className={styles.overview} data-details="">
+            {state === 'holding' && <HoldingsSection stock={stock} dayChange={dayChangeAbs} />}
+            <DailyPerformance price={stock.price} low={low} high={high} stats={stockDayStats(stock)} />
+            <AnalystRatings />
+            <Fundamentals />
+            <Financials />
+            <News items={news} stock={shortName} />
+            <Peers stock={stock} />
+            <EtfsWithStock sym={stock.sym} name={shortName} />
+            <BoostedOnStock sym={stock.sym} name={shortName} />
+            <KeyHolders />
+          </div>
+          <AboutBlock logo={aboutLogo} title={`About ${shortName}`} text={COMPANY_PROFILES[stock.sym] ?? `${stock.name} is listed on the ${stock.exchange ?? 'NASDAQ'} and trades in US dollars.`} />
+        </DetailsSheet>
+      </Phone>
+    )
+  }
 
   return (
     <Phone label={stock.name} header={header} footer={footer} gesture="none" bodyRef={setBody} className={backdrop ? styles.still : undefined}>
-      <div className={styles.assetHeader}>
-        <div className={styles.titleRow}>
-          <div className={styles.namePrice}>
-            <h1 className={styles.name}>{stock.name}</h1>
-            <div className={styles.priceRow}>
-              <span className={styles.price}><Usd value={stock.price} layout="inline" /></span>
-              <span className={styles.change}>
-                <PriceChange value={periodPct} size="lg" />
-                <span
-                  className={styles.changeAbs}
-                  data-down={periodChangeAbs < 0 || undefined}
-                  aria-label={`${periodChangeAbs < 0 ? 'down' : 'up'} ${usd(Math.abs(periodChangeAbs))} over ${period}`}
-                >
-                  (<Usd value={periodChangeAbs} sign layout="inline" />) {period}
-                </span>
-              </span>
-            </div>
-            {/* The price in rupees at the live rate, always, small under the $ (no $ / ₹ switch on this page). */}
-            <span className={styles.priceInr}>≈ {formatInr(stock.price * usdInr)}</span>
-          </div>
-          {isNvda ? (
-            <img src={asset('assets/activation/nvda-logo.svg')} alt="" width={44} height={44} />
-          ) : (
-            <span
-              className={styles.logoDisc}
-              style={stock.plate ? ({ '--plate': stock.plate } as CSSProperties) : undefined}
-              aria-hidden="true"
-            >
-              {stock.logo ? <img src={/^(\/|https?:)/.test(stock.logo) ? stock.logo : asset(stock.logo)} alt="" /> : stock.sym[0]}
-            </span>
-          )}
-        </div>
-        <div className={styles.tagsRow}>
-          <div className={styles.tags}>
-            <Tag variant="tertiary" color="neutral" size="md">Technology</Tag>
-            <Tag variant="tertiary" color="neutral" size="md">Large Cap</Tag>
-          </div>
-          <div className={styles.chartActions}>
-            <button type="button" className={styles.tradingView} aria-label="Open TradingView chart">
-              <ImgIcon src="assets/activation/tradingview.svg" w={16} h={12} />
-            </button>
-            <button type="button" className={styles.exchange} aria-label={`Exchange: ${stock.exchange ?? 'NASDAQ'}`}>
-              {stock.exchange ?? 'NASDAQ'}
-              <Icon icon={swapIcon} size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.chart} role="img" aria-label={`${shortName} price over ${period}, ${usd(chartLow)} to ${usd(chartHigh)}`}>
-        <div className={styles.plot} data-down={periodPct < 0 || undefined}>
-          <span className={styles.line} style={{ '--y': `${yOf(stock.price)}%` } as CSSProperties}>
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              <polyline points={linePoints} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-            </svg>
-            <span className={styles.halo} />
-            <span className={styles.dot} />
-          </span>
-        </div>
-        <div className={styles.yAxis} aria-hidden="true">
-          {yAxis.map((p) => (
-            <span key={p}>{p}</span>
-          ))}
-        </div>
-      </div>
-
-      <div className={styles.tabsAndContent}>
-        <Tabs
-                    appearance="pill-group"
-          size="sm"
-          width="fill"
-          aria-label="Chart period"
-          value={period}
-          onChange={setPeriod}
-          items={PERIODS.map((p) => ({ value: p, label: p }))}
-        />
-        <div className={styles.tabsBlock}>
-          <Tabs
-            appearance="underline"
-            width="fill"
-            aria-label="Stock sections"
-            className={styles.flatTabs}
-            value={tab}
-            onChange={setTab}
-            items={[
-              { value: 'overview', label: 'Overview' },
-              { value: 'news', label: 'News & Events' },
-            ]}
-          />
-          {tab === 'news' ? (
-            <div className={styles.feed}>
-              <Tabs
-                appearance="pill"
-                size="sm"
-                aria-label="Show"
-                value={feed}
-                onChange={setFeed}
-                items={[
-                  { value: 'events', label: 'Events' },
-                  { value: 'news', label: 'News' },
-                ]}
-              />
-              {feed === 'events' ? <Events /> : <News items={news} stock={shortName} />}
-            </div>
-          ) : (
-            <div className={styles.overview}>
-              {state === 'holding' && <HoldingsSection stock={stock} dayChange={dayChangeAbs} />}
-              <DailyPerformance price={stock.price} low={low} high={high} stats={stockDayStats(stock)} />
-              <AnalystRatings />
-              <Fundamentals />
-              <AboutCompany stock={stock} />
-              <Peers stock={stock} />
-              {/* Related ETFs (leveraged only) are off for now (2 Nov). */}
-              {false && <RelatedEtfs sym={stock.sym} />}
-              <KeyHolders />
-              <Financials />
-            </div>
-          )}
-        </div>
-      </div>
+      {/* The body (8 Nov, the user's call): one column, 24 between its two containers. 1 · the summary (name, price,
+          tags) and the chart with its periods, in the page's 16 gutter. 2 · the sections: their underline tabs edge to
+          edge, then the open tab's content in the gutter. No container pads or margins itself. */}
+      <Inset paddingInline="00" paddingBlock="08">
+        <Stack gap="24">
+          <Inset paddingInline="16" paddingBlock="00">
+            <Stack gap="24">
+              <Stack gap="24">
+                <div className={styles.titleRow}>
+                  <div className={styles.namePrice}>
+                    <h1 className={styles.name}>{stock.name}</h1>
+                    <div className={styles.priceRow}>
+                      <span className={styles.price}><Usd value={stock.price} layout="inline" /></span>
+                      <span className={styles.change}>
+                        <PriceChange value={periodPct} size="lg" />
+                        <span
+                          className={styles.changeAbs}
+                          data-down={periodChangeAbs < 0 || undefined}
+                          aria-label={`${periodChangeAbs < 0 ? 'down' : 'up'} ${usd(Math.abs(periodChangeAbs))} over ${period}`}
+                        >
+                          (<Usd value={periodChangeAbs} sign layout="inline" />) {period}
+                        </span>
+                      </span>
+                    </div>
+                    {/* The price in rupees at the live rate, small under the $ — hidden for now (SHOW_PRICE_INR). */}
+                    {SHOW_PRICE_INR && <span className={styles.priceInr}>≈ {formatInr(stock.price * usdInr)}</span>}
+                  </div>
+                  {isNvda ? (
+                    <img src={asset('assets/activation/nvda-logo.svg')} alt="" width={44} height={44} />
+                  ) : (
+                    <span
+                      className={styles.logoDisc}
+                      style={stock.plate ? ({ '--plate': stock.plate } as CSSProperties) : undefined}
+                      aria-hidden="true"
+                    >
+                      {/* The same logo as the rest of the page (logoSrc: the stock's own, else the US logo catalogue —
+                          18 Nov: AMZN, AAPL … showed only their initial here). */}
+                      {logoSrc ? <img src={logoSrc} alt="" /> : stock.sym[0]}
+                    </span>
+                  )}
+                </div>
+                <div className={styles.tagsRow}>
+                  <div className={styles.tags}>
+                    <Tag variant="tertiary" color="neutral" size="sm">Technology</Tag>
+                    <Tag variant="tertiary" color="neutral" size="sm">Large Cap</Tag>
+                  </div>
+                  <div className={styles.chartActions}>
+                    <button type="button" className={styles.tradingView} aria-label="Open TradingView chart">
+                      <ImgIcon src="assets/activation/tradingview.svg" w={16} h={12} />
+                    </button>
+                  </div>
+                </div>
+              </Stack>
+              <Stack gap="16">
+                <div className={styles.chart} role="img" aria-label={`${shortName} price over ${period}, ${usd(chartLow)} to ${usd(chartHigh)}`}>
+                  <div className={styles.plot} data-down={periodPct < 0 || undefined}>
+                    <span className={styles.line} style={{ '--y': `${yOf(stock.price)}%` } as CSSProperties}>
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        <polyline points={linePoints} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                      </svg>
+                      <span className={styles.halo} />
+                      <span className={styles.dot} />
+                    </span>
+                  </div>
+                  <div className={styles.yAxis} aria-hidden="true">
+                    {yAxis.map((p) => (
+                      <span key={p}>{p}</span>
+                    ))}
+                  </div>
+                </div>
+                <Tabs
+                            appearance="pill-group"
+                  size="sm"
+                  width="fill"
+                  aria-label="Chart period"
+                  value={period}
+                  onChange={setPeriod}
+                  items={PERIODS.map((p) => ({ value: p, label: p }))}
+                />
+              </Stack>
+            </Stack>
+          </Inset>
+          <Stack gap="24">
+            <Tabs
+              appearance="underline"
+              width="fill"
+              aria-label="Stock sections"
+              value={tab}
+              onChange={setTab}
+              items={[
+                { value: 'overview', label: 'Overview' },
+                { value: 'news', label: 'News & Events' },
+              ]}
+            />
+            <Inset paddingInline="16" paddingBlock="00">
+              {tab === 'news' ? (
+                <div className={styles.feed}>
+                  <Tabs
+                    appearance="pill"
+                    size="sm"
+                    aria-label="Show"
+                    value={feed}
+                    onChange={setFeed}
+                    items={[
+                      { value: 'events', label: 'Events' },
+                      { value: 'news', label: 'News' },
+                    ]}
+                  />
+                  {feed === 'events' ? <Events /> : <News items={news} stock={shortName} />}
+                </div>
+              ) : (
+                <div className={styles.overview}>
+                  {state === 'holding' && <HoldingsSection stock={stock} dayChange={dayChangeAbs} />}
+                  <DailyPerformance price={stock.price} low={low} high={high} stats={stockDayStats(stock)} />
+                  <AnalystRatings />
+                  <Fundamentals />
+                  <AboutCompany stock={stock} />
+                  <Peers stock={stock} />
+                  <EtfsWithStock sym={stock.sym} name={shortName} />
+                  {/* Related ETFs (19 Nov): the Boosted funds on this stock, long and short (sections.tsx). */}
+                  <BoostedOnStock sym={stock.sym} name={shortName} />
+                  <KeyHolders />
+                  <Financials />
+                </div>
+              )}
+            </Inset>
+          </Stack>
+        </Stack>
+      </Inset>
     </Phone>
   )
 }
@@ -24144,6 +25095,12 @@ export function ImgIcon({ src, w, h = w, className }: { src: string; w: number; 
   text-align: right;
 }
 
+/* The figures sit in a highlight box 4 in from the cell's edge (.figure): the column names take the same inset, so
+   each name lines up with the numbers under it (17 Nov). */
+.tr[data-head] > :not(:first-child) {
+  padding-inline-end: var(--l3-spacing-04);
+}
+
 .tr[data-self] {
   cursor: default;
 }
@@ -24157,6 +25114,10 @@ export function ImgIcon({ src, w, h = w, className }: { src: string; w: number; 
 
 
 .num {
+  /* A figure wider than its column (+19.84%) spills to the left, so its right edge stays under the column name. */
+  justify-content: flex-end;
+  white-space: nowrap;
+  display: flex;
   font: var(--l3-text-label-12);
   color: var(--l3-content-primary);
   font-variant-numeric: tabular-nums;
@@ -24172,8 +25133,8 @@ export function ImgIcon({ src, w, h = w, className }: { src: string; w: number; 
 
 /* FLAG: hand-made logo disc (L3 Avatar / BrandLogo) */
 .logo {
-  width: var(--l3-size-24);
-  height: var(--l3-size-24);
+  width: var(--l3-size-32); /* 24 → 32 (19 Nov, the user's call) */
+  height: var(--l3-size-32);
   border-radius: var(--l3-radius-full);
   background: var(--l3-surface-tertiary);
   font: var(--l3-text-label-12);
@@ -24191,10 +25152,6 @@ export function ImgIcon({ src, w, h = w, className }: { src: string; w: number; 
   padding: 14%;
 }
 
-.logo[data-plate] {
-  border: 1px solid var(--l3-border-light);
-}
-
 .logo[data-fill] img {
   object-fit: cover;
   padding: 0;
@@ -24202,22 +25159,19 @@ export function ImgIcon({ src, w, h = w, className }: { src: string; w: number; 
 
 
 .cardName {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-label-14); /* 12 → 14 (19 Nov) */
   color: var(--l3-content-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
 }
 
-/* The best figure of a % column: a light yellow highlight behind it. */
+/* A figure cell. The best figure's light yellow highlight was removed from every table (19 Nov, the user's call);
+   `data-best` still marks it, unstyled. */
 .figure {
   display: inline-block;
   padding: var(--l3-spacing-02) var(--l3-spacing-04);
   border-radius: var(--l3-radius-04);
-}
-
-.num[data-best] .figure {
-  background: var(--l3-surface-accent-warning-light);
 }
 ```
 
@@ -24225,8 +25179,8 @@ export function ImgIcon({ src, w, h = w, className }: { src: string; w: number; 
 
 ```tsx
 // "Peers" section: this stock first (styled like the others, so it's easy to compare against) and five peers; the
-// header cell cycles Overview / Returns / Ratios, rows open the peer's page. In each % column the best figure sits on a
-// light yellow (warning light) highlight.
+// header cell cycles Overview / Returns / Ratios, rows open the peer's page. No figure is highlighted (the yellow
+// best-figure highlight was removed from every table, 19 Nov).
 // FLAG: hand-made table (div role=table) with row buttons and a hand-made logo disc — L3 has no table; the logo is not L3 Avatar / BrandLogo.
 // FLAG: layout is raw display:flex/grid + gap/padding instead of L3 Stack/Grid.
 import { useState } from 'react'
@@ -24252,7 +25206,7 @@ function CompanyLogo({ sym }: { sym: string }) {
       style={{ background: src && !fill ? plateFor(sym) : undefined }}
       aria-hidden="true"
     >
-      {src ? <img src={src} alt="" /> : sym.slice(0, 2)}
+      {src ? <img src={src} alt="" /> : sym.slice(0, 1)}
     </span>
   )
 }
@@ -24355,21 +25309,80 @@ export function PeerTable({ stock, onOpen }: { stock: UsStock; onOpen: (peer: { 
 ### `src/flows/us-stocks/screens/activation/components/RatingRing.tsx`
 
 ```tsx
-// The rating gauge's ring: a disc with one arc per rating (buy green, hold yellow, sell red), sized by its share and
+// The rating gauge's ring, as Figma's layers draw it (6538:85139, 8 Nov), bottom to top:
+//   1. the disc (r 34): a 4px track, filled with a gradient — surface at the top to a dark green at the foot;
+//   2. three arcs on the track, 4.5 wide with round ends, all starting at 12 o'clock and running clockwise, stacked so
+//      the longest is at the back: Sell (red) to the end of all three, Hold (yellow) to the end of Buy + Hold, Buy
+//      (green) on top — so each shows its share, and the ring ends in a gap before 12 o'clock.
+// FLAG: hand-drawn gauge — L3 has no rating gauge; raw SVG circles (StockPage.module.css .ratingRing).
+//
+// The earlier page's ring (kept as it was): a disc with one arc per rating (buy green, hold yellow, sell red), sized by its share and
 // starting at the top, with a small gap between arcs — the same way the ETF page's Allocation donut is drawn.
 // FLAG: hand-drawn gauge — L3 has no rating gauge; arcs are raw SVG circles.
+import { useId } from 'react'
+import { useF1Details } from '../StockPage'
 import { RATINGS } from '../data'
 import styles from '../StockPage.module.css'
 
-const RING = { r: 32, gap: 2 }
+/** The arcs' centre line (the band runs 31.5–36, Figma's 8px stroke masked inside the 36 edge). */
+const ARC_R = 33.75
+/** How much of the ring the three arcs use together; the rest is the gap before 12 o'clock (Figma ≈ 30°). */
+const FILLED = 0.92
+/** The earlier ring's radius and the gap between its arcs. */
+/** `cap`: the arcs' stroke width (StockPage.module.css .ring .arc) — round ends add half of it at each end (18 Nov). */
+const RING = { r: 32, gap: 2, cap: 5 }
 
+/** The F1 stock page draws Figma's ring; the Classic page keeps its own (F1 archived 18 Nov, see useF1Details). */
 export function RatingRing() {
+  return useF1Details() ? <RatingRingF1 /> : <RatingRingClassic />
+}
+
+function RatingRingF1() {
+  const gradient = useId()
+  const length = 2 * Math.PI * ARC_R
+  const total = RATINGS.reduce((sum, r) => sum + r.value, 0)
+  // Each arc runs from the start to the end of its own share and every share before it (Buy, Buy + Hold, all three).
+  let upTo = 0
+  const arcs = RATINGS.map((r) => {
+    upTo += r.value
+    return { tone: r.tone, label: r.label, dash: (upTo / total) * FILLED * length }
+  })
+  return (
+    <svg className={styles.ratingRing} viewBox="0 0 72 72" aria-hidden="true">
+      <defs>
+        <linearGradient id={gradient} x1="35" y1="18.5" x2="36" y2="72" gradientUnits="userSpaceOnUse">
+          <stop className={styles.discTop} />
+          <stop offset="1" className={styles.discFoot} />
+        </linearGradient>
+      </defs>
+      <circle cx="36" cy="36" r="34" className={styles.ratingDisc} style={{ fill: `url(#${CSS.escape(gradient)})` }} />
+      {/* A quarter turn back, so the arcs start at 12 o'clock and run clockwise; the longest is drawn first. */}
+      <g transform="rotate(-90 36 36)">
+        {[...arcs].reverse().map((a) => (
+          <circle
+            key={a.label}
+            cx="36"
+            cy="36"
+            r={ARC_R}
+            className={styles.ratingArc}
+            data-tone={a.tone}
+            strokeDasharray={`${a.dash} ${length}`}
+          />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+
+function RatingRingClassic() {
   const length = 2 * Math.PI * RING.r
   const total = RATINGS.reduce((sum, r) => sum + r.value, 0)
   let start = 0
   const arcs = RATINGS.map((r) => {
     const size = (r.value / total) * length
-    const arc = { tone: r.tone, label: r.label, dash: Math.max(size - RING.gap, 0.5), offset: -start }
+    const arc = { tone: r.tone, label: r.label, dash: Math.max(size - RING.gap - RING.cap, 0.01), offset: -(start + RING.cap / 2) }
+    // Round ends (18 Nov): each arc's dash is shortened by its caps and starts half a cap in, so the gaps stay 2.
     start += size
     return arc
   })
@@ -24381,7 +25394,8 @@ export function RatingRing() {
           <stop offset="1" className={styles.discFoot} />
         </linearGradient>
       </defs>
-      <circle cx="36" cy="36" r="34" fill="url(#rating-disc)" className={styles.ringTrack} />
+      {/* The disc, to the svg's edge, no border (18 Nov: was a 6 wide grey band at r 34). */}
+      <circle cx="36" cy="36" r="35.5" fill="url(#rating-disc)" className={styles.ringTrack} />
       {/* Rotated a quarter turn so the first arc (Buy) starts at 12 o'clock and runs clockwise. */}
       <g transform="rotate(-90 36 36)">
         {arcs.map((a) => (
@@ -24664,6 +25678,701 @@ export const PERSONAL_DETAILS: [string, string, string, string][] = [
 export const ADDRESS = 'Flat 12, Green Park, Baner, Pune 411045'
 ```
 
+### `src/flows/us-stocks/screens/activation/details.module.css`
+
+```css
+/* The detail pages' shared top and bottom (Figma 6538:84949 / 6538:107342). FLAG: hand-made on L3 tokens — chip cards,
+   candles, the countdown chip and the About block have no L3 component. */
+
+/* ---- Title: logo 32 · name ⇕ · price + change (16 sides, 12 between logo and text) ---- */
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  padding: var(--l3-spacing-20) var(--l3-spacing-16) 0; /* Figma: the title 20 under the bar */
+}
+.logo {
+  display: inline-flex;
+  flex: none;
+}
+.titleText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--l3-spacing-04);
+  min-width: 0;
+}
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-04);
+  min-width: 0;
+}
+.name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--l3-content-primary);
+  font: var(--l3-text-heading-14); /* Figma: Heading 12; a step up (the user's call, 8 Nov) */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--l3-spacing-04);
+  color: var(--l3-content-accent-indicator-up-default);
+}
+.priceRow[data-down] {
+  color: var(--l3-content-accent-indicator-down-default);
+}
+.price {
+  font: var(--l3-text-label-18);
+}
+.change {
+  font: var(--l3-text-label-12);
+}
+.titleEnd {
+  display: inline-flex;
+  flex: none;
+}
+
+/* ---- Stat chips: a sideways row, 12 apart, 16 at the sides ---- */
+.chips {
+  display: flex;
+  gap: var(--l3-spacing-12);
+  overflow-x: auto;
+  padding: var(--l3-spacing-16) var(--l3-spacing-16) 0;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.chip {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--l3-spacing-04);
+  padding: var(--l3-spacing-08) var(--l3-spacing-12) var(--l3-spacing-08) var(--l3-spacing-08);
+  border: 1px solid var(--l3-border-light);
+  border-radius: var(--l3-radius-08);
+  background: var(--l3-surface-default);
+}
+.chip[data-tone='gold'] {
+  border-color: var(--l3-border-accent-zing-default);
+  background: var(--l3-surface-accent-zing-light);
+}
+.chipLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--l3-spacing-02);
+  color: var(--l3-content-secondary);
+  font: var(--l3-text-description-10);
+  white-space: nowrap;
+}
+.chipInfo {
+  display: inline-flex;
+  width: var(--l3-size-12);
+  height: var(--l3-size-12);
+}
+.liveDot {
+  width: var(--l3-size-04);
+  height: var(--l3-size-04);
+  margin-right: var(--l3-spacing-02);
+  border-radius: var(--l3-radius-full);
+  background: var(--l3-content-accent-zing-default);
+}
+.chipValue {
+  color: var(--l3-content-primary);
+  font: var(--l3-text-label-12);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Chart: ranges · candles with the price axis (60) · time axis ---- */
+.chartBlock {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--l3-spacing-32);
+}
+.ranges {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  padding: 0 var(--l3-spacing-16) 0 var(--l3-spacing-20);
+}
+.rangeTabs {
+  flex: 1;
+  justify-content: space-between;
+}
+.iconButton {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--l3-content-secondary);
+  cursor: pointer;
+}
+.iconButton[data-up] {
+  color: var(--l3-content-accent-indicator-up-default);
+}
+.chart {
+  display: flex;
+  height: 290px; /* FLAG: raw px — Figma's plot height */
+  margin-top: var(--l3-spacing-04);
+}
+.plot {
+  flex: 1;
+  height: 100%;
+  overflow: visible;
+}
+.plot g line {
+  stroke: var(--l3-content-accent-indicator-up-default);
+  stroke-width: 1;
+}
+.plot g rect {
+  fill: var(--l3-content-accent-indicator-up-default);
+}
+.plot g[data-down] line {
+  stroke: var(--l3-content-accent-indicator-down-default);
+}
+.plot g[data-down] rect {
+  fill: var(--l3-content-accent-indicator-down-default);
+}
+.plot polyline {
+  stroke: var(--l3-content-accent-indicator-up-default);
+  stroke-width: 1.5;
+}
+.plot polyline[data-down] {
+  stroke: var(--l3-content-accent-indicator-down-default);
+}
+.yAxis {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: var(--l3-size-64);
+  padding: 0 var(--l3-spacing-08);
+  color: var(--l3-content-tertiary);
+  font: var(--l3-text-description-10);
+  text-align: right;
+}
+.xAxis {
+  display: flex;
+  align-items: center;
+  height: var(--l3-size-32);
+  padding-right: var(--l3-spacing-16);
+}
+.xLabels {
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+  color: var(--l3-content-tertiary);
+  font: var(--l3-text-description-10);
+}
+
+/* ---- About: the page's last block ---- */
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--l3-spacing-08);
+  padding: var(--l3-spacing-24) var(--l3-spacing-16) var(--l3-spacing-32);
+  background: linear-gradient(var(--l3-surface-secondary), var(--l3-surface-default));
+}
+.aboutLogo {
+  display: inline-flex;
+  margin-bottom: var(--l3-spacing-04);
+}
+.aboutTitle {
+  margin: 0;
+  color: var(--l3-content-primary);
+  font: var(--l3-text-heading-14);
+}
+.aboutText {
+  margin: 0;
+  color: var(--l3-content-secondary);
+  font: var(--l3-text-description-12);
+}
+
+/* ---- Dock: bell 40 · Buy · Sell, 12 apart ---- */
+.dock {
+  display: flex;
+  gap: var(--l3-spacing-12);
+}
+.dock > :not(.bell) {
+  flex: 1;
+}
+.bell {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--l3-size-40);
+  height: var(--l3-size-40);
+  padding: var(--l3-spacing-08);
+  border: 1px solid var(--l3-border-intense);
+  border-radius: var(--l3-radius-08);
+  background: var(--l3-surface-primary);
+  color: var(--l3-content-primary);
+  cursor: pointer;
+}
+
+/* ---- A logo in a round plate ---- */
+.logoImg {
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  overflow: hidden;
+  border-radius: var(--l3-radius-full);
+  background: var(--plate, var(--l3-surface-tertiary));
+  color: var(--l3-content-primary);
+  font: var(--l3-text-heading-12);
+}
+.logoImg > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ---- Sections (ETF page): heading with ⓘ, 16 above the card ---- */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--l3-spacing-16);
+}
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-04);
+  margin: 0;
+  color: var(--l3-content-primary);
+  font: var(--l3-text-heading-16);
+}
+.headingInfo {
+  display: inline-flex;
+  width: var(--l3-size-16);
+  height: var(--l3-size-16);
+  color: var(--l3-content-secondary);
+}
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--l3-spacing-16);
+  margin: 0;
+  padding: var(--l3-spacing-16);
+  border: 1px solid var(--l3-border-light);
+  border-radius: var(--l3-radius-12);
+}
+.infoGrid dt {
+  color: var(--l3-content-secondary);
+  font: var(--l3-text-description-12);
+}
+.infoGrid dd {
+  margin: var(--l3-spacing-04) 0 0;
+  color: var(--l3-content-primary);
+  font: var(--l3-text-label-14);
+}
+
+/* The dock's sides (the L3 ButtonGroup brought them before). */
+.dock {
+  padding: var(--l3-spacing-08) var(--l3-spacing-12);
+}
+
+/* The dock floats over the page's end (18 Nov, the user's call): a gradient of the page's colour, full at the bottom
+   to clear at the top, so the page shows through as it scrolls under. The 24 above the buttons is the fade. The
+   frame lays the footer over the body (data-float-dock, components/Phone.module.css), so the page's content runs on
+   behind the whole dock instead of being cut at its top (19 Nov). L3 gap: no dock / fade token. */
+footer > .dock {
+  /* The fade sits higher (19 Nov, the user's call: the content ran into the buttons with no separation): 40 of fade
+     above the buttons, the page's colour solid under them, 90% at their top edge, clear at the top. So the content
+     has faded out before it reaches Buy / Sell. */
+  padding-top: calc(var(--l3-spacing-32) + var(--l3-spacing-08));
+  background: linear-gradient(
+    to top,
+    var(--page-surface, var(--l3-surface-default)) 0,
+    var(--page-surface, var(--l3-surface-default)) var(--l3-spacing-08),
+    color-mix(in srgb, var(--page-surface, var(--l3-surface-default)) 90%, transparent) calc(var(--l3-spacing-08) + var(--l3-size-48)),
+    transparent 100%
+  );
+}
+
+/* ---- Figma 6538:84949 polish (8 Nov) ---- */
+
+/* The title: no glow behind the logo (8 Nov: the user dropped Figma's brand-colour bloom). */
+.title {
+  position: relative;
+}
+
+/* The sheet under the chips (Figma 6538:84950): surface/default, 24 top corners, a 1px rim, a grey glow on its top. */
+.sheet {
+  position: relative;
+  margin-top: var(--l3-spacing-20);
+  padding-top: var(--l3-spacing-12);
+  overflow: hidden;
+  border-top: 1px solid var(--l3-border-light);
+  border-radius: var(--l3-radius-24) var(--l3-radius-24) 0 0;
+  background: var(--l3-surface-default);
+}
+.sheet::before {
+  content: '';
+  position: absolute;
+  top: -156px; /* FLAG: raw px — Figma's 436 × 157 ellipse, centred 78 above the sheet's edge, blurred 33 */
+  left: 50%;
+  width: 436px; /* FLAG: raw px */
+  height: 157px; /* FLAG: raw px */
+  translate: -50% 0;
+  border-radius: 50%;
+  background: var(--l3-border-intense);
+  filter: blur(33px); /* FLAG: raw px */
+  pointer-events: none;
+}
+.sheet > * {
+  position: relative;
+}
+.chartBlock {
+  margin-top: 0;
+}
+
+/* Ranges: plain words, 4 · 12 padding each, the picked one in content/primary (Figma 6538:85255). */
+.ranges {
+  justify-content: space-between;
+  gap: 0;
+  padding: 0 var(--l3-spacing-16) 0 var(--l3-spacing-20);
+}
+.range {
+  padding: var(--l3-spacing-04) var(--l3-spacing-12);
+  border: 0;
+  border-radius: var(--l3-radius-full);
+  background: none;
+  color: var(--l3-content-tertiary);
+  font: var(--l3-text-label-12);
+  cursor: pointer;
+}
+.range:first-child {
+  padding-left: 0;
+}
+.range[aria-checked='true'] {
+  color: var(--l3-content-primary);
+}
+.icon24 {
+  display: inline-flex;
+  width: var(--l3-size-24);
+  height: var(--l3-size-24);
+}
+
+/* The time axis: a 32 strip ruled above and below, Label 10 tertiary in a 300 column, the switch in the last 60. */
+.xAxis {
+  height: var(--l3-size-32);
+  padding-right: 0;
+  border-top: 1px solid var(--l3-border-light);
+  border-bottom: 1px solid var(--l3-border-light);
+}
+.xLabels {
+  justify-content: space-between;
+  padding: 0 var(--l3-spacing-16);
+  font: var(--l3-text-label-10);
+}
+.xAxis > .iconButton {
+  justify-content: center;
+  width: var(--l3-size-64);
+}
+
+/* The detail pages' bar takes the page's surface/primary (L3 Actionbar always paints surface/default), so the bar and
+   the title area are one block as in Figma — no cut under the bar. */
+.detailsPhone header > header {
+  background: transparent; /* the page's surface/primary shows through (no cut under the bar) */
+}
+.detailsPhone header[data-scrolled] > header {
+  background: var(--l3-surface-primary);
+}
+
+/* Pre Market chip as Figma 6546:9924: a honey tint (10% of #F6C12F), a honey border, a 6px honey dot, 16 on the right. */
+.chip[data-tone='gold'] {
+  padding-right: var(--l3-spacing-16);
+  border-color: var(--l3-border-accent-warning-default);
+  background: color-mix(in srgb, var(--l3-surface-accent-warning-default) 10%, transparent);
+}
+.chip[data-tone='gold'] .chipLabel {
+  gap: var(--l3-spacing-04);
+}
+.liveDot {
+  width: 6px; /* FLAG: raw px — Figma's 6px dot */
+  height: 6px; /* FLAG: raw px */
+  margin-right: 0;
+  background: var(--l3-surface-accent-warning-default);
+}
+```
+
+### `src/flows/us-stocks/screens/activation/details.tsx`
+
+```tsx
+// The detail pages' shared top and bottom (Figma Stocks Playground 6538:84949 stock, 6538:107342 ETF; 8 Nov), used by
+// StockPage and EtfPage: the title (logo · name ⇕ · price and change), a sideways row of stat chips (the ETF leads with
+// the Pre Market countdown), the candlestick chart with Figma's 1H · 24H · 7D · 1M · 3M · 1Y ranges (and a line /
+// candle switch), the About block at the end of the page, and the trade dock (alert bell · Buy · Sell).
+// Prices are $ only — no ≈ ₹ line (the user's call, 8 Nov; Figma shows ₹). Ranges exactly as Figma (the user's call).
+// FLAG: chips, chart, countdown and About block are hand-made (details.module.css): L3 has no chip card or candles.
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { Button } from '@l3/components/Button'
+import { Icon } from '@l3/components/Icon'
+import { MaskIcon } from '@l3/components/MaskIcon'
+import { msCandlestickChart } from '@l3/icons/material'
+import { Usd, useUsd } from '../../../../shared/money'
+import { asset } from '../../asset'
+import { periodReturn, priceSeries } from './data'
+import styles from './details.module.css'
+
+/** The Phone class for a detail page: its Actionbar takes the page's surface/primary (no cut under the bar). */
+export const detailsPhone = styles.detailsPhone
+
+/** The chart's ranges, exactly as Figma. */
+export const RANGES = ['1H', '24H', '7D', '1M', '3M', '1Y'] as const
+export type Range = (typeof RANGES)[number]
+/** The sample data's period behind each range (1H is the last stretch of the day's line). */
+const DATA_PERIOD: Record<Range, string> = { '1H': '1D', '24H': '1D', '7D': '1W', '1M': '1M', '3M': '3M', '1Y': '1Y' }
+/** The time axis under the chart, per range (US market hours, ET). */
+const X_LABELS: Record<Range, string[]> = {
+  '1H': ['3:00', '3:10', '3:20', '3:30', '3:40', '3:50'],
+  '24H': ['9:30', '10:30', '11:30', '12:30', '1:30', '2:30'],
+  '7D': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Mon'],
+  '1M': ['10 Oct', '15 Oct', '20 Oct', '25 Oct', '30 Oct', '5 Nov'],
+  '3M': ['Aug', 'Sep', 'Sep', 'Oct', 'Oct', 'Nov'],
+  '1Y': ['Dec', 'Feb', 'Apr', 'Jun', 'Aug', 'Oct'],
+}
+/** How many candles a range draws. */
+const CANDLES = 44
+
+// ── Title ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Logo (32) · the name in Heading 12 with the switch arrows (another stock / fund), a Tag after it (ETF) · the price in
+ * Label 18 and the change "(+1.48%)" in Label 12, both green or red with the move. `end`: the ETF's bookmark.
+ */
+export function AssetTitle({ logo, name, tag, price, changePct, end }: { logo: ReactNode; name: string; tag?: ReactNode; price: number; changePct: number; end?: ReactNode }) {
+  const up = changePct >= 0
+  return (
+    <div className={styles.title}>
+      <span className={styles.logo} aria-hidden="true">{logo}</span>
+      <div className={styles.titleText}>
+        <span className={styles.nameRow}>
+          <h1 className={styles.name}>{name}</h1>
+          {tag}
+          {/* No ⇕ after the name on either page (Figma has one; the user's call, 8 Nov). */}
+        </span>
+        <span className={styles.priceRow} data-down={!up || undefined}>
+          <span className={styles.price}><Usd value={price} layout="inline" /></span>
+          <span className={styles.change}>({up ? '+' : '−'}{Math.abs(changePct).toFixed(2)}%)</span>
+        </span>
+      </div>
+      {end && <span className={styles.titleEnd}>{end}</span>}
+    </div>
+  )
+}
+
+// ── Stat chips ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+export type StatChip = { label: string; value: ReactNode; info?: boolean }
+
+/** A sideways row of outlined chips (radius 8): a Description 10 label (with ⓘ) over a Label 12 value. `lead`: a chip
+ *  that comes first (the ETF's Pre Market countdown). */
+export function StatChips({ items, lead }: { items: StatChip[]; lead?: ReactNode }) {
+  return (
+    <div className={styles.chips} role="list">
+      {lead}
+      {items.map((c) => (
+        <div key={c.label} className={styles.chip} role="listitem">
+          <span className={styles.chipLabel}>
+            {c.label}
+            {c.info && <span className={styles.chipInfo} aria-hidden="true"><MaskIcon src={asset('assets/details/info.svg')} /></span>}
+          </span>
+          <span className={styles.chipValue}>{c.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** The ETF's first chip: "Pre Market ⓘ" over a live countdown to the open (Figma animates it a second at a time). */
+export function PreMarketChip({ seconds: start = 1 * 3600 + 24 * 60 + 59 }: { seconds?: number }) {
+  const [left, setLeft] = useState(start)
+  useEffect(() => {
+    const id = window.setInterval(() => setLeft((s) => (s > 0 ? s - 1 : start)), 1000)
+    return () => window.clearInterval(id)
+  }, [start])
+  const h = Math.floor(left / 3600)
+  const m = Math.floor((left % 3600) / 60)
+  const s = left % 60
+  return (
+    <div className={styles.chip} data-tone="gold" role="listitem" aria-label={`Pre market, opens in ${h} hours ${m} minutes`}>
+      <span className={styles.chipLabel}>
+        <span className={styles.liveDot} aria-hidden="true" />
+        Pre Market
+        <span className={styles.chipInfo} aria-hidden="true"><MaskIcon src={asset('assets/details/info.svg')} /></span>
+      </span>
+      <span className={styles.chipValue} aria-hidden="true">{h}h : {String(m).padStart(2, '0')}m : {String(s).padStart(2, '0')}s</span>
+    </div>
+  )
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+type Candle = { o: number; h: number; l: number; c: number }
+
+/** The sample line for a range, grouped into candles (open = first, close = last, high / low = the extremes). */
+function candlesFor(sym: string, range: Range, price: number, dayPct: number): { candles: Candle[]; line: number[] } {
+  const period = DATA_PERIOD[range]
+  const pct = range === '1H' ? dayPct / 6 : periodReturn(sym, period, dayPct)
+  const per = 4
+  const full = priceSeries(sym, period, price, pct, CANDLES * per * (range === '1H' ? 4 : 1))
+  const line = range === '1H' ? full.slice(-CANDLES * per) : full
+  const candles: Candle[] = []
+  for (let i = 0; i < CANDLES; i++) {
+    const chunk = line.slice(i * per, i * per + per + 1)
+    candles.push({ o: chunk[0], c: chunk[chunk.length - 1], h: Math.max(...chunk), l: Math.min(...chunk) })
+  }
+  return { candles, line }
+}
+
+/**
+ * The chart: the range picker (L3 pill Tabs, small) with full screen at its end; candles (or the line) with the price
+ * axis on the right; the time axis under it with the line / candle switch at its end. Green and red are the
+ * indicator up / down tokens.
+ */
+export function CandleChart({ sym, name, price, dayPct }: { sym: string; name: string; price: number; dayPct: number }) {
+  const usd = useUsd()
+  const [range, setRange] = useState<Range>('1H')
+  const [mode, setMode] = useState<'candle' | 'line'>('candle')
+  const { candles, line } = candlesFor(sym, range, price, dayPct)
+  const lo = Math.min(...candles.map((k) => k.l))
+  const hi = Math.max(...candles.map((k) => k.h))
+  const y = (p: number) => ((hi - p) / (hi - lo || 1)) * 100
+  const step = 100 / CANDLES
+  const axis = Array.from({ length: 8 }, (_, i) => usd(hi - ((hi - lo) * i) / 7))
+  const up = line[line.length - 1] >= line[0]
+  return (
+    <div className={styles.chartBlock}>
+      {/* Figma 6538:85255: the ranges are plain Label 12 words (content/tertiary), the picked one in content/primary —
+          no pill fills. FLAG: hand-made radio row (L3 Tabs always draws a pill or an underline). */}
+      <div className={styles.ranges} role="radiogroup" aria-label="Chart range">
+        {RANGES.map((r) => (
+          <button key={r} type="button" role="radio" aria-checked={r === range} className={styles.range} onClick={() => setRange(r)}>{r}</button>
+        ))}
+        <button type="button" className={styles.iconButton} aria-label="Full screen chart"><span className={styles.icon24}><MaskIcon src={asset('assets/details/fullscreen.svg')} /></span></button>
+      </div>
+      <div className={styles.chart} role="img" aria-label={`${name} over ${range}, ${usd(lo)} to ${usd(hi)}`}>
+        <svg className={styles.plot} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {mode === 'candle'
+            ? candles.map((k, i) => {
+                const x = i * step + step / 2
+                const top = y(Math.max(k.o, k.c))
+                const bottom = y(Math.min(k.o, k.c))
+                return (
+                  <g key={i} data-down={k.c < k.o || undefined}>
+                    <line x1={x} x2={x} y1={y(k.h)} y2={y(k.l)} vectorEffect="non-scaling-stroke" />
+                    <rect x={x - step * 0.3} width={step * 0.6} y={top} height={Math.max(bottom - top, 0.6)} />
+                  </g>
+                )
+              })
+            : <polyline data-down={!up || undefined} points={line.map((p, i) => `${((i / (line.length - 1)) * 100).toFixed(2)},${y(p).toFixed(2)}`).join(' ')} fill="none" vectorEffect="non-scaling-stroke" />}
+        </svg>
+        <div className={styles.yAxis} aria-hidden="true">{axis.map((p, i) => <span key={i}>{p}</span>)}</div>
+      </div>
+      <div className={styles.xAxis}>
+        <span className={styles.xLabels} aria-hidden="true">{X_LABELS[range].map((t, i) => <span key={i}>{t}</span>)}</span>
+        <button
+          type="button"
+          className={styles.iconButton}
+          data-up={up || undefined}
+          aria-label={mode === 'candle' ? 'Show as a line' : 'Show as candles'}
+          onClick={() => setMode(mode === 'candle' ? 'line' : 'candle')}
+        >
+          {mode === 'candle' ? <span className={styles.icon24}><MaskIcon src={asset('assets/details/chart-toggle.svg')} /></span> : <Icon icon={msCandlestickChart} size={24} />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Sections ──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** A section's heading row: Heading 16 with an ⓘ after it (Figma "Asset info ⓘ", "Top holdings ⓘ"). */
+export function DetailsHeading({ title }: { title: string }) {
+  return (
+    <h2 className={styles.heading}>
+      {title}
+      <span className={styles.headingInfo} aria-hidden="true"><MaskIcon src={asset('assets/details/info.svg')} /></span>
+    </h2>
+  )
+}
+
+/** Figma "Asset info": a card with two columns of label (Description 12) over value (Label 14), 16 apart. */
+export function InfoGrid({ title, items }: { title: string; items: [string, ReactNode][] }) {
+  return (
+    <section className={styles.block} aria-label={title}>
+      <DetailsHeading title={title} />
+      <dl className={styles.infoGrid}>
+        {items.map(([k, v]) => (
+          <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+// ── About · dock ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Figma 6538:84950: from the ranges down, the page sits on a sheet of surface/default with 24 top corners and a 1px rim,
+ * a soft grey glow along its top edge, over the header's surface/primary (the Phone is `surface="primary"`).
+ */
+export function DetailsSheet({ children }: { children: ReactNode }) {
+  return <div className={styles.sheet}>{children}</div>
+}
+
+/** The page's last block: the logo (40), "About NVIDIA" and the whole profile, on a soft wash from the page. */
+export function AboutBlock({ logo, title, text }: { logo: ReactNode; title: string; text: string }) {
+  return (
+    <section className={styles.about} aria-label={title}>
+      <span className={styles.aboutLogo} aria-hidden="true">{logo}</span>
+      <h2 className={styles.aboutTitle}>{title}</h2>
+      <p className={styles.aboutText}>{text}</p>
+    </section>
+  )
+}
+
+/** The asset page's bottom dock — one for the stock page, the ETF pages and every user state (18 Nov, the user's call):
+ *  same place, padding and fade; only the buttons inside change (Buy · Sell, Go Long · Go Short, or one full-width
+ *  activation button). It floats over the page's end on a gradient of the page's colour, full at the bottom to clear
+ *  at the top, so the body shows through as it scrolls under. Figma's price-alert bell is hidden (18 Nov, the user's
+ *  call); its .bell style stays in details.module.css. */
+export function AssetDock({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={styles.dock} role="group" aria-label={label} data-float-dock="">
+      {children}
+    </div>
+  )
+}
+
+/** The trade dock: Buy · Sell, 12 apart (L3 buy / sell, Large: the app's big buttons, 18 Nov; Figma has md). */
+export function TradeDock({ buy, sell, onBuy, onSell, label = 'Trade' }: { buy: string; sell: string; onBuy?: () => void; onSell?: () => void; label?: string }) {
+  return (
+    <AssetDock label={label}>
+      <Button variant="buy" size="lg" onClick={onBuy}>{buy}</Button>
+      <Button variant="sell" size="lg" onClick={onSell}>{sell}</Button>
+    </AssetDock>
+  )
+}
+
+/** A logo image in a round plate (the stock's or the fund house's). */
+export function LogoImg({ src, plate, size, fallback }: { src?: string; plate?: string; size: number; fallback: string }) {
+  return (
+    <span className={styles.logoImg} style={{ '--size': `${size}px`, ...(plate ? { '--plate': plate } : {}) } as CSSProperties}>
+      {src ? <img src={src} alt="" /> : fallback}
+    </span>
+  )
+}
+```
+
 ### `src/flows/us-stocks/screens/activation/icons.ts`
 
 ```ts
@@ -24690,7 +26399,6 @@ export const chevronUpIcon = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 export const infoIcon = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 -960 960 960' width='24'%3E%3Cpath d='M508.5-291.5Q520-303 520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280q17 0 28.5-11.5Zm0-320Q520-623 520-640t-11.5-28.5Q497-680 480-680t-28.5 11.5Q440-657 440-640t11.5 28.5Q463-600 480-600t28.5-11.5ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E`
 
 /** Up/down triangles — the Select "swap" icon. */
-export const swapIcon = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16.5886 10.0012H7.41856C6.52856 10.0012 6.08856 8.92119 6.70856 8.29119L11.2986 3.70119C11.6886 3.31119 12.3186 3.31119 12.7086 3.70119L17.2986 8.29119C17.9286 8.92119 17.4786 10.0012 16.5886 10.0012Z'/%3E%3Cpath d='M11.2986 20.2912C11.6886 20.6812 12.3186 20.6812 12.7086 20.2912L17.2986 15.7012C17.9286 15.0812 17.4886 14.0012 16.5986 14.0012H7.41856C6.52856 14.0012 6.07856 15.0812 6.70856 15.7112L11.2986 20.2912Z'/%3E%3C/svg%3E`
 
 export const historyIcon = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24' viewBox='0 -960 960 960' width='24'%3E%3Cpath d='M480-120q-126 0-223-76.5T131-392q-4-15 6-27.5t27-14.5q16-2 29 6t18 24q24 90 99 147t170 57q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h70q17 0 28.5 11.5T360-600q0 17-11.5 28.5T320-560H160q-17 0-28.5-11.5T120-600v-160q0-17 11.5-28.5T160-800q17 0 28.5 11.5T200-760v54q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm40-376 100 100q11 11 11 28t-11 28q-11 11-28 11t-28-11L452-452q-6-6-9-13.5t-3-15.5v-159q0-17 11.5-28.5T480-680q17 0 28.5 11.5T520-640v144Z'/%3E%3C/svg%3E`
 ```
@@ -24705,7 +26413,8 @@ export const STOCK_HOLDING = '5837:94648'
 /** Not in Jojo's Figma: the stock page for a user whose Lemonn KYC isn't done (Complete KYC in place of Activate). */
 export const STOCK_KYC_PENDING = '9001:10'
 
-export const RISK_DISCLOSURE = '5756:71475'
+/** Activate US Stocks: the declarations page (screens/activate; was the risk disclosure sheet 5756:71475). */
+export const RISK_DISCLOSURE = '9001:60'
 export const CONFIRM_DETAILS = '5756:72486'
 export const ACTIVATION_SUBMITTED = '5756:73797'
 
@@ -24729,16 +26438,15 @@ export const HOME_ACTIVATION_PENDING_ALT = '5852:99028'
 ### `src/flows/us-stocks/screens/activation/index.tsx`
 
 ```tsx
-// Activation: the stock page (not activated / no holdings / holding) and the US Stocks activation sheets —
-// risk disclosure and confirm details (the "activation submitted" sheet now lives in the Stocks flow, stocks-18).
+// Activation: the stock page (not activated / no holdings / holding) and confirm details. Activating itself is
+// screens/activate (4 Nov: the risk disclosure sheet is gone); the "activation submitted" sheet is the Stocks flow's stocks-18.
 // Imported from the teammate's prototype; his `screens` map by Figma node id.
 // FLAG: copy not in copy.json yet — all UI text in this part is hard-coded.
 import { useUsJourney } from '../../../../shared/userStatus'
 import { currentStock } from '../../data'
 import type { UsScreenMap } from '../types'
-import { CONFIRM_DETAILS, RISK_DISCLOSURE, STOCK_HOLDING, STOCK_KYC_PENDING, STOCK_NO_HOLDINGS, STOCK_NOT_ACTIVATED } from './ids'
+import { CONFIRM_DETAILS, STOCK_HOLDING, STOCK_KYC_PENDING, STOCK_NO_HOLDINGS, STOCK_NOT_ACTIVATED } from './ids'
 import { ConfirmDetailsScreen } from './sheets/ConfirmDetailsScreen'
-import { RiskDisclosureSheet } from './sheets/RiskDisclosureSheet'
 import { StockHolding, StockKycPending, StockNoHoldings, StockNotActivated, StockPage } from './StockPage'
 
 export { StockHolding, StockKycPending, StockNoHoldings, StockNotActivated, StockPage }
@@ -24767,7 +26475,6 @@ export const screens: UsScreenMap = {
   [STOCK_NO_HOLDINGS]: StockNoHoldings,
   [STOCK_HOLDING]: StockHolding,
   // Sheets (his `Xr` map).
-  [RISK_DISCLOSURE]: RiskDisclosureSheet,
   [CONFIRM_DETAILS]: ConfirmDetailsScreen,
 }
 ```
@@ -24778,7 +26485,10 @@ export const screens: UsScreenMap = {
 // The scrolling sections of the stock page, top to bottom: holdings (holding state only), daily performance, analyst
 // ratings, fundamentals, about, peers, related ETFs, key holders, company financials; and the News & Events tab (events, news).
 // FLAG: layout is raw display:flex + gap/padding (module CSS) instead of L3 Stack/Section/Inset/Grid; panels, rows and bars are hand-made.
+import { BoostedFunds, EtfsHolding } from '../etf/EtfPeers'
+import { ETFS_WITH_STOCK, boostedOn, etfsHolding } from '../etf/data'
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Stack } from '@l3/components/Stack'
 import { Card } from '@l3/components/Card'
 import { Icon } from '@l3/components/Icon'
 import { PriceChange } from '@l3/components/PriceChange'
@@ -24791,7 +26501,7 @@ import { useUsNav } from '../../nav'
 import { usQuote } from '../../../../shared/data/usStocks'
 import { Usd, formatUsd, useUsd } from '../../../../shared/money'
 import { setCurrentEtf } from '../etf/currentEtf'
-import { ShareDonut } from '../etf/EtfHoldings'
+import { ShareBars } from '../etf/EtfHoldings'
 import { LevTag } from '../etf/parts'
 import { COMPANY_PROFILES } from './companyProfiles'
 import { PeerTable } from './components/PeerTable'
@@ -25004,8 +26714,10 @@ export function AboutCard({ title, text, short }: { title: string; text: string;
   }, [text, short, open])
   return (
     <section className={styles.section}>
-      <SectionTitle title={title} />
+      {/* The title sits inside the card, above the text (17 Nov). */}
       <Card surface="primary">
+        <Stack gap="08">
+        <SectionTitle title={title} />
         <div className={styles.about}>
           <p ref={para} data-collapsed={(!short && !open) || undefined}>{text}</p>
           {!short && (cut || open) && (
@@ -25014,6 +26726,7 @@ export function AboutCard({ title, text, short }: { title: string; text: string;
             </button>
           )}
         </div>
+        </Stack>
       </Card>
     </section>
   )
@@ -25047,13 +26760,14 @@ export function Peers({ stock }: { stock: UsStock }) {
 }
 
 /** Key Holders: who holds the stock, for the latest quarter only (no quarter picker, 3 Nov). Drawn like the ETF
- *  page's Allocation (3 Nov): a donut with the biggest holder in the middle, the legend beside it. */
+ *  page's Allocation (19 Nov, the user's call): the ShareBars panel — "4 holder types · Weight", then each holder's
+ *  name, a short bar against the biggest and its share. */
 export function KeyHolders() {
   const parts = HOLDERS[QUARTERS[0]].map(([name, pct]) => ({ name, weight: pct }))
   return (
     <section className={styles.section}>
       <SectionTitle title="Key Holders" />
-      <ShareDonut parts={parts} of="the shares" legendLabel="Who holds the shares" format={(n) => `${n.toFixed(2)}%`} />
+      <ShareBars parts={parts} count={`${parts.length} holder types`} label="Who holds the shares" />
     </section>
   )
 }
@@ -25098,18 +26812,21 @@ export function Financials() {
   }
   return (
     <section className={styles.section}>
-      <SectionTitle title="Company financials" info />
+      {/* The statement tabs sit with the header, outside the card (19 Nov), 8 under the title — 16 to the content. */}
+      <Stack gap="08">
+        <SectionTitle title="Company financials" info />
+        <Tabs
+          appearance="pill"
+          emphasis="primary"
+          size="sm"
+          aria-label="Statement"
+          value={statement}
+          onChange={(v) => setStatement(v as Statement)}
+          items={(Object.keys(STATEMENTS) as Statement[]).map((k) => ({ value: k, label: STATEMENTS[k].label }))}
+        />
+      </Stack>
       <div className={styles.financials}>
         <div className={styles.chartArea}>
-          <Tabs
-            appearance="pill"
-            emphasis="primary"
-            size="sm"
-            aria-label="Statement"
-            value={statement}
-            onChange={(v) => setStatement(v as Statement)}
-            items={(Object.keys(STATEMENTS) as Statement[]).map((k) => ({ value: k, label: STATEMENTS[k].label }))}
-          />
           <div className={styles.legend}>
             <span data-tone="up">{spec.series[0].toUpperCase()}</span>
             <span>{spec.series[1].toUpperCase()}</span>
@@ -25256,7 +26973,7 @@ export function RelatedEtfs({ sym }: { sym: string }) {
           >
             <span className={styles.etfTop}>
               <span className={styles.etfSym}>
-                <span className={styles.etfDisc} aria-hidden="true">{e.sym.slice(0, 2)}</span>
+                <span className={styles.etfDisc} aria-hidden="true">{e.sym.slice(0, 1)}</span>
                 <b>{e.sym}</b>
               </span>
               <LevTag long={e.side === 'long'}>{e.lev} {e.side === 'long' ? 'Long' : 'Short'}</LevTag>
@@ -25272,6 +26989,58 @@ export function RelatedEtfs({ sym }: { sym: string }) {
           </Card>
         ))}
       </div>
+    </section>
+  )
+}
+
+/**
+ * Related ETFs (19 Nov, the user's call, from another app's NVDA page): one section with Long / Short sub-tabs (pill,
+ * as Company financials) — Long funds gain when it rises (by 1x–3x the daily move), Short ones when it falls. Each in
+ * the funds table of "ETFs with {stock}" (Leverage · Today · Expense, or Returns). Every stock has them: its own
+ * single-stock funds where they exist (NVIDIA, Tesla, Apple …), otherwise the index or sector funds that hold it most
+ * (chip stocks, the S&P 500 for the rest). A side with no funds has no tab; with one side only, no tabs at all.
+ */
+export function BoostedOnStock({ sym, name }: { sym: string; name: string }) {
+  const { long, short, on } = boostedOn(sym)
+  const subject = on ?? name
+  const [side, setSide] = useState<'long' | 'short'>('long')
+  const sides = [
+    { value: 'long', label: 'Long', funds: long, label2: `Long ETFs on ${subject}, gain when ${on ? 'they rise' : `${name} rises`}` },
+    { value: 'short', label: 'Short', funds: short, label2: `Short ETFs on ${subject}, gain when ${on ? 'they fall' : `${name} falls`}` },
+  ].filter((x) => x.funds.length > 0)
+  if (!sides.length) return null
+  const shown = sides.find((x) => x.value === side) ?? sides[0]
+  return (
+    <section className={styles.section}>
+      {/* The Long / Short filters sit 8 under the title, 16 above the table (19 Nov, the user's call). */}
+      <Stack gap="08">
+        <SectionTitle title="Related ETFs" />
+        {sides.length > 1 && (
+          <Tabs
+            appearance="pill"
+            emphasis="primary"
+            size="sm"
+            aria-label="Long or short"
+            value={shown.value}
+            onChange={(v) => setSide(v as 'long' | 'short')}
+            items={sides.map((x) => ({ value: x.value, label: x.label }))}
+          />
+        )}
+      </Stack>
+      <BoostedFunds key={shown.value} funds={shown.funds} label={shown.label2} />
+    </section>
+  )
+}
+
+/** "ETFs with {stock}" (17 Nov): every fund in the catalogue that holds this stock, biggest weight first; tapping one opens it. */
+/** The first 5 funds, then an Others row to the full list (9001:13, 18 Nov). */
+export function EtfsWithStock({ sym, name }: { sym: string; name: string }) {
+  const { go } = useUsNav()
+  if (!etfsHolding(sym).length) return null
+  return (
+    <section className={styles.section}>
+      <SectionTitle title={`ETFs with ${name}`} />
+      <EtfsHolding sym={sym} label={`ETFs with ${name}`} limit={5} onAll={() => go(ETFS_WITH_STOCK)} />
     </section>
   )
 }
@@ -25722,77 +27491,6 @@ export function RiskBullets({ className, link = true }: { className?: string; li
 }
 ```
 
-### `src/flows/us-stocks/screens/activation/sheets/RiskDisclosureSheet.tsx`
-
-```tsx
-// 5756:71475 — "Risk disclosure / For US Stocks" sheet over the screen it was opened from (the not-activated stock page,
-// or the 5852 wallet screens); Agree and Continue goes to the activation-pending home (the Stocks flow's stocks-13) or
-// wallet. The Home's own copy of this sheet is the Stocks flow's stocks-12.
-// FLAG: copy not in copy.json yet (all UI text in this part is hard-coded).
-import { useState } from 'react'
-import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
-import { Button } from '@l3/components/Button'
-import { ButtonGroup } from '@l3/components/ButtonGroup'
-import { useUsNav } from '../../../nav'
-import { CONFIRM_DETAILS, HOME_ACTIVATION_PENDING, HOME_ACTIVATION_PENDING_ALT, STOCK_NOT_ACTIVATED } from '../ids'
-import { SheetFrame } from './SheetFrame'
-import { RiskBullets } from './RiskBullets'
-
-export function RiskDisclosureSheet({ backdrop }: { backdrop?: boolean }) {
-  const { go, back, prev } = useUsNav()
-  const under = prev && prev !== CONFIRM_DETAILS ? prev : STOCK_NOT_ACTIVATED
-  const next = under.startsWith('5852:') ? HOME_ACTIVATION_PENDING_ALT : HOME_ACTIVATION_PENDING
-  const [open, setOpen] = useState(true)
-  const close = () => {
-    setOpen(false)
-    setTimeout(() => back(under), 250)
-  }
-  return (
-    <SheetFrame under={under} backdrop={backdrop}>
-      {(container) => (
-        <BottomSheet
-          open={open}
-          onClose={close}
-          container={container}
-          aria-labelledby="risk-title"
-          header={<BottomSheetHeader size="sm" heading="Risk disclosure" headingId="risk-title" description="For US Stocks" />}
-          footer={
-            <ButtonGroup aria-label="Risk disclosure">
-              <Button variant="primary" size="lg" fullWidth onClick={() => go(next)}>Agree and Continue</Button>
-            </ButtonGroup>
-          }
-        >
-          <RiskBullets />
-        </BottomSheet>
-      )}
-    </SheetFrame>
-  )
-}
-```
-
-### `src/flows/us-stocks/screens/activation/sheets/SheetFrame.tsx`
-
-```tsx
-// Frame for a sheet screen: the screen under it (frozen, from the flow) + a layer the sheet portals into.
-// With `backdrop` set (this sheet is itself drawn behind another screen) only the screen under it is drawn.
-// FLAG: own frame (.frame) with its own sheet layer — sheets use L3 BottomSheet's own overlay in the rest of the app.
-import { useState, type ReactNode } from 'react'
-import { ScreenBackdrop } from '../components/ScreenBackdrop'
-import styles from './Activation.module.css'
-
-export function SheetFrame({ under, backdrop, children }: { under: string; backdrop?: boolean; children: (container: HTMLDivElement) => ReactNode }) {
-  const [layer, setLayer] = useState<HTMLDivElement | null>(null)
-  if (backdrop) return <ScreenBackdrop id={under} />
-  return (
-    <div className={styles.frame}>
-      <ScreenBackdrop id={under} />
-      <div className={styles.sheets} ref={setLayer} />
-      {layer && children(layer)}
-    </div>
-  )
-}
-```
-
 ### `src/flows/us-stocks/screens/entry/MutualFundHome.module.css`
 
 ```css
@@ -25805,7 +27503,7 @@ export function SheetFrame({ under, backdrop, children }: { under: string; backd
 
 .topSection {
   gap: var(--l3-spacing-24);
-  padding: 0 var(--l3-spacing-16) var(--l3-spacing-32);
+  padding: var(--l3-spacing-16) var(--l3-spacing-16) var(--l3-spacing-32); /* 16 under the top bar, so the holdings don't sit on its title */
   flex-direction: column;
   display: flex;
 }
@@ -25879,7 +27577,7 @@ export function SheetFrame({ under, backdrop, children }: { under: string; backd
 
 .content {
   gap: var(--l3-spacing-32);
-  padding: var(--l3-spacing-24) var(--l3-spacing-16) var(--l3-spacing-32);
+  padding: var(--l3-spacing-24) var(--l3-spacing-16) 0; /* page end: the body's --app-body-end */
   border-radius: var(--l3-radius-24) var(--l3-radius-24) 0 0;
   background: var(--l3-surface-default);
   flex-direction: column;
@@ -26488,6 +28186,10 @@ export function SheetFrame({ under, backdrop, children }: { under: string; backd
   scrollbar-width: none;
   display: flex;
   overflow-x: auto;
+  /* Room for the cards' shadow: a sideways scroller clips vertically too, so it pads 12 above and below and takes it
+     back with a negative margin (same layout, shadow not cut). */
+  padding-block: var(--l3-spacing-12);
+  margin-block: calc(-1 * var(--l3-spacing-12));
 }
 
 .scroller::-webkit-scrollbar {
@@ -26532,6 +28234,11 @@ import { Move } from './components/Primitives'
 import { entryUrl } from './entryAssets'
 import { arrowForward, chevronRight } from './icons'
 import styles from './MutualFundHome.module.css'
+import { SearchWalletActions } from '../../../../shared/ui/TopBarAction'
+import { useUsJourney } from '../../../../shared/userStatus'
+import { useUsNav } from '../../nav'
+import { SEARCH, WALLET, WALLET_US } from './ids'
+import { t } from './copy'
 
 const mfUrl = (file: string) => entryUrl(`mf/${file}`)
 /** Path of an mf SVG for InlineSvg (its colours are L3 tokens). */
@@ -26594,14 +28301,18 @@ export function MutualFundHomeScreen() {
   const preview = usePreview()
   const [popular, setPopular] = useState('high')
   const [explore, setExplore] = useState('equity')
-  const [query, setQuery] = useState('')
+  const { go } = useUsNav()
+  const journey = useUsJourney()
+  const usActive = journey === 'activated' || journey === 'onTheWay' || journey === 'ready' || journey === 'holding'
   return (
     <Phone
       label="Mutual funds"
       surface="primary"
       header={
+        // Same top bar as every navbar tab (Market, Portfolio): the title, then the shared search and wallet.
         <Actionbar
-          search={{ value: query, onChange: setQuery, placeholder: 'Search for stocks', label: 'Search for stocks' }}
+          title={t('mf.title')}
+          actions={<SearchWalletActions searchLabel={t('portfolio.search')} walletLabel={t('portfolio.wallet')} onSearch={() => go(SEARCH)} onWallet={() => go(usActive ? WALLET_US : WALLET)} />}
         />
       }
       gesture="none"
@@ -26820,538 +28531,43 @@ export function MutualFundHomeScreen() {
 }
 ```
 
-### `src/flows/us-stocks/screens/entry/PortfolioScreen.module.css`
-
-```css
-/* Teammate's CSS module 1f20t, reformatted (one declaration per line). */
-/* FLAG: raw display:flex/grid + gap/padding layout instead of L3 Stack/Section/Inset/Grid (whole file) */
-
-.page {
-  background: var(--l3-surface-secondary); /* as on Stocks home: grey above, the white sheet over it */
-  flex-direction: column;
-  min-height: 100%;
-  display: flex;
-}
-
-.top {
-  gap: var(--l3-spacing-16);
-  padding: var(--l3-spacing-24) var(--l3-spacing-16);
-  flex-direction: column;
-  display: flex;
-}
-
-.sectionTitle {
-  min-height: var(--l3-size-24);
-  font: var(--l3-text-heading-16);
-  color: var(--l3-content-primary);
-  margin: 0;
-}
-
-.label {
-  font: var(--l3-text-description-12);
-  color: var(--l3-content-secondary);
-}
-
-.stat {
-  align-items: flex-start;
-  gap: var(--l3-spacing-04);
-  flex-direction: column;
-  display: flex;
-}
-
-.stat[data-align=center] {
-  align-items: center;
-}
-
-.stat[data-align=end] {
-  align-items: flex-end;
-}
-
-.summary {
-  gap: var(--l3-spacing-16);
-  padding-top: var(--l3-spacing-28);
-  background: var(--l3-surface-primary);
-  position: relative;
-}
-
-.allTag {
-  padding: var(--l3-spacing-02) var(--l3-spacing-16);
-  border-radius: var(--l3-radius-12) 0 var(--l3-radius-12) 0;
-  background: var(--l3-surface-accent-success-light);
-  font: var(--l3-text-label-10);
-  color: var(--l3-content-accent-success-default);
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.summaryRow {
-  justify-content: space-between;
-  display: flex;
-}
-
-.big {
-  font: var(--l3-text-heading-18);
-  color: var(--l3-content-primary);
-}
-
-.returns {
-  align-items: center;
-  gap: var(--l3-spacing-08);
-  display: flex;
-}
-
-/* FLAG: hand-made sheet on the page — surface default with 32 round top corners over the grey, as on Stocks home. */
-.sheet {
-  gap: var(--l3-spacing-16);
-  padding: var(--l3-spacing-24) var(--l3-spacing-16);
-  border-radius: var(--l3-radius-32) var(--l3-radius-32) 0 0;
-  background: var(--l3-surface-default);
-  flex-direction: column;
-  flex: 1;
-  display: flex;
-}
-
-.sheet[data-section=orders] {
-  padding-top: var(--l3-spacing-16);
-  border-radius: 0;
-}
-
-.sheetHead {
-  justify-content: space-between;
-  align-items: center;
-  display: flex;
-}
-
-.sort {
-  align-items: center;
-  gap: var(--l3-spacing-04);
-  font: var(--l3-text-label-12);
-  color: var(--l3-content-primary);
-  cursor: pointer;
-  background: 0 0;
-  border: 0;
-  padding: 0;
-  display: flex;
-}
-
-.list {
-  gap: var(--l3-spacing-12);
-  flex-direction: column;
-  display: flex;
-}
-
-.holding[data-interactive] {
-  gap: 0;
-}
-
-.holdingTop {
-  align-items: center;
-  gap: var(--l3-spacing-12);
-  padding: var(--l3-spacing-12);
-  border-bottom: 1px solid var(--l3-border-light);
-  display: flex;
-}
-
-.holdingName {
-  gap: var(--l3-spacing-02);
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-}
-
-.symbol {
-  font: var(--l3-text-label-14);
-  color: var(--l3-content-primary);
-}
-
-.holdingBottom {
-  padding: var(--l3-spacing-12);
-  justify-content: space-between;
-  display: flex;
-}
-
-.value {
-  font: var(--l3-text-label-14);
-  color: var(--l3-content-primary);
-}
-
-.value[data-tone=up],
-[data-tone=up] {
-  color: var(--l3-content-accent-indicator-up-default);
-}
-
-.value[data-tone=down] {
-  color: var(--l3-content-accent-indicator-down-default);
-}
-
-.indices {
-  gap: var(--l3-spacing-12);
-  flex-direction: column;
-  display: flex;
-}
-
-.indexRow {
-  gap: var(--l3-spacing-12);
-  margin-right: calc(-1 * var(--l3-spacing-16));
-  scrollbar-width: none;
-  display: flex;
-  overflow-x: auto;
-}
-
-/* FLAG: hand-made card with fixed 189px width — use L3 Card */
-.index {
-  gap: var(--l3-spacing-08);
-  flex: none;
-  width: 189px;  /* FLAG: raw px */
-}
-
-.indexValue {
-  font: var(--l3-text-label-12);
-  color: var(--l3-content-primary);
-  white-space: nowrap;
-}
-
-.indexHead {
-  justify-content: space-between;
-  align-items: center;
-  display: flex;
-}
-
-.index .label {
-  font: var(--l3-text-label-12);
-  color: var(--l3-content-secondary);
-}
-
-.holdTotal {
-  font: var(--l3-text-heading-14);
-  color: var(--l3-content-primary);
-}
-
-.holdList {
-  gap: var(--l3-spacing-08);
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-}
-
-.holdList .holdRow {
-  align-items: center;
-  gap: var(--l3-spacing-12);
-  flex-direction: row;
-}
-
-.holdText,
-.holdValue {
-  gap: var(--l3-spacing-02);
-  flex-direction: column;
-  display: flex;
-}
-
-.holdText {
-  flex: 1;
-  min-width: 0;
-}
-
-.holdValue {
-  align-items: flex-end;
-}
-
-.holdName {
-  font: var(--l3-text-label-14);
-  color: var(--l3-content-primary);
-}
-
-.holdSub {
-  font: var(--l3-text-description-12);
-  color: var(--l3-content-secondary);
-}
-
-/* FLAG: hand-made switch (unused in JSX) */
-.marketSwitch {
-  align-items: center;
-  gap: var(--l3-spacing-04);
-  height: var(--l3-size-32);
-  padding: 0 var(--l3-spacing-12);
-  border: 1px solid var(--l3-border-light);
-  border-radius: var(--l3-radius-full);
-  background: var(--l3-surface-primary);
-  font: var(--l3-text-label-12);
-  color: var(--l3-content-primary);
-  cursor: pointer;
-  display: inline-flex;
-}
-
-.marketName {
-  animation: .22s cubic-bezier(.2,0,0,1) market-in;
-}
-
-@keyframes market-in {
-  0% {
-    opacity: 0;
-    translate: 0 4px;  /* FLAG: raw px */
-  }
-
-}
-
-.holdList {
-  gap: var(--l3-spacing-16);
-}
-
-/* FLAG: hand-made holding card — use L3 Card / ListCell */
-.hold {
-  width: 100%; /* also a button (a US holding opens its stock page, 3 Nov) */
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
-  gap: var(--l3-spacing-12);
-  padding: var(--l3-spacing-12);
-  border: 1px solid var(--l3-border-light);
-  border-radius: var(--l3-radius-12);
-  background: var(--l3-surface-primary);
-  flex-direction: column;
-  display: flex;
-}
-
-button.hold {
-  cursor: pointer;
-}
-
-.holdTop {
-  align-items: center;
-  gap: var(--l3-spacing-12);
-  display: flex;
-}
-
-.holdName {
-  gap: var(--l3-spacing-02);
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-}
-
-.holdSym {
-  font: var(--l3-text-label-14);
-  color: var(--l3-content-primary);
-}
-
-.holdQty {
-  font: var(--l3-text-description-12);
-  color: var(--l3-content-secondary);
-}
-
-.holdRule {
-  display: block;
-  flex: none;
-  background: var(--l3-border-light);
-  border: 0;
-  width: 100%;
-  height: 1px;
-  margin: 0;
-}
-
-.holdBottom {
-  grid-template-columns: 1fr auto 1fr;
-  align-items: start;
-  display: grid;
-}
-
-.holdCell {
-  gap: var(--l3-spacing-04);
-  flex-direction: column;
-  display: flex;
-}
-
-.holdCell[data-mid] {
-  align-items: center;
-}
-
-.holdCell[data-end] {
-  text-align: right;
-  align-items: flex-end;
-}
-
-.holdLabel {
-  font: var(--l3-text-description-12);
-  color: var(--l3-content-secondary);
-}
-
-.holdFig {
-  font: var(--l3-text-heading-14);
-  color: var(--l3-content-primary);
-}
-
-.holdFig[data-tone=up] {
-  color: var(--l3-content-accent-success-default);
-}
-
-.holdFig[data-tone=down] {
-  color: var(--l3-content-accent-error-default);
-}
-
-.marketTabs.marketTabs {
-  width: calc(100% + 2 * var(--l3-spacing-16));
-  margin: calc(var(--l3-spacing-08) - var(--l3-spacing-24)) calc(-1 * var(--l3-spacing-16)) var(--l3-spacing-08);
-}
-
-/* FLAG: hand-made text button — use L3 Button ghost */
-.sortLink {
-  align-items: center;
-  gap: var(--l3-spacing-04);
-  font: var(--l3-text-label-14);
-  color: var(--l3-content-accent-discover-default);
-  cursor: pointer;
-  background: 0 0;
-  border: 0;
-  padding: 0;
-  display: inline-flex;
-}
-
-.sortLink:focus {
-  outline: none;
-}
-
-.sortLink:focus-visible {
-  outline: var(--l3-spacing-02) solid var(--l3-border-dark);
-  outline-offset: var(--l3-spacing-04);
-  border-radius: var(--l3-radius-04);
-}
-
-/* The underline tabs' line (Positions · Holdings · Orders, Indian · US Stocks) is border intense, not L3's border light,
-   so it shows in dark mode too. L3 gap: underline Tabs have no line-colour option. */
-.screen [role='tablist'][data-appearance='underline'],
-.screen [role='tablist'][data-appearance='underline'] > [role='tab'] {
-  box-shadow: inset 0 -1px 0 var(--l3-border-intense);
-}
-
-/* A tappable holding (US: opens its stock page) presses and hovers like a clickable L3 Card. */
-button.hold { cursor: pointer; transition: transform var(--l3-motion-duration-short) var(--l3-motion-easing-standard); }
-button.hold:active { transform: scale(var(--l3-motion-scale-press-default)); }
-@media (hover: hover) {
-  button.hold:hover { background-image: linear-gradient(var(--l3-state-layer-dark-hover), var(--l3-state-layer-dark-hover)); }
-}
-```
-
 ### `src/flows/us-stocks/screens/entry/PortfolioScreen.tsx`
 
 ```tsx
-// E4 · Portfolio tab (before 8 PM IST / after 8 PM IST): Positions · Holdings · Orders. Holdings has Indian / US tabs
-// and a Sort sheet; the page opens on Holdings (3 Nov, was Positions). The US side is empty with an "Explore US Market" button that leads to US Stocks home.
-// NOTE: both variants render the same — his `live` prop is not read anywhere, and the US-market banner that the Figma
-// frames show ("opens tonight" / "LIVE till 2:30 AM IST") is no longer drawn (OrdersTab keeps an unused `banner` slot).
+// E4 · Portfolio tab: Positions · Holdings · Orders, opening on Holdings (3 Nov, was Positions). Each tab is its own
+// page (portfolio/PositionsTab, portfolio/HoldingsTab, components/OrdersTab): a grey top and the white sheet under it.
+// This screen holds the frame — Actionbar with the section tabs, swiping between tabs, the navbar — and the sort sheet.
+// NOTE: the US-market banner the Figma frames show ("opens tonight" / "LIVE till 2:30 AM IST") is no longer drawn, so
+// the two Figma variants (before / after 8 PM IST) render the same.
 // FLAG: redraws the app's Portfolio tab (no portfolio flow in src/flows yet) for this prototype.
-// FLAG: hand-made Sort text button and holding cards (card edge, Avatar 40, Label 16 / Description 12 match StockListCard)
-// (see PortfolioScreen.module.css) — L3 Button / Card exist. Empty tabs use L3 EmptyState.
 import { useState } from 'react'
-import { Actionbar, ActionbarAction } from '@l3/components/Actionbar'
-import { Avatar } from '@l3/components/Avatar'
-import { Button } from '@l3/components/Button'
-import { EmptyState } from '@l3/components/EmptyState'
-import { Card } from '@l3/components/Card'
-import { Icon } from '@l3/components/Icon'
-import { Stack } from '@l3/components/Stack'
-import { Tabs } from '@l3/components/Tabs'
-import { Tag } from '@l3/components/Tag'
-import { asset } from '../../asset'
+import { Actionbar } from '@l3/components/Actionbar'
+import { Section } from '@l3/components/Section'
 import { Phone } from '../../components/Phone'
 import { UsMainNav } from '../../components/UsMainNav'
-import { openStock, stockFor } from '../../data'
 import { useUsNav } from '../../nav'
-import { HoldingsCards, type HoldingsMarket } from './components/HoldingsCards'
+import { useUsMarketSnapshot } from '../../../../shared/data/usStocks'
+import { useUsJourney } from '../../../../shared/userStatus'
+import type { HoldingsMarket } from './components/HoldingsCards'
 import { OrdersTab } from './components/OrdersTab'
 import { SlidingTabs } from './components/SlidingTabs'
 import { neighbour, useSwipePages } from './components/swipePages'
-import { MaskImg } from './components/MaskImg'
-import { entryPath, entryUrl } from './entryAssets'
-import { sortIcon } from './icons'
-import { Usd } from '../../../../shared/money'
-import { useUsMarketSnapshot } from '../../../../shared/data/usStocks'
-import { useUsJourney, type UsJourney } from '../../../../shared/userStatus'
-import { ACTIVATE_US, KYC_START, SEARCH, STOCKS_HOME, STOCKS_HOME_ENTRY, WALLET, WALLET_US, FNO_HOME } from './ids'
-import { holdingsSummary, marketIndices, portfolioTabs, sortedHoldings, usHoldingNow, type Holding, type PortfolioTab } from './portfolioData'
+import { t } from './copy'
+import { SEARCH, WALLET, WALLET_US } from './ids'
+import { HoldingsTab } from './portfolio/HoldingsTab'
+import { PortfolioPage } from './portfolio/PortfolioPage'
+import { PositionsTab } from './portfolio/PositionsTab'
+import { portfolioTabs, type PortfolioTab } from './portfolioData'
 import { SortSheet, type SortValue } from './sheets/SortSheet'
-import styles from './PortfolioScreen.module.css'
+import styles from './portfolio/Portfolio.module.css'
+import { SearchWalletActions } from '../../../../shared/ui/TopBarAction'
 
-/** An empty tab: L3 Empty state (default illustration), centred in the space left in the sheet, with one small button. */
-function EmptyWallet({ title, text, button, onClick }: { title: string; text: string; button: string; onClick?: () => void }) {
-  return (
-    <EmptyState
-      title={title}
-      description={text}
-      action={<Button variant="primary" size="sm" onClick={onClick}>{button}</Button>}
-    />
-  )
-}
-
-/** One holding card (Indian or US): today's return (1D %) on top, current · invested · total returns below.
- *  `onOpen` (US, 3 Nov): the card is a button that opens the stock's page, with its Your Holdings card. */
-function HoldingRow({ holding, onOpen }: { holding: Holding; onOpen?: () => void }) {
-  const Box = onOpen ? 'button' : 'div'
-  return (
-    <li>
-      <Box {...(onOpen ? { type: 'button' as const, onClick: onOpen, 'aria-label': `${holding.name}, open its stock page` } : {})} className={styles.hold}>
-        <span className={styles.holdTop}>
-          <Avatar src={holding.logo} initials={holding.name.slice(0, 2)} size={40} label={holding.name} />
-          <span className={styles.holdName}>
-            <span className={styles.holdSym}>{holding.name}</span>
-            <span className={styles.holdQty}>Qty {holding.qty}</span>
-          </span>
-          <span className={styles.holdCell} data-end="">
-            <span className={styles.holdLabel}>1D Returns</span>
-            <span className={styles.holdFig} data-tone={holding.day >= 0 ? 'up' : 'down'}>{`${holding.day >= 0 ? '+' : '−'}${Math.abs(holding.day).toFixed(2)}%`}</span>
-          </span>
-        </span>
-        <span className={styles.holdRule} aria-hidden="true" />
-        <span className={styles.holdBottom}>
-          <span className={styles.holdCell}>
-            <span className={styles.holdLabel}>Current</span>
-            <span className={styles.holdFig}><Usd text={holding.current} /></span>
-          </span>
-          <span className={styles.holdCell} data-mid="">
-            <span className={styles.holdLabel}>Invested</span>
-            <span className={styles.holdFig}><Usd text={holding.invested} /></span>
-          </span>
-          <span className={styles.holdCell} data-end="">
-            <span className={styles.holdLabel}>Returns</span>
-            <span className={styles.holdFig} data-tone={holding.up ? 'up' : 'down'}><Usd text={holding.returns} align="end" /></span>
-          </span>
-        </span>
-      </Box>
-    </li>
-  )
-}
-
-/** The US side of Holdings follows the user status (Settings → User status). */
-function usEmpty(journey: UsJourney): { title: string; text: string; button: string; to: string } {
-  switch (journey) {
-    case 'kyc':
-      return { title: 'Complete your KYC', text: 'Finish your Lemonn KYC to activate US Stocks', button: 'Complete KYC', to: KYC_START }
-    case 'activate':
-      return { title: 'Build Wealth in Dollars', text: 'Activate US Stocks to start investing in US companies', button: 'Activate US Stocks', to: ACTIVATE_US }
-    case 'review':
-    case 'support':
-      return { title: 'Activation under review', text: 'We’re reviewing your US Stocks activation. You’ll see your holdings here once it’s done', button: 'Explore US Market', to: STOCKS_HOME_ENTRY }
-    case 'failed':
-      return { title: 'Activation failed', text: 'We couldn’t activate US Stocks for you. Please try again', button: 'Retry', to: ACTIVATE_US }
-    default:
-      return { title: 'Build Wealth in Dollars', text: 'Seems like you don’t have any US holdings right now', button: 'Explore US Market', to: STOCKS_HOME_ENTRY }
-  }
-}
-
-/** `live` is accepted for the two Figma variants but, as in the original, not used. `tab` / `market`: where it opens
- * (Home's US holdings card opens Holdings with the US Stocks card upfront). */
-export function PortfolioScreen({ tab: initialTab = 'holdings', market: initialMarket = 'in' }: { live?: boolean; tab?: PortfolioTab; market?: HoldingsMarket }) {
+/** `tab` / `market`: where it opens (Home's US holdings card opens Holdings with the US Stocks card upfront). */
+export function PortfolioScreen({ tab: initialTab = 'holdings', market: initialMarket = 'in' }: { tab?: PortfolioTab; market?: HoldingsMarket }) {
   const { go } = useUsNav()
   const journey = useUsJourney()
   useUsMarketSnapshot() // re-render when US prices refresh
-  const us = usHoldingNow()
   const usActive = journey === 'activated' || journey === 'onTheWay' || journey === 'ready' || journey === 'holding'
-  const usEmptyState = usEmpty(journey)
   const [tab, setTab] = useState<PortfolioTab>(initialTab)
   const [market, setMarket] = useState<HoldingsMarket>(initialMarket)
   const [sort, setSort] = useState<SortValue>({ key: 'current', dir: 'desc' })
@@ -27372,135 +28588,62 @@ export function PortfolioScreen({ tab: initialTab = 'holdings', market: initialM
     <Phone
       className={styles.screen}
       bodyRef={swipe.bind}
-      label="Portfolio"
+      label={t('portfolio.title')}
       header={
         <Actionbar
-          title="Portfolio"
-          actions={
-            <>
-              <ActionbarAction icon={entryUrl('search.svg')} label="Search" onClick={() => go(SEARCH)} />
-              <ActionbarAction icon={entryUrl('wallet.svg')} label="Wallet" onClick={() => go(usActive ? WALLET_US : WALLET)} />
-            </>
-          }
+          title={t('portfolio.title')}
+          actions={<SearchWalletActions searchLabel={t('portfolio.search')} walletLabel={t('portfolio.wallet')} onSearch={() => go(SEARCH)} onWallet={() => go(usActive ? WALLET_US : WALLET)} />}
           bottom={
-          <SlidingTabs
-            appearance="underline"
-            aria-label="Portfolio sections"
-            width="auto"
-            value={tab}
-            onChange={(value) => pickTab(value as PortfolioTab)}
-            items={[
-              { value: 'positions', label: 'Positions' },
-              { value: 'holdings', label: 'Holdings' },
-              { value: 'orders', label: 'Orders' },
-            ]}
-          />
+            <SlidingTabs
+              appearance="underline"
+              aria-label={t('portfolio.sections')}
+              width="auto"
+              value={tab}
+              onChange={(value) => pickTab(value as PortfolioTab)}
+              items={portfolioTabs.map((value) => ({ value, label: t(`portfolio.tab.${value}`) }))}
+            />
           }
         />
       }
       gesture="none"
       footer={<UsMainNav value="portfolio" />}
+      overlay={
+        <SortSheet
+          key={String(sortOpen)} // a fresh draft each time it opens
+          open={sortOpen}
+          value={sort}
+          onApply={(value) => {
+            setSort(value)
+            setSortOpen(false)
+          }}
+          onClose={() => setSortOpen(false)}
+        />
+      }
     >
-      <div className={styles.page}>
-        {tab !== 'orders' && (
-          <div className={styles.top}>
-            {tab === 'positions' && (
-              <section className={styles.indices}>
-                <h2 className={styles.sectionTitle}>Market Indices</h2>
-                <div className={styles.indexRow}>
-                  {marketIndices.map((index) => (
-                    <Card key={index.key} surface="primary" className={styles.index}>
-                      <span className={styles.indexHead}>
-                        <span className={styles.label}>{index.name}</span>
-                        <Tag variant="secondary" color="discover" size="sm">Expires today</Tag>
-                      </span>
-                      <span className={styles.indexValue}>
-                        {index.value}{' '}
-                        <span data-tone="up">{index.change}</span>{' '}
-                        <span data-tone="up">{index.pct}</span>
-                      </span>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-            {tab === 'holdings' && <HoldingsCards market={market} onMarket={setMarket} data={journey === 'holding' ? { ...holdingsSummary, us: us.summary } : holdingsSummary} />}
-          </div>
-        )}
-        <section key={tab} className={styles.sheet} data-section={tab} ref={swipe.contentRef}>
-          {tab === 'positions' && (
-            <>
-              {/* Positions are F&O only, and F&O is Indian: no Indian / US tabs here (3 Nov). */}
-              <div className={styles.sheetHead}>
-                <h2 className={styles.sectionTitle}>Your positions</h2>
-                <button type="button" className={styles.sort}>
-                  Refresh
-                  <MaskImg src={entryPath('portfolio/refresh.svg')} w={12} />
-                </button>
-              </div>
-              <EmptyWallet title="Build Wealth Daily" text="Seems like you don’t have any positions right now" button="Explore F&O" onClick={() => go(FNO_HOME)} />
-            </>
-          )}
-          {tab === 'holdings' && (
-            <>
-              <Tabs
-                appearance="underline"
-                width="fill"
-                aria-label="Holdings market"
-                items={[
-                  { value: 'in', label: 'Indian Stocks', iconLeft: <Icon icon={asset('assets/home/ind-icon-on.svg')} size={16} /> },
-                  { value: 'us', label: 'US Stocks', iconLeft: <Icon icon={asset('assets/home/us-icon-on.svg')} size={16} /> },
-                ]}
-                value={market}
-                onChange={(value) => setMarket(value as HoldingsMarket)}
-                className={styles.marketTabs}
-              />
-              <div className={styles.sheetHead}>
-                <h2 className={styles.sectionTitle}>Your holdings</h2>
-                <button type="button" className={styles.sortLink} onClick={() => setSortOpen(true)}>
-                  <Icon icon={sortIcon} size={18} />
-                  Sort
-                </button>
-              </div>
-              {market === 'us' && journey === 'holding' ? (
-                <ul className={styles.holdList}>
-                  <HoldingRow holding={us.holding} onOpen={() => openStock(go, stockFor(us.holding.name))} />
-                </ul>
-              ) : market === 'us' ? (
-                <EmptyWallet
-                  title={usEmptyState.title}
-                  text={usEmptyState.text}
-                  button={usEmptyState.button}
-                  onClick={() => go(usEmptyState.to)}
-                />
-              ) : (
-                <ul className={styles.holdList}>
-                  {sortedHoldings(sort).map((holding) => (
-                    <HoldingRow key={holding.key} holding={holding} />
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-          {tab === 'orders' && <OrdersTab initialMarket={market === 'us' ? 'us' : undefined} />}
-          <SortSheet
-            key={String(sortOpen)}
-            open={sortOpen}
-            value={sort}
-            onApply={(value) => {
-              setSort(value)
-              setSortOpen(false)
-            }}
-            onClose={() => setSortOpen(false)}
-          />
-        </section>
-      </div>
+      {/* Keyed by tab: the new tab's page mounts fresh, and its sheet is what slides in (swipe.contentRef). */}
+      {tab === 'positions' && <PositionsTab key={tab} sheetRef={swipe.contentRef} />}
+      {tab === 'holdings' && <HoldingsTab key={tab} market={market} onMarket={setMarket} sort={sort} onSort={() => setSortOpen(true)} sheetRef={swipe.contentRef} />}
+      {tab === 'orders' && (
+        <PortfolioPage key={tab} flat sheetRef={swipe.contentRef}>
+          <OrdersPage market={market} />
+        </PortfolioPage>
+      )}
     </Phone>
   )
 }
 
-export const PortfolioBannerScreen = () => <PortfolioScreen live={false} />
-export const PortfolioBannerLiveScreen = () => <PortfolioScreen live />
+/** Orders sits 16 from the top of its square sheet and from its sides. */
+function OrdersPage({ market }: { market: HoldingsMarket }) {
+  return (
+    <Section paddingInline="16" paddingBlock="08" className={styles.grow}>
+      <OrdersTab initialMarket={market === 'us' ? 'us' : undefined} />
+    </Section>
+  )
+}
+
+// Figma's two variants (before / after 8 PM IST) render the same now (see the NOTE at the top).
+export const PortfolioBannerScreen = () => <PortfolioScreen />
+export const PortfolioBannerLiveScreen = () => <PortfolioScreen />
 export const PortfolioUsHoldingsScreen = () => <PortfolioScreen tab="holdings" market="us" />
 /** Portfolio on Orders, US side — where Order Details goes back to. */
 export const PortfolioUsOrdersScreen = () => <PortfolioScreen tab="orders" market="us" />
@@ -27812,10 +28955,6 @@ export const PortfolioUsPositionsScreen = () => <PortfolioScreen tab="positions"
   display: flex;
 }
 
-.section:last-child {
-  padding-bottom: var(--l3-spacing-24);
-}
-
 .section+.section {
   padding-top: var(--l3-spacing-32);
 }
@@ -27932,7 +29071,7 @@ export const PortfolioUsPositionsScreen = () => <PortfolioScreen tab="positions"
 // E1a · S&P 500 index page (market open): name + value, the intraday chart, chart tools, the day's range, and the
 // index's stocks — tapping one opens its stock page. Back and the footer CTA both lead to US Stocks home.
 // FLAG: hand-made chart tools, and "See all" (see SpxIndex.module.css); the stock rows are the shared StockListCard — L3 Button / SectionHeader / Card / ListCell exist.
-import { ActionbarAction, Actionbar } from '@l3/components/Actionbar'
+import { Actionbar } from '@l3/components/Actionbar'
 import { Button } from '@l3/components/Button'
 import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Icon } from '@l3/components/Icon'
@@ -27949,6 +29088,7 @@ import { STOCKS_HOME, STOCKS_HOME_ENTRY } from './ids'
 import { InlineSvg } from '../../components/InlineSvg'
 import { indexStocks } from './spxData'
 import styles from './SpxIndex.module.css'
+import { TopBarAction } from '../../../../shared/ui/TopBarAction'
 
 /** The row of chart tools under the chart: an icon or a text glyph + a caption. */
 const chartTools: { label: string; icon?: string; text?: string }[] = [
@@ -27968,7 +29108,7 @@ export function SpxIndexScreen() {
       header={
         <Actionbar
           onBack={() => back(STOCKS_HOME)}
-          actions={<ActionbarAction icon={star} label="Add S&P 500 to watchlist" onClick={() => {}} />}
+          actions={<TopBarAction icon={star} label="Add S&P 500 to watchlist" onClick={() => {}} />}
         />
       }
       footer={
@@ -28085,6 +29225,10 @@ export function SpxIndexScreen() {
   overscroll-behavior-x: contain;
   display: flex;
   overflow-x: auto;
+  /* Room for the cards' shadow: a sideways scroller clips vertically too, so it pads 12 above and below and takes it
+     back with a negative margin (same layout, shadow not cut). */
+  padding-block: var(--l3-spacing-12);
+  margin-block: calc(-1 * var(--l3-spacing-12));
 }
 
 .rail::-webkit-scrollbar {
@@ -28099,6 +29243,7 @@ export function SpxIndexScreen() {
   padding: var(--l3-spacing-12);
   border: 1px solid var(--l3-border-light);
   border-radius: var(--l3-radius-16);
+  box-shadow: var(--l3-shadow-elevation-soft); /* a clickable card: L3's soft shadow, as a clickable L3 Card */
   background: radial-gradient(80% 70% at 100% 100%, color-mix(in srgb, var(--glow) 16%, transparent) 0%, transparent 72%), var(--l3-surface-primary);
   --glow: var(--l3-surface-accent-brand-default);
   scroll-snap-align: start;
@@ -29247,6 +30392,16 @@ export function useSwipePages({ canGo, onSwitch, page }: { canGo: (direction: 1 
 }
 ```
 
+### `src/flows/us-stocks/screens/entry/copy.ts`
+
+```ts
+import { makeCopy } from '../../../../shared/copy'
+import copy from '../../copy.json'
+
+/** US Stocks strings for the entry screens (Portfolio so far): t('portfolio.holdings'). */
+export const t = makeCopy('us-stocks', copy)
+```
+
 ### `src/flows/us-stocks/screens/entry/entryAssets.ts`
 
 ```ts
@@ -29331,7 +30486,7 @@ export const FNO_HOME = 'fno-01'
 /** Wallet, US tab (follows the user status). */
 export const WALLET_US = '5852:99057'
 /** Activation / KYC screens in other flows (prototype ids). */
-export const ACTIVATE_US = 'stocks-12'
+export const ACTIVATE_US = 'us-stocks-94'
 export const KYC_START = 'kyc-01'
 /** Search, US tab (this part). */
 export const SEARCH = '5796:89230'
@@ -29362,6 +30517,386 @@ export const screens: UsScreenMap = {
   '9001:31': PortfolioUsOrdersScreen, // Portfolio · Orders · US (Order Details goes back here)
   '9001:32': PortfolioUsPositionsScreen, // Portfolio · Positions · US (Position Details goes back here)
   '5796:88163': MutualFundHomeScreen, // E5 · Mutual Fund home · US banner
+}
+```
+
+### `src/flows/us-stocks/screens/entry/portfolio/HoldingCard.tsx`
+
+```tsx
+import type { ReactNode } from 'react'
+import { Avatar } from '@l3/components/Avatar'
+import { Card } from '@l3/components/Card'
+import { Grid } from '@l3/components/Grid'
+import { Stack } from '@l3/components/Stack'
+import { Usd } from '../../../../../shared/money'
+import { t } from '../copy'
+import type { Holding } from '../portfolioData'
+import styles from './Portfolio.module.css'
+
+type Tone = 'up' | 'down'
+
+/** A label over a figure, lined up to the start, centre or end of its column. */
+function Figure({ label, align = 'start', tone, children }: { label: string; align?: 'start' | 'center' | 'end'; tone?: Tone; children: ReactNode }) {
+  return (
+    <Stack gap="04" align={align}>
+      <span className={styles.figureLabel}>{label}</span>
+      <span className={styles.figure} data-tone={tone}>{children}</span>
+    </Stack>
+  )
+}
+
+/**
+ * One holding (Indian or US): name, quantity and today's return (1D %) on top; current · invested · total returns
+ * below. With `onOpen` (US) it's a clickable L3 Card that opens the stock's page; otherwise a static one.
+ */
+export function HoldingCard({ holding, onOpen }: { holding: Holding; onOpen?: () => void }) {
+  const day = `${holding.day >= 0 ? '+' : '−'}${Math.abs(holding.day).toFixed(2)}%`
+  return (
+    <Card surface="primary" className={styles.holding} onClick={onOpen} aria-label={onOpen ? t('portfolio.holding.open', { name: holding.name }) : undefined}>
+      <Stack gap="12">
+        <Stack direction="horizontal" align="center" gap="12">
+          <Avatar src={holding.logo} initials={holding.name.slice(0, 1)} size={40} label={holding.name} />
+          <Stack className={styles.name}>
+            <span className={styles.symbol}>{holding.name}</span>
+            <span className={styles.qty}>{t('portfolio.holding.qty', { qty: holding.qty })}</span>
+          </Stack>
+          <Figure label={t('portfolio.holding.day')} align="end" tone={holding.day >= 0 ? 'up' : 'down'}>{day}</Figure>
+        </Stack>
+        <span className={styles.rule} aria-hidden="true" />
+        <Grid columns={3}>
+          <Figure label={t('portfolio.holding.current')}><Usd text={holding.current} /></Figure>
+          <Figure label={t('portfolio.holding.invested')} align="center"><Usd text={holding.invested} /></Figure>
+          <Figure label={t('portfolio.holding.returns')} align="end" tone={holding.up ? 'up' : 'down'}><Usd text={holding.returns} align="end" /></Figure>
+        </Grid>
+      </Stack>
+    </Card>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/entry/portfolio/HoldingsTab.tsx`
+
+```tsx
+import type { Ref } from 'react'
+import { Button } from '@l3/components/Button'
+import { EmptyState } from '@l3/components/EmptyState'
+import { Icon } from '@l3/components/Icon'
+import { Inset } from '@l3/components/Inset'
+import { Stack } from '@l3/components/Stack'
+import { Tabs } from '@l3/components/Tabs'
+import { asset } from '../../../asset'
+import { openStock, stockFor } from '../../../data'
+import { useUsNav } from '../../../nav'
+import { Flag } from '../../../../../shared/ui/Flag'
+import { useUsJourney, type UsJourney } from '../../../../../shared/userStatus'
+import { HoldingsCards, type HoldingsMarket } from '../components/HoldingsCards'
+import { t } from '../copy'
+import { ACTIVATE_US, KYC_START, STOCKS_HOME_ENTRY } from '../ids'
+import { sortIcon } from '../icons'
+import { holdingsSummary, sortedHoldings, usHoldingNow } from '../portfolioData'
+import type { SortValue } from '../sheets/SortSheet'
+import { HoldingCard } from './HoldingCard'
+import { PortfolioPage, SheetContent, SheetHeader } from './PortfolioPage'
+import styles from './Portfolio.module.css'
+
+/** The US side of Holdings follows the user status (Settings → User status): which empty state, and where it leads. */
+function usEmpty(journey: UsJourney): { copy: 'kyc' | 'activate' | 'review' | 'failed' | 'none'; to: string } {
+  switch (journey) {
+    case 'kyc':
+      return { copy: 'kyc', to: KYC_START }
+    case 'activate':
+      return { copy: 'activate', to: ACTIVATE_US }
+    case 'review':
+    case 'support':
+      return { copy: 'review', to: STOCKS_HOME_ENTRY }
+    case 'failed':
+      return { copy: 'failed', to: ACTIVATE_US }
+    default:
+      return { copy: 'none', to: STOCKS_HOME_ENTRY }
+  }
+}
+
+/**
+ * Portfolio → Holdings: the Indian / US P&L cards on the grey top; in the sheet, Indian Stocks / US Stocks tabs and
+ * that market's holdings (Sort opens the sort sheet). The US side shows the one US holding once the user holds it,
+ * else an empty state that follows the user status.
+ */
+export function HoldingsTab({ market, onMarket, sort, onSort, sheetRef }: { market: HoldingsMarket; onMarket: (market: HoldingsMarket) => void; sort: SortValue; onSort: () => void; sheetRef?: Ref<HTMLElement> }) {
+  const { go } = useUsNav()
+  const journey = useUsJourney()
+  const us = usHoldingNow()
+  const holdsUs = journey === 'holding'
+  const empty = usEmpty(journey)
+
+  return (
+    <PortfolioPage
+      sheetRef={sheetRef}
+      top={
+        <Inset paddingInline="16" paddingBlock="24">
+          <HoldingsCards market={market} onMarket={onMarket} data={holdsUs ? { ...holdingsSummary, us: us.summary } : holdingsSummary} />
+        </Inset>
+      }
+    >
+      {/* The home's market tabs (V18): L3 underline tabs, round flags, "IN Stocks / US Stocks" (18 Nov). */}
+      <Tabs
+        appearance="underline"
+        width="fill"
+        aria-label={t('portfolio.markets')}
+        items={[
+          { value: 'in', label: t('portfolio.market.in'), iconLeft: <Flag code="in" /> },
+          { value: 'us', label: t('portfolio.market.us'), iconLeft: <Flag code="us" /> },
+        ]}
+        value={market}
+        onChange={(value) => onMarket(value as HoldingsMarket)}
+      />
+      <SheetContent>
+        <SheetHeader
+          title={t('portfolio.holdings')}
+          action={<Button variant="ghost" size="sm" iconLeft={<Icon icon={sortIcon} />} onClick={onSort}>{t('portfolio.sort')}</Button>}
+        />
+        {market === 'us' && !holdsUs ? (
+          <EmptyState
+            title={t(`portfolio.usEmpty.${empty.copy}.title`)}
+            description={t(`portfolio.usEmpty.${empty.copy}.text`)}
+            action={<Button variant="primary" size="sm" onClick={() => go(empty.to)}>{t(`portfolio.usEmpty.${empty.copy}.button`)}</Button>}
+          />
+        ) : (
+          <Stack as="ul" gap="16" className={styles.list}>
+            {market === 'us' ? (
+              <li>
+                <HoldingCard holding={us.holding} onOpen={() => openStock(go, stockFor(us.holding.name))} />
+              </li>
+            ) : (
+              sortedHoldings(sort).map((holding) => (
+                <li key={holding.key}>
+                  <HoldingCard holding={holding} />
+                </li>
+              ))
+            )}
+          </Stack>
+        )}
+      </SheetContent>
+    </PortfolioPage>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/entry/portfolio/Portfolio.module.css`
+
+```css
+/* Portfolio tab (PortfolioScreen + portfolio/*). Layout is L3 Stack / Section / Inset / Grid; this file only holds
+   surfaces, type and the few things those blocks don't do. */
+
+/* Grey page under a white sheet, as on Stocks home. Fills the body so the sheet reaches the navbar. */
+.page {
+  min-height: 100%;
+  background: var(--l3-surface-secondary);
+}
+
+/* FLAG: the white sheet over the grey — surface default, 32 round top corners (L3 Section rounds all four corners). */
+.sheet {
+  flex: 1;
+  border-radius: var(--l3-radius-32) var(--l3-radius-32) 0 0;
+  background: var(--l3-surface-default);
+}
+
+/* Orders has no grey top: the sheet is the whole page, square. */
+.sheet[data-flat] {
+  border-radius: 0;
+}
+
+/* A block that takes the space left (so an empty state centres in it). */
+.grow {
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+  font: var(--l3-text-heading-16);
+  color: var(--l3-content-primary);
+}
+
+/* ---- Market Indices (Positions) ---- */
+
+.indexName {
+  font: var(--l3-text-label-12);
+  color: var(--l3-content-secondary);
+}
+
+.indexValue {
+  font: var(--l3-text-label-12);
+  color: var(--l3-content-primary);
+  white-space: nowrap;
+}
+
+.up {
+  color: var(--l3-content-accent-indicator-up-default);
+}
+
+/* ---- Holding card ---- */
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.name {
+  min-width: 0;
+  flex: 1;
+}
+
+.symbol {
+  font: var(--l3-text-label-14);
+  color: var(--l3-content-primary);
+}
+
+.qty,
+.figureLabel {
+  font: var(--l3-text-description-12);
+  color: var(--l3-content-secondary);
+}
+
+.figure {
+  font: var(--l3-text-heading-14);
+  color: var(--l3-content-primary);
+}
+
+.figure[data-tone='up'] {
+  color: var(--l3-content-accent-success-default);
+}
+
+.figure[data-tone='down'] {
+  color: var(--l3-content-accent-error-default);
+}
+
+/* The hairline between the card's top row and its figures. */
+.rule {
+  display: block;
+  height: 1px;
+  background: var(--l3-border-light);
+}
+
+/* FLAG (L3 gap): the underline tabs' line (Positions · Holdings · Orders, Indian · US Stocks) is border intense, not
+   L3's border light, so it shows in dark mode too — underline Tabs have no line-colour option. */
+.screen [role='tablist'][data-appearance='underline'],
+.screen [role='tablist'][data-appearance='underline'] > [role='tab'] {
+  box-shadow: inset 0 -1px 0 var(--l3-border-intense);
+}
+
+/* Every holding card is raised with L3's soft elevation, static (Indian) ones too — the user's 4 Nov ask. Clickable
+   (US) cards get it from L3 Card; a static Card has no shadow in L3, so it's added here. FLAG: L3 gap — no shadow
+   option on a static Card. */
+.list .holding:not([data-interactive]) {
+  box-shadow: var(--card-border), var(--l3-shadow-elevation-soft);
+}
+```
+
+### `src/flows/us-stocks/screens/entry/portfolio/PortfolioPage.tsx`
+
+```tsx
+import type { ReactNode, Ref } from 'react'
+import { Section } from '@l3/components/Section'
+import { Stack } from '@l3/components/Stack'
+import styles from './Portfolio.module.css'
+
+/**
+ * One Portfolio tab's page: an optional grey top (summary cards, market indices) and the white sheet under it, which
+ * runs down to the navbar. The sheet is 8 from its top edge and its bottom; what's inside brings its own 16 sides.
+ * `sheetRef` is the part that slides when the tab changes. `flat`: no grey top, a square sheet (Orders).
+ */
+export function PortfolioPage({ top, flat, sheetRef, children }: { top?: ReactNode; flat?: boolean; sheetRef?: Ref<HTMLElement>; children: ReactNode }) {
+  return (
+    <Stack className={styles.page}>
+      {top}
+      <Section as="section" ref={sheetRef} paddingBlock="08" gap="08" className={styles.sheet} data-flat={flat || undefined}>
+        {children}
+      </Section>
+    </Stack>
+  )
+}
+
+/** The sheet's content block: 16 at the sides, 16 from the tabs above (8 + 8) and 24 from the sheet's ends. */
+export function SheetContent({ children }: { children: ReactNode }) {
+  return (
+    <Section paddingInline="16" paddingBlock="16" gap="16" className={styles.grow}>
+      {children}
+    </Section>
+  )
+}
+
+/** A section title with an action on its right (Sort, Refresh). */
+export function SheetHeader({ title, action }: { title: string; action?: ReactNode }) {
+  return (
+    <Stack direction="horizontal" align="center" justify="between">
+      <h2 className={styles.title}>{title}</h2>
+      {action}
+    </Stack>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/entry/portfolio/PositionsTab.tsx`
+
+```tsx
+import type { Ref } from 'react'
+import { Button } from '@l3/components/Button'
+import { Card } from '@l3/components/Card'
+import { EmptyState } from '@l3/components/EmptyState'
+import { Icon } from '@l3/components/Icon'
+import { Inset } from '@l3/components/Inset'
+import { Stack } from '@l3/components/Stack'
+import { Tag } from '@l3/components/Tag'
+import { Rail } from '../../../../../shared/ui/Rail'
+import { useUsNav } from '../../../nav'
+import { t } from '../copy'
+import { entryUrl } from '../entryAssets'
+import { FNO_HOME } from '../ids'
+import { marketIndices } from '../portfolioData'
+import { PortfolioPage, SheetContent, SheetHeader } from './PortfolioPage'
+import styles from './Portfolio.module.css'
+
+/** Portfolio → Positions: market indices on the grey top; the positions (F&O only, so Indian only — no market tabs). */
+export function PositionsTab({ sheetRef }: { sheetRef?: Ref<HTMLElement> }) {
+  const { go } = useUsNav()
+  const top = (
+    <Inset paddingInline="00" paddingBlock="24">
+      <Stack gap="12">
+        <Inset paddingInline="16" paddingBlock="00">
+          <h2 className={styles.title}>{t('portfolio.indices')}</h2>
+        </Inset>
+        {/* Cards 189 wide at 392 (Figma): 1.85 across, the second one cut at the edge. */}
+        <Rail label={t('portfolio.indices')} visible={1.85}>
+          {marketIndices.map((index) => (
+            <Card key={index.key} surface="primary">
+              <Stack direction="horizontal" align="center" justify="between">
+                <span className={styles.indexName}>{index.name}</span>
+                <Tag variant="secondary" color="discover" size="sm">{t('portfolio.expiresToday')}</Tag>
+              </Stack>
+              <span className={styles.indexValue}>
+                {index.value} <span className={styles.up}>{index.change}</span> <span className={styles.up}>{index.pct}</span>
+              </span>
+            </Card>
+          ))}
+        </Rail>
+      </Stack>
+    </Inset>
+  )
+  return (
+    <PortfolioPage top={top} sheetRef={sheetRef}>
+      <SheetContent>
+        <SheetHeader
+          title={t('portfolio.positions')}
+          action={<Button variant="ghost" size="sm" iconRight={<Icon icon={entryUrl('portfolio/refresh.svg')} />}>{t('portfolio.refresh')}</Button>}
+        />
+        <EmptyState
+          title={t('portfolio.positionsEmpty.title')}
+          description={t('portfolio.positionsEmpty.text')}
+          action={<Button variant="primary" size="sm" onClick={() => go(FNO_HOME)}>{t('portfolio.positionsEmpty.button')}</Button>}
+        />
+      </SheetContent>
+    </PortfolioPage>
+  )
 }
 ```
 
@@ -29910,7 +31445,8 @@ export function BoostStrip({ lines, tone, label, onOpen, gradient, look = 'edges
 /* "How Boosted ETFs work" sheet (3 Nov). L3 tokens only. FLAG: hand-made bars and animation. */
 .body {
   gap: var(--l3-spacing-20);
-  padding: 0 var(--l3-spacing-16) var(--l3-spacing-16);
+  /* No side padding of its own (17 Nov): the sheet already insets its content 16 from the edges. */
+  padding: 0 0 var(--l3-spacing-16);
   flex-direction: column;
   display: flex;
 }
@@ -30140,7 +31676,7 @@ export function BoostedSheet({ open, onClose }: { open: boolean; onClose: () => 
 
 .rowName{font:var(--l3-text-heading-14);color:var(--l3-content-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 
-.rowSub{font:var(--l3-text-label-12);color:var(--l3-content-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.rowSub{font:var(--l3-text-description-12);color:var(--l3-content-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 
 .disc{width:var(--l3-size-32);height:var(--l3-size-32);border-radius:var(--l3-radius-full);background:var(--l3-surface-secondary);box-shadow:inset 0 0 0 1px var(--l3-border-light);font:var(--l3-text-heading-12);color:var(--l3-content-primary);letter-spacing:0;flex:none;place-items:center;display:grid}
 
@@ -30172,7 +31708,7 @@ export function BoostedSheet({ open, onClose }: { open: boolean; onClose: () => 
 
 .move[data-size="lg"][data-up] .tri{border-bottom-width:var(--l3-spacing-06)}
 
-.lede{font:var(--l3-text-label-12);color:var(--l3-content-secondary);margin:0}
+.lede{font:var(--l3-text-description-12);color:var(--l3-content-secondary);margin:0}
 
 .group{gap:var(--l3-spacing-12);flex-direction:column;display:flex}
 
@@ -30184,7 +31720,7 @@ export function BoostedSheet({ open, onClose }: { open: boolean; onClose: () => 
 
 .sideSym{font:var(--l3-text-heading-16);color:var(--l3-content-primary)}
 
-.sideName{width:100%;font:var(--l3-text-label-12);color:var(--l3-content-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.sideName{width:100%;font:var(--l3-text-description-12);color:var(--l3-content-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 
 .sidePrice{align-items:center;gap:var(--l3-spacing-04);font:var(--l3-text-heading-12);color:var(--l3-content-primary);font-variant-numeric:tabular-nums;flex-wrap:wrap;display:flex}
 
@@ -30208,19 +31744,19 @@ export function BoostedSheet({ open, onClose }: { open: boolean; onClose: () => 
 
 .chart[data-up] .chartFill{fill:color-mix(in srgb, var(--l3-content-accent-success-default) 10%, transparent)}
 
-.note{padding:var(--l3-spacing-12);border-radius:var(--l3-radius-08);background:var(--l3-surface-secondary);font:var(--l3-text-label-12);color:var(--l3-content-secondary);margin:0}
+.note{padding:var(--l3-spacing-12);border-radius:var(--l3-radius-08);background:var(--l3-surface-secondary);font:var(--l3-text-description-12);color:var(--l3-content-secondary);margin:0}
 
 .section{gap:var(--l3-spacing-12);flex-direction:column;display:flex}
 
 .sectionHead{justify-content:space-between;align-items:center;display:flex}
 
-.sectionMeta{font:var(--l3-text-label-12);color:var(--l3-content-secondary)}
+.sectionMeta{font:var(--l3-text-description-12);color:var(--l3-content-secondary)}
 
 .facts{gap:var(--l3-spacing-12);padding:var(--l3-spacing-12);border-radius:var(--l3-radius-12);background:var(--l3-surface-primary);box-shadow:inset 0 0 0 1px var(--l3-border-light);flex-direction:column;margin:0;display:flex}
 
 .fact{justify-content:space-between;gap:var(--l3-spacing-12);display:flex}
 
-.fact dt{font:var(--l3-text-label-12);color:var(--l3-content-secondary)}
+.fact dt{font:var(--l3-text-description-12);color:var(--l3-content-secondary)}
 
 .fact dd{font:var(--l3-text-heading-12);color:var(--l3-content-primary);text-align:right;margin:0}
 
@@ -30247,6 +31783,10 @@ export function BoostedSheet({ open, onClose }: { open: boolean; onClose: () => 
 .switchChip{display:flex;flex:none;align-items:center;gap:var(--l3-spacing-02);box-sizing:border-box;height:var(--l3-size-32);padding:0 calc(var(--l3-spacing-12) - 1px);border:1px solid var(--l3-content-primary);border-radius:var(--l3-radius-full);background:var(--l3-surface-default);color:var(--l3-content-primary);font:var(--l3-text-label-12);cursor:pointer;-webkit-tap-highlight-color:transparent}
 
 .switchName{animation:.22s cubic-bezier(.2,0,0,1) switch-in}
+
+/* The filter switcher (19 Nov): a one-tab L3 primary pill; tapping it switches Country ⇄ Sector. Its arrow at 14. */
+.switchPill{display:flex;flex:none;cursor:pointer}
+.switchPill [role='tab']>span:last-child{width:var(--l3-icon-size-14);height:var(--l3-icon-size-14)}
 
 @keyframes switch-in{0%{opacity:0;translate:0 var(--l3-spacing-04)}}
 
@@ -30293,7 +31833,7 @@ span:has(>.diagCol){width:auto;height:auto}
 
 .cellValue{font:var(--l3-text-label-16);color:var(--l3-content-primary);font-variant-numeric:tabular-nums}
 
-.twoPlain{font:var(--l3-text-label-12);color:var(--l3-content-secondary);text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}
+.twoPlain{font:var(--l3-text-description-12);color:var(--l3-content-secondary);text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}
 
 .twoLogos{align-items:center;gap:var(--l3-spacing-04);flex:none;display:flex}
 
@@ -30426,7 +31966,7 @@ span:has(>.diagCol){width:auto;height:auto}
 .boostCard[data-tone="purple"],.boostChip[data-tone="purple"]{--boost-accent:var(--l3-content-accent-purple-default);--boost-soft:var(--l3-surface-accent-purple-light)}
 
 /* "Market ▲ 1% → 3x Boosted ▲ 3%": the market's move in the text colour, the boosted one in the accent. */
-.boostSum{align-items:baseline;gap:var(--l3-spacing-06);font:var(--l3-text-label-12);color:var(--l3-content-secondary);white-space:nowrap;display:inline-flex}
+.boostSum{align-items:baseline;gap:var(--l3-spacing-06);font:var(--l3-text-description-12);color:var(--l3-content-secondary);white-space:nowrap;display:inline-flex}
 
 .boostSum b{font:var(--l3-text-heading-12);font-variant-numeric:tabular-nums}
 
@@ -30444,7 +31984,7 @@ span:has(>.diagCol){width:auto;height:auto}
 
 .boostCardText{gap:var(--l3-spacing-02);flex-direction:column;flex:1;min-width:0;display:flex}
 
-.boostCardSub{font:var(--l3-text-label-12);color:var(--l3-content-secondary)}
+.boostCardSub{font:var(--l3-text-description-12);color:var(--l3-content-secondary)}
 
 .boostCardInfo{color:var(--l3-content-secondary);flex:none}
 
@@ -30535,6 +32075,243 @@ span:has(>.diagCol){width:auto;height:auto}
 /* The long / short tag, border only (3 Nov): L3 Tag secondary without its soft fill. L3 gap: no outline Tag variant. */
 .outlineTag[data-variant][data-color] { /* beats L3's .tag[data-variant='secondary'] */
   --tag-surface: transparent;
+}
+```
+
+### `src/flows/us-stocks/screens/etf/EtfDetailsF1.module.css`
+
+```css
+/* The ETF page's Top holdings and Allocation, Figma 6538:107342. */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--l3-spacing-16);
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--l3-spacing-12);
+  padding: var(--l3-spacing-16);
+  border: 1px solid var(--l3-border-light);
+  border-radius: var(--l3-radius-12);
+}
+.lead {
+  margin: 0;
+  color: var(--l3-content-secondary);
+  font: var(--l3-text-description-12);
+}
+.lead b {
+  color: var(--l3-content-primary);
+  font: var(--l3-text-label-12);
+}
+/* FLAG: hand-made segmented bar — each top holding a green step (2 apart), the rest one grey step. */
+.bar {
+  display: flex;
+  gap: 2px; /* FLAG: raw px — Figma's step gap */
+  height: var(--l3-size-08);
+}
+.step {
+  flex-basis: 0;
+  border-radius: var(--l3-radius-02, 2px);
+  background: var(--l3-surface-accent-indicator-up-default);
+}
+.rest {
+  flex-basis: 0;
+  border-radius: var(--l3-radius-02, 2px);
+  background: var(--l3-surface-tertiary);
+}
+.legend {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--l3-content-secondary);
+  font: var(--l3-text-label-10);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.legend i {
+  display: inline-block;
+  width: var(--l3-size-08);
+  height: var(--l3-size-08);
+  margin-right: var(--l3-spacing-06);
+  border-radius: var(--l3-radius-02, 2px);
+  background: var(--l3-surface-accent-indicator-up-default);
+}
+.legend i[data-tone='rest'] {
+  background: var(--l3-surface-tertiary);
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  width: 100%;
+  padding: var(--l3-spacing-10) 0;
+  border: 0;
+  background: none;
+  color: var(--l3-content-primary);
+  text-align: start;
+  cursor: pointer;
+}
+.rank {
+  width: var(--l3-size-12);
+  color: var(--l3-content-tertiary);
+  font: var(--l3-text-label-12);
+}
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--l3-spacing-02);
+  min-width: 0;
+}
+.who > :first-child {
+  overflow: hidden;
+  font: var(--l3-text-label-14);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.who > :last-child {
+  color: var(--l3-content-secondary);
+  font: var(--l3-text-description-12);
+}
+.weight {
+  font: var(--l3-text-label-14);
+}
+.all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--l3-spacing-04);
+  padding: var(--l3-spacing-08) 0 0;
+  border: 0;
+  background: none;
+  color: var(--l3-content-primary);
+  font: var(--l3-text-label-12);
+  cursor: pointer;
+}
+.chips {
+  justify-content: flex-start;
+}
+```
+
+### `src/flows/us-stocks/screens/etf/EtfDetailsF1.tsx`
+
+```tsx
+// The ETF page's sections from Figma 6538:107342 (8 Nov): Top holdings ("Top 10 make up 50.2% of the fund", a bar in ten
+// green steps and the others in grey, the five biggest rows, "View all N more holdings") and Allocation (Market cap ·
+// Sectors · Countries chips over the share donut).
+// Market cap and Countries splits are sample data (by the fund's sector / country); Sectors are the fund's own.
+// FLAG: the segmented bar is hand-made (EtfDetailsF1.module.css); L3 ProgressBar has one value.
+import { useState } from 'react'
+import { Icon } from '@l3/components/Icon'
+import { Tabs } from '@l3/components/Tabs'
+import { msKeyboardArrowDown } from '@l3/icons/material'
+import { DetailsHeading } from '../activation/details'
+import { holdingsBeyond, sectorsFor, stockName, topHoldings, type Etf } from './data'
+import { ShareBars, ShareDonut, useAllocationLook, type DonutPart } from './EtfHoldings'
+import { HoldingLogo } from './parts'
+import styles from './EtfDetailsF1.module.css'
+
+/** How many holdings the bar counts and how many rows show. */
+const TOP = 10
+const ROWS = 5
+
+export function TopHoldingsF1({ etf, title = 'Top holdings', onOpen, onAll }: { etf: Etf; title?: string; onOpen: (sym: string) => void; onAll?: () => void }) {
+  const top = topHoldings(etf, TOP)
+  const share = top.reduce((sum, h) => sum + h.weight, 0)
+  const more = holdingsBeyond(etf, ROWS)
+  return (
+    <section className={styles.block} aria-label={title}>
+      <DetailsHeading title={title} />
+      <div className={styles.card}>
+        <p className={styles.lead}>
+          Top {top.length} make up <b>{share.toFixed(1)}%</b> of the fund
+        </p>
+        <div className={styles.bar} aria-hidden="true">
+          {top.map((h) => <span key={h.sym} className={styles.step} style={{ flexGrow: h.weight }} />)}
+          <span className={styles.rest} style={{ flexGrow: Math.max(0, 100 - share) }} />
+        </div>
+        <p className={styles.legend} aria-hidden="true">
+          <span><i data-tone="top" />Top {top.length} holdings</span>
+          <span><i data-tone="rest" />Others</span>
+        </p>
+        <ol className={styles.rows}>
+          {top.slice(0, ROWS).map((h, i) => (
+            <li key={h.sym}>
+              <button type="button" className={styles.row} onClick={() => onOpen(h.sym)} aria-label={`${stockName(h.sym)}, ${h.weight.toFixed(1)}% of the fund. Open stock`}>
+                <span className={styles.rank}>{i + 1}</span>
+                <HoldingLogo sym={h.sym} size={32} />
+                <span className={styles.who}>
+                  <span>{stockName(h.sym)}</span>
+                  <span>{h.sym}</span>
+                </span>
+                <span className={styles.weight}>{h.weight.toFixed(1)}%</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        {more > 0 && (
+          // "View more" (the user's wording, 8 Nov; Figma: "View all N more holdings") opens the full Top holdings page.
+          <button type="button" className={styles.all} onClick={onAll} aria-label={`View all ${more.toLocaleString('en-US')} more holdings`}>
+            View more
+            <Icon icon={msKeyboardArrowDown} size={16} />
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+type AllocationBy = 'cap' | 'sectors' | 'countries'
+
+/** Sample market-cap split by the kind of fund. */
+function capSplit(etf: Etf): DonutPart[] {
+  if (etf.sector === 'Broad market') return [{ name: 'Mega cap', weight: 62 }, { name: 'Large cap', weight: 28 }, { name: 'Mid cap', weight: 8 }, { name: 'Small cap', weight: 2 }]
+  if (etf.sector === 'Technology') return [{ name: 'Mega cap', weight: 74 }, { name: 'Large cap', weight: 18 }, { name: 'Mid cap', weight: 6 }, { name: 'Small cap', weight: 2 }]
+  return [{ name: 'Mega cap', weight: 48 }, { name: 'Large cap', weight: 34 }, { name: 'Mid cap', weight: 14 }, { name: 'Small cap', weight: 4 }]
+}
+
+/** Sample country split: the fund's own country, then the rest. */
+function countrySplit(etf: Etf): DonutPart[] {
+  const home = etf.country === 'US' ? 'United States' : etf.country
+  return etf.country === 'US' ? [{ name: home, weight: 98.9 }, { name: 'Other', weight: 1.1 }] : [{ name: home, weight: 96 }, { name: 'Other', weight: 4 }]
+}
+
+export function AllocationF1({ etf }: { etf: Etf }) {
+  const sectors = sectorsFor(etf)
+  const [by, setBy] = useState<AllocationBy>('cap')
+  const look = useAllocationLook()
+  const parts = by === 'cap' ? capSplit(etf) : by === 'countries' ? countrySplit(etf) : sectors
+  return (
+    <section className={styles.block} aria-label="Allocation">
+      <DetailsHeading title="Allocation" />
+      <Tabs
+        appearance="pill"
+        size="sm"
+        aria-label="Allocation by"
+        value={by}
+        onChange={(v) => setBy(v as AllocationBy)}
+        items={[
+          { value: 'cap', label: 'Market cap' },
+          ...(sectors.length ? [{ value: 'sectors', label: 'Sectors' }] : []),
+          { value: 'countries', label: 'Countries' },
+        ]}
+        className={styles.chips}
+      />
+      {look === 'bars' ? (
+        <ShareBars key={by} parts={parts} count={by === 'cap' ? 'Market cap' : by === 'sectors' ? `${parts.filter((p) => p.name !== 'Other').length} sectors` : `${parts.filter((p) => p.name !== 'Other').length} countries`} label={`Share of the fund by ${by === 'cap' ? 'market cap' : by === 'sectors' ? 'sector' : 'country'}`} />
+      ) : (
+        <ShareDonut key={by} parts={parts} of="the fund" legendLabel={`Share of the fund by ${by === 'cap' ? 'market cap' : by === 'sectors' ? 'sector' : 'country'}`} />
+      )}
+    </section>
+  )
 }
 ```
 
@@ -30717,7 +32494,11 @@ span:has(>.diagCol){width:auto;height:auto}
   color: var(--l3-content-primary);
   font-variant-numeric: tabular-nums;
   flex: none;
+  /* A fixed column (19 Nov) so every row's bar lines up: "100.0%", the widest share, measures 48 in heading-14. */
+  width: var(--l3-size-48);
+  text-align: right;
 }
+.weightPill .weight { width: auto; }
 
 /* "Holding weight" versions (3 Nov, to test). Mini: a short bar just before the number. */
 .miniBar {
@@ -30839,21 +32620,6 @@ span:has(>.diagCol){width:auto;height:auto}
 .donut circle[data-colour='zing'] { stroke: var(--l3-surface-accent-zing-default); }
 .donut circle[data-colour='other'] { stroke: var(--l3-content-tertiary); }
 
-.donut strong {
-  font: var(--l3-text-heading-16);
-  color: var(--l3-content-primary);
-}
-
-.donut span {
-  max-width: 70%;
-  font: var(--l3-text-description-10);
-  color: var(--l3-content-secondary);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .donutLegend {
   gap: var(--l3-spacing-10);
   flex-direction: column;
@@ -30877,6 +32643,25 @@ span:has(>.diagCol){width:auto;height:auto}
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Allocation V2 (17 Nov): a Top holdings row without the logo — name, short bar, share. */
+.shareRow {
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  padding: var(--l3-spacing-08) 0;
+  display: flex;
+}
+/* The last row drops its bottom 8, so the panel ends on its own 12 (19 Nov, the user's call: less space at the foot). */
+.shareRow:last-child { padding-bottom: 0; }
+
+
+.shareName {
+  flex: 1;
+  min-width: 0;
+  /* Label text, not heading (19 Nov, the user's call) — the name and the share of a ShareBars row. */
+  font: var(--l3-text-label-14);
+}
+.shareRow > .weight { font: var(--l3-text-label-14); }
 ```
 
 ### `src/flows/us-stocks/screens/etf/EtfHoldings.tsx`
@@ -30899,11 +32684,12 @@ import { useFlowOption } from '../../../../shared/prototype'
 import { HoldingLogo } from './parts'
 import listStyles from './Etf.module.css'
 import styles from './EtfHoldings.module.css'
+import { usShortName } from '../../../../shared/data/usShortNames'
 
 const TOP = 6
 
 /**
- * How a row shows its share of the fund (3 Nov, prototype option "Holding weight", to test):
+ * How a row shows its share of the fund (3 Nov, "Holding weight" versions; archived 17 Nov — Top holdings uses `mini`):
  * - `bar` — a bar under the name, against the biggest holding (before 3 Nov);
  * - `none` — no bar, only the number;
  * - `mini` — a short bar just before the number (the default, 3 Nov);
@@ -30914,13 +32700,14 @@ export type WeightLook = 'bar' | 'none' | 'mini' | 'fill' | 'pill'
 
 /** One holding row: logo, name and ticker, then its share — shown as `look` says (against `biggest`). Opens the stock. */
 export function HoldingRow({ sym, weight, biggest, onOpen, look = 'bar' }: { sym: string; weight: number; biggest: number; onOpen: (sym: string) => void; look?: WeightLook }) {
-  const name = stockName(sym)
+  // One name, the short one (19 Nov): "Broadcom", not "Broadcom Inc AVGO".
+  const name = usShortName(sym, stockName(sym))
   const share = `${(weight / biggest) * 100}%`
   return (
     <button type="button" className={styles.row} data-look={look} onClick={() => onOpen(sym)} aria-label={`${name}, ${weight}% of the ETF. Open stock`}>
       <HoldingLogo sym={sym} size={32} />
       <span className={styles.text}>
-        <span className={styles.name}>{name}<span className={styles.sym}>{sym}</span></span>
+        <span className={styles.name}>{name}</span>
         {look === 'bar' && <span className={styles.bar} aria-hidden="true"><span style={{ width: share }} /></span>}
       </span>
       {look === 'mini' && <span className={`${styles.bar} ${styles.miniBar}`} aria-hidden="true"><span style={{ width: share }} /></span>}
@@ -30942,7 +32729,8 @@ export function TopHoldings({ etf, onOpen, onOthers }: { etf: Etf; onOpen: (sym:
   const biggest = top[0]?.weight ?? 100
   const others = otherHoldings(etf, TOP)
   const total = holdingsBeyond(etf, 0)
-  const look = useFlowOption('us-stocks', 'holdingWeight', 'mini') as WeightLook
+  // V3 (17 Nov): the other looks are archived — the setting is gone; they stay in HoldingRow for reference.
+  const look: WeightLook = 'mini'
   return (
     <div className={styles.panel}>
       <p className={styles.head} aria-hidden="true"><span>{total.toLocaleString('en-US')} positions</span><span>Weight</span></p>
@@ -31019,8 +32807,6 @@ export function ShareDonut({ parts: items, of, legendLabel, format = (n) => `${n
             />
           ))}
         </svg>
-        <strong>{format(biggest.weight)}</strong>
-        <span>{biggest.name}</span>
       </div>
       <ul className={styles.donutLegend} aria-label={legendLabel}>
         {parts.map((p) => (
@@ -31041,8 +32827,36 @@ export function ShareDonut({ parts: items, of, legendLabel, format = (n) => `${n
  */
 export function Allocation({ etf }: { etf: Etf }) {
   const sectors = sectorsFor(etf)
+  const look = useAllocationLook()
   if (sectors.length === 0) return null
+  if (look === 'bars') return <ShareBars parts={sectors} count={`${sectors.filter((p) => p.name !== 'Other').length} sectors`} label="Share of the fund by sector" />
   return <ShareDonut parts={sectors} of="the fund" legendLabel="Share of the fund by sector" />
+}
+
+/** How Allocation shows the split (17 Nov, prototype option "Allocation"): `donut` (V1) or `bars` (V2, Top holdings' rows). */
+export type AllocationLook = 'donut' | 'bars'
+export const useAllocationLook = () => useFlowOption('us-stocks', 'allocationLook', 'donut') as AllocationLook
+
+/**
+ * Allocation V2 (17 Nov): the Top holdings panel for the split — a header ("11 sectors · Weight"), then one row per
+ * part: its name, a short bar against the biggest and its share. No logo or dot. "Other" stays last.
+ */
+export function ShareBars({ parts, count, label }: { parts: DonutPart[]; count: string; label: string }) {
+  const biggest = Math.max(...parts.map((p) => p.weight), 1)
+  return (
+    <div className={styles.panel}>
+      <p className={styles.head} aria-hidden="true"><span>{count}</span><span>Weight</span></p>
+      <ul className={styles.list} aria-label={label}>
+        {parts.map((p) => (
+          <li key={p.name} className={styles.shareRow} aria-label={`${p.name}, ${p.weight}%`}>
+            <span className={`${styles.name} ${styles.shareName}`}>{p.name}</span>
+            <span className={`${styles.bar} ${styles.miniBar}`} aria-hidden="true"><span style={{ width: `${(p.weight / biggest) * 100}%` }} /></span>
+            <span className={styles.weight}>{p.weight.toFixed(1)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 ```
 
@@ -31057,6 +32871,7 @@ export function Allocation({ etf }: { etf: Etf }) {
 // header / end-of-list note).
 import { Actionbar } from '@l3/components/Actionbar'
 import { Section } from '@l3/components/Section'
+import { Inset } from '@l3/components/Inset'
 import { StockListCard } from '../../../../shared/ui/StockListCard'
 import { Phone } from '../../components/Phone'
 import { useUsNav } from '../../nav'
@@ -31081,13 +32896,15 @@ export function EtfHoldingsScreen({ backdrop }: { backdrop?: boolean }) {
       gesture="none"
       topLine
     >
-      {/* 24 under the bar, 16 at the sides; the cards 12 apart, as the Market list (3 Nov). */}
-      <Section paddingInline="16" paddingBlock="24" gap="12">
-        <p className={styles.fullHead} aria-hidden="true">
-          <span>Top {top.length} of {total.toLocaleString('en-US')}</span>
-          <span>Weight</span>
-        </p>
-        <Section as="ul" gap="12" aria-label={`${etf.sym}: top ${top.length} of ${total} holdings`}>
+      {/* 24 under the bar; edge-to-edge rows split by a hairline (19 Nov; were cards 12 apart), as the Market list. */}
+      <Section paddingBlock="24" gap="04">
+        <Inset paddingInline="16" paddingBlock="00">
+          <p className={styles.fullHead} aria-hidden="true">
+            <span>Top {top.length} of {total.toLocaleString('en-US')}</span>
+            <span>Weight</span>
+          </p>
+        </Inset>
+        <Section as="ul" gap="00" aria-label={`${etf.sym}: top ${top.length} of ${total} holdings`}>
           {top.map((h) => {
             const name = stockName(h.sym)
             return (
@@ -31098,6 +32915,7 @@ export function EtfHoldingsScreen({ backdrop }: { backdrop?: boolean }) {
                   logo={<HoldingLogo sym={h.sym} size={40} />}
                   price={`${h.weight.toFixed(1)}%`}
                   onOpen={() => { if (!backdrop) openHolding(go, h.sym) }}
+                  look="list"
                   aria-label={`${name}, ${h.weight}% of the ETF. Open stock`}
                 />
               </li>
@@ -31107,9 +32925,9 @@ export function EtfHoldingsScreen({ backdrop }: { backdrop?: boolean }) {
         {/* The end of the list (3 Nov): big funds hold hundreds or thousands of stocks, so the page lists only the
             biggest — this says so, and how much of the fund the rest are together. */}
         {rest > 0 && (
-          <p className={styles.fullEnd}>
+          <Inset paddingInline="16" paddingBlock="08"><p className={styles.fullEnd}>
             {`That's the top ${top.length} of ${total.toLocaleString('en-US')}. The other ${rest.toLocaleString('en-US')} ${rest === 1 ? 'stock is' : 'stocks are'} ${restWeight.toFixed(1)}% of the fund together.`}
-          </p>
+          </p></Inset>
         )}
       </Section>
     </Phone>
@@ -31137,9 +32955,10 @@ import { Actionbar } from '@l3/components/Actionbar'
 import { Icon } from '@l3/components/Icon'
 import { Stack } from '@l3/components/Stack'
 import { lmSwitchArrowVertical } from '@l3/icons/lemonnade'
-import { msGlobe } from '@l3/icons/material'
+import { msGlobe, msShowChart } from '@l3/icons/material'
 import { Avatar } from '@l3/components/Avatar'
 import { Section } from '@l3/components/Section'
+import { Inset } from '@l3/components/Inset'
 import { Tabs } from '@l3/components/Tabs'
 import { Phone } from '../../components/Phone'
 import { useUsNav } from '../../nav'
@@ -31156,7 +32975,8 @@ import { SideTag, etfLogoUrl } from './parts'
 import styles from './Etf.module.css'
 
 const TABS = [
-  { value: 'normal', label: 'Regular' },
+  // Regular gets a plain chart icon (17 Nov), so both tabs read alike next to Boosted's bolt.
+  { value: 'normal', label: 'Regular', iconLeft: <Icon icon={msShowChart} size={16} /> },
   // "Boosted" (jojo, 3 Nov): the app's word for leveraged ETFs, with a gold bolt.
   { value: 'leveraged', label: 'Boosted', iconLeft: <Icon icon={boltIcon} size={16} className={styles.boostTabBolt} /> },
 ]
@@ -31179,10 +32999,11 @@ function EtfCard({ etf, onOpen }: { etf: Etf; onOpen: () => void }) {
         symbol={plain}
         name={`${etf.sym} · ${insideFor(etf)}`}
         logoUrl={etfLogoUrl(etf.sym)}
-        initials={etf.sym.slice(0, 2)}
+        initials={etf.sym.slice(0, 1)}
         price={<Usd value={etf.price} align="end" />}
         changePct={etf.change}
         onOpen={onOpen}
+        look="list"
         aria-label={`${plain}, ${etf.sym}, ${etf.name}`}
       />
     </li>
@@ -31198,7 +33019,8 @@ function FundRow({ etf, onClick }: { etf: Etf; onClick: () => void }) {
   const { plain } = plainFor(etf)
   // Where a leveraged fund's leverage shows (3 Nov, flow option "Leverage tag" in the prototype settings): eight
   // versions to compare; V5 After heading is the default.
-  const levTag = useFlowOption('us-stocks', 'levTag', 'heading')
+  // V5 · After heading: the one leverage tag left (18 Nov; the other versions are archived, still drawn below).
+  const levTag: string = 'heading'
   const lev = etf.kind === 'leveraged' ? levTag : undefined
   const marked = lev === 'foot' || lev === 'badge' || lev === 'ring' || lev === 'pill' || lev === 'slice' || lev === 'notch'
   const cell = (
@@ -31208,10 +33030,10 @@ function FundRow({ etf, onClick }: { etf: Etf; onClick: () => void }) {
       symbol={plain}
       name={`${etf.sym} · ${insideFor(etf)}`}
       logoUrl={etfLogoUrl(etf.sym)}
-      initials={etf.sym.slice(0, 2)}
+      initials={etf.sym.slice(0, 1)}
       logo={marked ? (
         <span className={styles.diagCol} data-ring={lev === 'ring' ? etf.side : undefined} data-slice={lev === 'slice' ? '' : undefined} data-notch={lev === 'notch' ? '' : undefined}>
-          <Avatar src={etfLogoUrl(etf.sym)} initials={etf.sym.slice(0, 2)} size={40} label={etf.name} />
+          <Avatar src={etfLogoUrl(etf.sym)} initials={etf.sym.slice(0, 1)} size={40} label={etf.name} />
           {/* V1 Logo foot: "3x Long" (L3 Tag) across the logo's foot, both ends round. */}
           {lev === 'foot' && <SideTag etf={etf} filled className={styles.levBadge} />}
           {/* V2 Logo badge: a "3x ▲" pill on the logo's top-right, like a notification badge. */}
@@ -31229,6 +33051,7 @@ function FundRow({ etf, onClick }: { etf: Etf; onClick: () => void }) {
       price={<Usd value={etf.price} align="end" />}
       changePct={etf.change}
       onOpen={onClick}
+      look="list"
       aria-label={`${plain}, ${etf.sym}, ${etf.name}${etf.kind === 'leveraged' ? `, ${etf.lev} ${etf.side === 'long' ? 'Long' : 'Short'}` : ''}`}
     />
   )
@@ -31349,7 +33172,8 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
   const [boostOpen, setBoostOpen] = useState(false)
   // The Boosted note's look and colour (jojo, 3 Nov, flow options "Boosted note" / "Boosted line").
   const boostNote = useFlowOption('us-stocks', 'boostNote', 'strip')
-  const boostTone = useFlowOption('us-stocks', 'boostTone', 'grey')
+  // Grey: the one Boosted line colour left (18 Nov; Green, Gold, Blue, Purple archived, still in Etf.module.css).
+  const boostTone = 'grey'
   const regular = ETFS.filter((e) => e.kind === 'normal' && (filterBy === 'country' ? country === 'all' || e.country === country : sector === 'all' || e.sector === sector))
   // Switching Country ⇄ Sector starts the new filter at All.
   const switchFilter = () => {
@@ -31360,15 +33184,24 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 
   const filters = (
     <Stack direction="horizontal" align="center" gap="12" className={styles.filterRow}>
-      <button type="button" className={styles.switchChip} aria-label={`Filter by ${FILTER_BY[filterBy]}, tap to switch`} onClick={switchFilter}>
-        <span className={styles.switchName} key={filterBy}>{FILTER_BY[filterBy]}</span>
-        <Icon icon={lmSwitchArrowVertical} size={16} />
-      </button>
+      {/* The switcher is an L3 primary pill (selected, the filter's name and a switch arrow), the filters below it the
+          secondary (outline) pills: as Home's US ETFs chips (19 Nov; was a hand-made outlined chip + primary pills). */}
+      <div className={styles.switchPill} onClick={switchFilter}>
+        <Tabs
+          appearance="pill"
+          size="md"
+          aria-label={`Filter by ${FILTER_BY[filterBy]}, tap to switch`}
+          items={[{ value: filterBy, label: FILTER_BY[filterBy], iconRight: <Icon icon={lmSwitchArrowVertical} size={14} /> }]}
+          value={filterBy}
+          onChange={() => {}}
+        />
+      </div>
       <span className={styles.filterDivider} aria-hidden="true" />
       {filterBy === 'country' ? (
         <Tabs
           appearance="pill"
           behavior="filter"
+          emphasis="secondary"
           aria-label="Country"
           className={styles.filterTabs}
           items={[
@@ -31382,6 +33215,7 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
         <Tabs
           appearance="pill"
           behavior="filter"
+          emphasis="secondary"
           aria-label="Sector"
           className={styles.filterTabs}
           items={[{ value: 'all', label: 'All' }, ...SECTORS.map((v) => ({ value: v, label: v }))]}
@@ -31410,8 +33244,9 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
       gesture="none"
     >
       {tab === 'normal' ? (
-        <Section paddingBlock="16" gap="16">
-          <Section as="ul" paddingInline="16" gap="12" aria-label="Regular ETFs">
+        // Edge-to-edge rows split by a hairline (19 Nov; were cards 12 apart), as the Market and theme lists.
+        <Section paddingBlock="08" gap="16">
+          <Section as="ul" gap="00" aria-label="Regular ETFs">
             {regular.map((e) => (
               <EtfCard key={e.sym} etf={e} onOpen={() => open(e.sym)} />
             ))}
@@ -31420,9 +33255,10 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
       ) : (
         // Boosted (jojo, 3 Nov): what Boosted means, quiet but always there (a tap opens "How Boosted ETFs work"), then
         // one list, long then short for each index; the leverage sits on each card.
-        <Section paddingBlock="16" paddingInline="16" gap="16">
-          <BoostNote kind={boostNote} tone={boostTone} onOpen={() => setBoostOpen(true)} />
-          <Section as="ul" gap="12" aria-label="Boosted ETFs">
+        <Section paddingBlock="16" gap="08">
+          <Inset paddingInline="16" paddingBlock="00"><BoostNote kind={boostNote} tone={boostTone} onOpen={() => setBoostOpen(true)} /></Inset>
+          {/* Edge-to-edge rows split by a hairline (19 Nov; were cards 12 apart). */}
+          <Section as="ul" gap="00" aria-label="Boosted ETFs">
             {leveragedGroups().flatMap((g) => g.etfs).map((e) => (
               <li key={e.sym}>
                 <FundRow etf={e} onClick={() => open(e.sym)} />
@@ -31456,13 +33292,6 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
   position: absolute;
 }
 
-.assetHeader {
-  gap: var(--l3-spacing-24);
-  padding: var(--l3-spacing-08) var(--l3-spacing-16) 0;
-  flex-direction: column;
-  display: flex;
-}
-
 /* ≈ ₹ under the $ price (playground): secondary. */
 .priceInr {
   font: var(--l3-text-description-12);
@@ -31490,7 +33319,7 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 
 /* Ticker · exchange, above the fund's name (3 Nov). */
 .alias {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
   margin: 0;
 }
@@ -31585,8 +33414,6 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 /* FLAG: hand-drawn price chart (svg line + positioned dot/halo) — L3 has a Chart component */
 .chart {
   height: 184px; /* FLAG: raw px */
-  margin: var(--l3-spacing-24) 0 var(--l3-spacing-16);
-  padding: 0 var(--l3-spacing-16);
   display: flex;
   position: relative;
 }
@@ -31640,25 +33467,6 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 
 .yAxis span:first-child {
   color: var(--l3-content-primary);
-}
-
-.tabsAndContent {
-  gap: var(--l3-spacing-24);
-  padding: 0 var(--l3-spacing-16) var(--l3-spacing-14);
-  flex-direction: column;
-  display: flex;
-}
-
-.tabsBlock {
-  gap: var(--l3-spacing-24);
-  flex-direction: column;
-  display: flex;
-}
-
-.tabsBlock > .flatTabs.flatTabs {
-  width: calc(100% + 2 * var(--l3-spacing-16));
-  max-width: none;
-  margin-inline: calc(-1 * var(--l3-spacing-16));
 }
 
 /* FLAG: hand-made range meter */
@@ -31783,7 +33591,7 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 }
 
 .statLabel {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12); /* a stat's name is description text, not a label (17 Nov) */
   color: var(--l3-content-secondary);
 }
 
@@ -31827,7 +33635,7 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 }
 
 .kv dt {
-  font: var(--l3-text-label-12);
+  font: var(--l3-text-description-12);
   color: var(--l3-content-secondary);
 }
 
@@ -31946,6 +33754,21 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
   flex-direction: column;
   display: flex;
 }
+
+/* Figma 6538:107342: the sections sit straight on the page, 16 at the sides, 32 apart and 32 under the chart. */
+.overview[data-details] {
+  padding: var(--l3-spacing-32) var(--l3-spacing-16);
+}
+
+/* The bookmark at the title's end (Figma). */
+.bookmark {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--l3-content-primary);
+  cursor: pointer;
+}
 ```
 
 ### `src/flows/us-stocks/screens/etf/EtfPage.tsx`
@@ -31961,11 +33784,11 @@ export function EtfListScreen({ backdrop }: { backdrop?: boolean }) {
 // (EtfPage.module.css, copied from the stock page) instead of L3 Chart; same as the stock page.
 import { useEffect, useState, type ReactNode } from 'react'
 import { Actionbar, ActionbarAction } from '@l3/components/Actionbar'
-import { Button } from '@l3/components/Button'
-import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Icon } from '@l3/components/Icon'
 import { MaskIcon } from '@l3/components/MaskIcon'
-import { msTrendingDown, msTrendingUp } from '@l3/icons/material'
+import { msBookmark, msSearch, msTrendingDown, msTrendingUp } from '@l3/icons/material'
+import { Stack } from '@l3/components/Stack'
+import { Inset } from '@l3/components/Inset'
 import { Tabs } from '@l3/components/Tabs'
 import { Tag } from '@l3/components/Tag'
 import { Phone } from '../../components/Phone'
@@ -31973,7 +33796,9 @@ import { asset } from '../../asset'
 import { useUsNav } from '../../nav'
 import { useUsJourney } from '../../../../shared/userStatus'
 import { Usd, formatInr, useUsd, useUsdInrRate } from '../../../../shared/money'
-import { activationFooter, type StockState } from '../activation/StockPage'
+import { useF1Details, activationFooter, type StockState } from '../activation/StockPage'
+import { AboutBlock, AssetTitle, CandleChart, DetailsSheet, InfoGrid, LogoImg, PreMarketChip, StatChips, TradeDock, detailsPhone } from '../activation/details'
+import { AllocationF1, TopHoldingsF1 } from './EtfDetailsF1'
 import { AboutCard, DailyPerformance, Events, News } from '../activation/sections'
 import { catalogue } from '../../data'
 import { getCurrentEtf } from './currentEtf'
@@ -31985,7 +33810,12 @@ import listStyles from './Etf.module.css'
 import { Allocation, TopHoldings } from './EtfHoldings'
 import { boltIcon, infoIcon } from './icons'
 import { EtfMove, HoldingLogo, SideTag } from './parts'
+import { EtfPeers } from './EtfPeers'
 import styles from './EtfPage.module.css'
+import { TopBarAction } from '../../../../shared/ui/TopBarAction'
+
+/** The "≈ ₹" line under the price: hidden for now (4 Nov), kept to turn back on. */
+const SHOW_PRICE_INR = false
 
 /** T03 · Buy · Empty US wallet. */
 const BUY_PAD_EMPTY_WALLET = '5837:96155'
@@ -32007,6 +33837,7 @@ function SectionTitle({ title }: { title: string }) {
 }
 
 export function EtfPage({ backdrop }: { backdrop?: boolean }) {
+  const f1Details = useF1Details()
   const { go, back } = useUsNav()
   const usd = useUsd()
   const usdInr = useUsdInrRate()
@@ -32039,7 +33870,7 @@ export function EtfPage({ backdrop }: { backdrop?: boolean }) {
       onBack={() => back(ETF_LIST)}
       title={scrolled ? etf.name : undefined}
       description={scrolled ? <><Usd value={etf.price} layout="inline" /> <EtfMove change={etf.change} /></> : undefined}
-      actions={<ActionbarAction icon={asset('assets/etf/watchlist.svg')} label={`Add ${etf.sym} to watchlist`} onClick={() => {}} />}
+      actions={<TopBarAction icon={asset('assets/etf/watchlist.svg')} label={`Add ${etf.sym} to watchlist`} onClick={() => {}} />}
     />
   )
 
@@ -32048,10 +33879,7 @@ export function EtfPage({ backdrop }: { backdrop?: boolean }) {
     journey === 'kyc' ? 'kyc-pending' : journey === 'activate' ? 'not-activated' : journey === 'review' || journey === 'support' || journey === 'failed' ? journey : undefined
   const buyTo = journey === 'activated' || journey === 'onTheWay' ? BUY_PAD_EMPTY_WALLET : BUY_PAD
   const footer = (gate && activationFooter(gate, (id) => act(() => go(id))())) || (
-    <ButtonGroup aria-label={`Trade ${etf.sym}`} direction="horizontal" scrollIndicator>
-      <Button variant="buy" size="lg" onClick={act(() => go(buyTo))}>{leveraged ? 'Go Long' : 'Buy'}</Button>
-      <Button variant="sell" size="lg" onClick={act(() => go(BUY_PAD))}>{leveraged ? 'Go Short' : 'Sell'}</Button>
-    </ButtonGroup>
+    <TradeDock label={`Trade ${etf.sym}`} buy={leveraged ? 'Go Long' : 'Buy'} sell={leveraged ? 'Go Short' : 'Sell'} onBuy={act(() => go(buyTo))} onSell={act(() => go(BUY_PAD))} />
   )
 
   // No "≈ ₹" lines on the ETF page (3 Nov): every amount is inline <Usd>.
@@ -32076,131 +33904,214 @@ export function EtfPage({ backdrop }: { backdrop?: boolean }) {
     ...(leveraged ? ([['Leverage', `${etf.lev} daily, ${long ? 'long' : 'short'}`]] as [string, ReactNode][]) : []),
   ]
 
+  // Figma 6538:107342 (8 Nov): one long page. Back · search in the bar; logo · name + ETF tag ⇕ · $ price, the bookmark at
+  // the end; Pre Market countdown and stat chips; candles; then Asset info, Top holdings, Allocation (Market cap ·
+  // Sectors · Countries), Daily Performance (kept, the user's call), News, About; bell · Buy · Sell dock.
+  if (f1Details) {
+    const f1Header = (
+      <Actionbar
+        onBack={() => back(ETF_LIST)}
+        title={scrolled ? etf.name : undefined}
+        description={scrolled ? <><Usd value={etf.price} layout="inline" /> <EtfMove change={etf.change} /></> : undefined}
+        actions={<ActionbarAction icon={msSearch} variant="ghost" label="Search" onClick={() => {}} />}
+      />
+    )
+    const f1Footer = (gate && activationFooter(gate, (id) => act(() => go(id))())) || (
+      <TradeDock label={`Trade ${etf.sym}`} buy={leveraged ? 'Go Long' : 'Buy'} sell={leveraged ? 'Go Short' : 'Sell'} onBuy={act(() => go(buyTo))} onSell={act(() => go(BUY_PAD))} />
+    )
+    const fundLogo = (size: number) => <LogoImg src={logo?.src} plate={logo?.plate} size={size} fallback={etf.sym[0]} />
+    const assetInfo: [string, ReactNode][] = [
+      ['NAV (USD)', <Usd value={d.nav} layout="inline" />],
+      ['Total Assets', <Usd text={etf.aum} />],
+      ['Avg Volume', <Usd text={d.volume} />],
+      ['Expense Ratio', percent(etf.expense)],
+      ['Dividend Yield', d.yield],
+      ['Leverage', leveraged ? `${etf.lev} ${long ? 'long' : 'short'}` : '1x'],
+      ['Tracking Index', d.index],
+      ['Issuer', issuer ?? '—'],
+      ['Domicile', 'US'],
+      ['Holdings', d.holdings],
+    ]
+    return (
+      <Phone label={etf.name} header={f1Header} footer={f1Footer} surface="primary" gesture="none" bodyRef={setBody} className={[detailsPhone, backdrop && styles.still].filter(Boolean).join(' ')}>
+        <AssetTitle
+          logo={fundLogo(32)}
+          name={etf.name}
+          tag={<Tag variant="secondary" color="neutral" size="sm">ETF</Tag>}
+          price={etf.price}
+          changePct={etf.change}
+          end={<button type="button" className={styles.bookmark} aria-label={`Add ${etf.sym} to watchlist`}><Icon icon={msBookmark} size={24} /></button>}
+        />
+        <StatChips
+          lead={<PreMarketChip />}
+          items={[
+            { label: 'Total Assets', value: <Usd text={etf.aum} /> },
+            { label: 'Expense Ratio', value: percent(etf.expense), info: true },
+            { label: '52W High / Low', value: <><Usd value={d.high52} layout="inline" /> / <Usd value={d.low52} layout="inline" /></> },
+          ]}
+        />
+        <DetailsSheet>
+          <CandleChart sym={etf.sym} name={etf.sym} price={etf.price} dayPct={etf.change} />
+          <div className={styles.overview} data-details="">
+            {leveraged && <LeverageStrip etf={etf} onOpen={BOOST_SHEET ? act(() => setBoostOpen(true)) : undefined} />}
+            <InfoGrid title="Asset info" items={assetInfo} />
+            <TopHoldingsF1 etf={etf} title={leveraged ? 'Tracks' : 'Top holdings'} onOpen={(sym) => act(() => openHolding(go, sym))()} onAll={act(() => go(ETF_HOLDINGS))} />
+            {!leveraged && <AllocationF1 etf={etf} />}
+            <DailyPerformance price={etf.price} low={d.low} high={d.high} stats={dayStats} />
+            <section className={styles.section}>
+              <SectionTitle title="Similar ETFs" />
+              <EtfPeers etf={etf} />
+            </section>
+            <News items={newsFor(etf)} stock={etf.sym} />
+          </div>
+          <AboutBlock logo={fundLogo(40)} title={`About ${etf.sym}`} text={aboutFor(etf)} />
+        </DetailsSheet>
+        {BOOST_SHEET && leveraged && !backdrop && <BoostedSheet key={String(boostOpen)} open={boostOpen} onClose={() => setBoostOpen(false)} />}
+      </Phone>
+    )
+  }
+
   return (
     <Phone label={etf.name} header={header} footer={footer} gesture="none" bodyRef={setBody} className={backdrop ? styles.still : undefined}>
-      <div className={styles.assetHeader}>
-        <div className={styles.titleRow}>
-          <div className={styles.namePrice}>
-            {/* Ticker · exchange (after Perplexity's "TTWO · NASDAQ"), the exchange from the US snapshot; the fund's name
-                under it in 14 (3 Nov). */}
-            <p className={styles.alias}>{catalogue[etf.sym]?.exchange ? `${etf.sym} · ${catalogue[etf.sym].exchange}` : etf.sym}</p>
-            <h1 className={styles.name}>{etf.name}</h1>
-            <div className={styles.priceRow}>
-              <span className={styles.price}><Usd value={etf.price} layout="inline" /></span>
-              <span className={styles.change}>
-                {/* EtfMove, not L3 PriceChange: PriceChange always writes "+" / "−" beside its arrow (L3 gap: a no-sign
-                    option); the arrow alone says which way (3 Nov). The $ move has no sign either. */}
-                <EtfMove change={etf.change} size="lg" />
-                <span className={styles.changeAbs} data-down={dayChangeAbs < 0 || undefined}>
-                  (<Usd value={Math.abs(dayChangeAbs)} layout="inline" />)
-                </span>
-              </span>
-            </div>
-            {/* The price in rupees at the live rate, always, small under the $ (playground: no $ / ₹ switch on this page). */}
-            <span className={styles.priceInr}>≈ {formatInr(etf.price * usdInr)}</span>
-          </div>
-          <span className={styles.logoDisc} style={logo ? ({ '--plate': logo.plate } as React.CSSProperties) : undefined} aria-hidden="true">
-            {logo ? <img src={logo.src} alt="" /> : etf.sym[0]}
-          </span>
-        </div>
-        <div className={styles.tagsRow}>
-          <div className={styles.tags}>
-            <Tag variant="tertiary" color="neutral" size="md">ETF</Tag>
-            {/* What's in it, in a word or two (3 Nov): "Top 500", "US"; "Chips", "Global". */}
-            {tagsFor(etf).map((tag) => <Tag key={tag} variant="tertiary" color="neutral" size="md">{tag}</Tag>)}
-            {leveraged && (
-              <SideTag etf={etf} size="md" />
-            )}
-          </div>
-          {/* What's inside (3 Nov): up to three of the biggest holdings' logos, then a "+35" capsule tucked under the last
-              one — the rest of the fund's stocks. A leveraged fund shows the stocks of the index it follows. A tap opens
-              the Top holdings page (3 Nov). */}
-          {behind && (
-            <button
-              type="button"
-              className={styles.inside}
-              onClick={act(() => go(ETF_HOLDINGS))}
-              aria-label={`${behind.follows ? 'Follows' : 'Holds'} ${behind.count.toLocaleString('en-US')} ${behind.count === 1 ? 'stock' : 'stocks'}. See top holdings`}
-            >
-              <span className={styles.insideLogos} aria-hidden="true">
-                {etf.holdings.slice(0, Math.min(3, behind.count)).map((h) => <HoldingLogo key={h.sym} sym={h.sym} size={24} />)}
-                {behind.count > 3 && (
-                  <span className={styles.insideCount}>+{(behind.count - Math.min(3, etf.holdings.length)).toLocaleString('en-US')}</span>
-                )}
-              </span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.chart} role="img" aria-label={`${etf.sym} price today`}>
-        <div className={styles.plot}>
-          <span className={styles.line}><MaskIcon src={asset('assets/etf/price-line-1d.svg')} /></span>
-          <span className={styles.halo} />
-          <span className={styles.dot} />
-        </div>
-        <div className={styles.yAxis} aria-hidden="true">
-          {Y_STEPS.map((s) => <span key={s}>{usd(etf.price * s)}</span>)}
-        </div>
-      </div>
-
-      <div className={styles.tabsAndContent}>
-        <Tabs
-          appearance="pill-group"
-          size="sm"
-          width="fill"
-          aria-label="Chart period"
-          value={period}
-          onChange={setPeriod}
-          items={PERIODS.map((p) => ({ value: p, label: p }))}
-        />
-        <div className={styles.tabsBlock}>
-          <Tabs appearance="underline" width="fill" aria-label="ETF sections" className={styles.flatTabs} value={section} onChange={setSection} items={SECTIONS} />
-          {section === 'news' ? (
-            // News & Events, as on the stock page: Events / News pills, then the list.
-            <div className={styles.feed}>
-              <Tabs
-                appearance="pill"
-                size="sm"
-                aria-label="Show"
-                value={feed}
-                onChange={setFeed}
-                items={[
-                  { value: 'events', label: 'Events' },
-                  { value: 'news', label: 'News' },
-                ]}
-              />
-              {feed === 'events' ? <Events items={d.events} /> : <News items={newsFor(etf)} stock={etf.sym} />}
-            </div>
-          ) : (
-            <div className={styles.overview}>
-              {/* A Boosted fund (3 Nov): what its leverage does, in one sentence on the gold strip, above About. */}
-              {leveraged && <LeverageStrip etf={etf} onOpen={BOOST_SHEET ? act(() => setBoostOpen(true)) : undefined} />}
-              {/* What the ETF is: the stock page's About card ("SPY tracks …"), three lines until Read more. */}
-              <AboutCard title="About Fund" text={aboutFor(etf)} />
-              {!leveraged && (
-                <section className={styles.section}>
-                  <SectionTitle title="Allocation" />
-                  <Allocation etf={etf} />
-                </section>
+      {/* The body (8 Nov, the user's call): one column, 24 between its two containers. 1 · the summary (name, price,
+          tags) and the chart with its periods, in the page's 16 gutter. 2 · the sections: their underline tabs edge to
+          edge, then the open tab's content in the gutter. No container pads or margins itself. */}
+      <Inset paddingInline="00" paddingBlock="08">
+        <Stack gap="24">
+          <Inset paddingInline="16" paddingBlock="00">
+            <Stack gap="24">
+              <Stack gap="24">
+                <div className={styles.titleRow}>
+                  <div className={styles.namePrice}>
+                    {/* Ticker · exchange (after Perplexity's "TTWO · NASDAQ"), the exchange from the US snapshot; the fund's name
+                        under it in 14 (3 Nov). */}
+                    <p className={styles.alias}>{catalogue[etf.sym]?.exchange ? `${etf.sym} · ${catalogue[etf.sym].exchange}` : etf.sym}</p>
+                    <h1 className={styles.name}>{etf.name}</h1>
+                    <div className={styles.priceRow}>
+                      <span className={styles.price}><Usd value={etf.price} layout="inline" /></span>
+                      <span className={styles.change}>
+                        {/* EtfMove, not L3 PriceChange: PriceChange always writes "+" / "−" beside its arrow (L3 gap: a no-sign
+                            option); the arrow alone says which way (3 Nov). The $ move has no sign either. */}
+                        <EtfMove change={etf.change} size="lg" />
+                        <span className={styles.changeAbs} data-down={dayChangeAbs < 0 || undefined}>
+                          (<Usd value={Math.abs(dayChangeAbs)} layout="inline" />)
+                        </span>
+                      </span>
+                    </div>
+                    {/* The price in rupees at the live rate, small under the $ — hidden for now (SHOW_PRICE_INR). */}
+                    {SHOW_PRICE_INR && <span className={styles.priceInr}>≈ {formatInr(etf.price * usdInr)}</span>}
+                  </div>
+                  <span className={styles.logoDisc} style={logo ? ({ '--plate': logo.plate } as React.CSSProperties) : undefined} aria-hidden="true">
+                    {logo ? <img src={logo.src} alt="" /> : etf.sym[0]}
+                  </span>
+                </div>
+                <div className={styles.tagsRow}>
+                  <div className={styles.tags}>
+                    <Tag variant="tertiary" color="neutral" size="sm">ETF</Tag>
+                    {/* What's in it, in a word or two (3 Nov): "Top 500", "US"; "Chips", "Global". */}
+                    {tagsFor(etf).map((tag) => <Tag key={tag} variant="tertiary" color="neutral" size="sm">{tag}</Tag>)}
+                    {leveraged && (
+                      <SideTag etf={etf} size="sm" />
+                    )}
+                  </div>
+                  {/* What's inside (3 Nov): up to three of the biggest holdings' logos, then a "+35" capsule tucked under the last
+                      one — the rest of the fund's stocks. A leveraged fund shows the stocks of the index it follows. A tap opens
+                      the Top holdings page (3 Nov). */}
+                  {behind && (
+                    <button
+                      type="button"
+                      className={styles.inside}
+                      onClick={act(() => go(ETF_HOLDINGS))}
+                      aria-label={`${behind.follows ? 'Follows' : 'Holds'} ${behind.count.toLocaleString('en-US')} ${behind.count === 1 ? 'stock' : 'stocks'}. See top holdings`}
+                    >
+                      <span className={styles.insideLogos} aria-hidden="true">
+                        {etf.holdings.slice(0, Math.min(3, behind.count)).map((h) => <HoldingLogo key={h.sym} sym={h.sym} size={24} />)}
+                        {behind.count > 3 && (
+                          <span className={styles.insideCount}>+{(behind.count - Math.min(3, etf.holdings.length)).toLocaleString('en-US')}</span>
+                        )}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </Stack>
+              <Stack gap="16">
+                <div className={styles.chart} role="img" aria-label={`${etf.sym} price today`}>
+                  <div className={styles.plot}>
+                    <span className={styles.line}><MaskIcon src={asset('assets/etf/price-line-1d.svg')} /></span>
+                    <span className={styles.halo} />
+                    <span className={styles.dot} />
+                  </div>
+                  <div className={styles.yAxis} aria-hidden="true">
+                    {Y_STEPS.map((s) => <span key={s}>{usd(etf.price * s)}</span>)}
+                  </div>
+                </div>
+                <Tabs
+                  appearance="pill-group"
+                  size="sm"
+                  width="fill"
+                  aria-label="Chart period"
+                  value={period}
+                  onChange={setPeriod}
+                  items={PERIODS.map((p) => ({ value: p, label: p }))}
+                />
+              </Stack>
+            </Stack>
+          </Inset>
+          <Stack gap="24">
+            <Tabs appearance="underline" width="fill" aria-label="ETF sections" value={section} onChange={setSection} items={SECTIONS} />
+            <Inset paddingInline="16" paddingBlock="00">
+              {section === 'news' ? (
+                // News & Events, as on the stock page: Events / News pills, then the list.
+                <div className={styles.feed}>
+                  <Tabs
+                    appearance="pill"
+                    size="sm"
+                    aria-label="Show"
+                    value={feed}
+                    onChange={setFeed}
+                    items={[
+                      { value: 'events', label: 'Events' },
+                      { value: 'news', label: 'News' },
+                    ]}
+                  />
+                  {feed === 'events' ? <Events items={d.events} /> : <News items={newsFor(etf)} stock={etf.sym} />}
+                </div>
+              ) : (
+                <div className={styles.overview}>
+                  {/* A Boosted fund (3 Nov): what its leverage does, in one sentence on the gold strip, above About. */}
+                  {leveraged && <LeverageStrip etf={etf} onOpen={BOOST_SHEET ? act(() => setBoostOpen(true)) : undefined} />}
+                  {/* What the ETF is: the stock page's About card ("SPY tracks …"), three lines until Read more. */}
+                  <AboutCard title="About Fund" text={aboutFor(etf)} />
+                  {!leveraged && (
+                    <section className={styles.section}>
+                      <SectionTitle title="Allocation" />
+                      <Allocation etf={etf} />
+                    </section>
+                  )}
+                  <section className={styles.section}>
+                    <SectionTitle title={leveraged ? 'Tracks' : 'Top holdings'} />
+                    <TopHoldings etf={etf} onOpen={(sym) => act(() => openHolding(go, sym))()} onOthers={act(() => go(ETF_HOLDINGS))} />
+                  </section>
+                  <DailyPerformance price={etf.price} low={d.low} high={d.high} stats={dayStats} />
+                  <section className={styles.section}>
+                    <SectionTitle title="Fundamentals" />
+                    <dl className={styles.panel} data-gap="12" data-rows="">
+                      {fundamentals.map(([k, v], i) => (
+                        <div className={styles.kv} data-sep={i > 0 || undefined} key={k}><dt>{k}</dt><dd>{v}</dd></div>
+                      ))}
+                    </dl>
+                  </section>
+                  {/* Similar ETFs (4 Nov): the stock page's Peers table for funds — this one first, then five like it. */}
+                  <section className={styles.section}>
+                    <SectionTitle title="Similar ETFs" />
+                    <EtfPeers etf={etf} />
+                  </section>
+                </div>
               )}
-              <section className={styles.section}>
-                <SectionTitle title={leveraged ? 'Tracks' : 'Top holdings'} />
-                <TopHoldings etf={etf} onOpen={(sym) => act(() => openHolding(go, sym))()} onOthers={act(() => go(ETF_HOLDINGS))} />
-              </section>
-              <DailyPerformance price={etf.price} low={d.low} high={d.high} stats={dayStats} />
-              <section className={styles.section}>
-                <SectionTitle title="Fundamentals" />
-                <dl className={styles.panel} data-gap="12" data-rows="">
-                  {fundamentals.map(([k, v], i) => (
-                    <div className={styles.kv} data-sep={i > 0 || undefined} key={k}><dt>{k}</dt><dd>{v}</dd></div>
-                  ))}
-                </dl>
-              </section>
-            </div>
-          )}
-        </div>
-      </div>
+            </Inset>
+          </Stack>
+        </Stack>
+      </Inset>
       {BOOST_SHEET && leveraged && !backdrop && <BoostedSheet key={String(boostOpen)} open={boostOpen} onClose={() => setBoostOpen(false)} />}
     </Phone>
   )
@@ -32258,6 +34169,211 @@ function LeverageStrip({ etf, onOpen }: { etf: ReturnType<typeof getCurrentEtf>;
 }
 ```
 
+### `src/flows/us-stocks/screens/etf/EtfPeers.module.css`
+
+```css
+/* "ETFs with {stock}" (18 Nov): the Others row under the first 5 funds — the ETF page's Top holdings "Others" row
+   (EtfHoldings.module.css .others) inside the table card: a hairline above, 12 in from the card's edges. */
+.others {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  width: 100%;
+  padding: var(--l3-spacing-12);
+  border: 0;
+  border-top: 1px solid var(--l3-border-light);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.othersName {
+  flex: 1;
+  font: var(--l3-text-heading-14);
+  color: var(--l3-content-secondary);
+}
+
+.othersChevron {
+  flex: none;
+  color: var(--l3-content-secondary);
+}
+```
+
+### `src/flows/us-stocks/screens/etf/EtfPeers.tsx`
+
+```tsx
+// "Similar ETFs" on the ETF page (4 Nov): the stock page's Peers table for funds — this ETF first (to compare against),
+// then up to five like it (similarEtfs), each row by its ticker and issuer logo. The header cell cycles Overview /
+// Returns; no figure is highlighted (the yellow best-figure highlight was removed, 19 Nov).
+// Tapping a row opens that ETF on this same page, scrolled back to the top.
+// The same table lists, on a stock's page, every ETF that holds the stock (EtfsHolding, 17 Nov): by its weight in each.
+// FLAG: the stock page's hand-made table (activation/components/PeerTable.module.css) — L3 has no table.
+import { useRef, useState, type Ref } from 'react'
+import { Icon } from '@l3/components/Icon'
+import { Select } from '@l3/components/Select'
+import { msChevronRight } from '@l3/icons/material'
+import { Usd } from '../../../../shared/money'
+import { periodReturn } from '../activation/data'
+import tableStyles from '../activation/components/PeerTable.module.css'
+import { useUsNav } from '../../nav'
+import { setCurrentEtf } from './currentEtf'
+import { ETF_PAGE, etfsHolding, shortCount, similarEtfs, type Etf } from './data'
+import { EtfDisc } from './parts'
+import listStyles from './Etf.module.css'
+import styles from './EtfPeers.module.css'
+
+const percent = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(2)}%`
+const toneOf = (n: number) => (n >= 0 ? 'up' : 'down')
+
+/** `usd`: a $ amount as text, shown in the currency picked. */
+type Cell = { text: string; tone?: 'up' | 'down'; usd?: boolean }
+/** `best`: the figure to compare — the highest gets the highlight, or the lowest with `lowest` (costs). */
+type Column = { label: string; v: (e: Etf) => Cell; best?: (e: Etf) => number; lowest?: boolean }
+
+const VIEWS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'returns', label: 'Returns' },
+] as const
+type View = (typeof VIEWS)[number]['value']
+
+const ret = (e: Etf, period: string) => periodReturn(e.sym, period, e.change)
+
+const COLUMNS: Record<View, Column[]> = {
+  overview: [
+    { label: 'Today', v: (e) => ({ text: percent(e.change), tone: toneOf(e.change) }), best: (e) => e.change },
+    { label: 'Expense', v: (e) => ({ text: `${e.expense.toFixed(2)}%` }), best: (e) => e.expense, lowest: true },
+    { label: 'AUM', v: (e) => ({ text: e.aum, usd: true }) },
+  ],
+  returns: (['1M', '3M', '1Y'] as const).map((period) => ({
+    label: period,
+    v: (e: Etf) => ({ text: percent(ret(e, period)), tone: toneOf(ret(e, period)) }),
+    best: (e: Etf) => ret(e, period),
+  })),
+}
+
+/** The nearest part of the page that scrolls (the ETF page's body). */
+function scrollParent(el: HTMLElement | null): HTMLElement | null {
+  for (let at = el?.parentElement; at; at = at.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(at).overflowY)) return at
+  }
+  return null
+}
+
+export function EtfPeers({ etf }: { etf: Etf }) {
+  const { go } = useUsNav()
+  const table = useRef<HTMLDivElement>(null)
+  const open = (sym: string) => {
+    // The ETF opens on this same page: start it at the top, like a new page.
+    const body = scrollParent(table.current)
+    setCurrentEtf(sym)
+    go(ETF_PAGE)
+    if (body) body.scrollTop = 0
+  }
+  return <FundTable ref={table} label="Similar ETFs" rows={[etf, ...similarEtfs(etf)]} self={etf} columns={COLUMNS} onOpen={open} />
+}
+
+/** A stock's page (17 Nov): every ETF that holds it, the biggest share first. Nothing when no fund in the catalogue does.
+ *  `limit` (18 Nov): the stock page shows the first 5, then an Others row (the ETF page's Top holdings row: the next
+ *  funds' logos, "+N", Others, chevron) that opens the full list (`onAll`, 9001:13). */
+export function EtfsHolding({ sym, label, limit, onAll }: { sym: string; label: string; limit?: number; onAll?: () => void }) {
+  const { go } = useUsNav()
+  const funds = etfsHolding(sym)
+  if (!funds.length) return null
+  const weight = new Map(funds.map((f) => [f.etf.sym, f.weight]))
+  const share: Column = { label: 'Weight', v: (e) => ({ text: `${(weight.get(e.sym) ?? 0).toFixed(1)}%` }), best: (e) => weight.get(e.sym) ?? 0 }
+  // The overview leads with the stock's weight in each fund; Returns stays the funds' own.
+  const columns: Record<View, Column[]> = { overview: [share, COLUMNS.overview[0], COLUMNS.overview[1]], returns: COLUMNS.returns }
+  const open = (fund: string) => {
+    setCurrentEtf(fund)
+    go(ETF_PAGE)
+  }
+  const all = funds.map((f) => f.etf)
+  const rows = limit ? all.slice(0, limit) : all
+  const rest = all.slice(rows.length)
+  return <FundTable label={label} rows={rows} columns={columns} onOpen={open} more={rest.length && onAll ? { rest, onAll } : undefined} />
+}
+
+/** A stock's Related ETFs (19 Nov): one side of the Boosted funds built on it (boostedOn) — how many times the stock's
+ *  daily move each aims for, today's move and the cheapest expense highlighted; Returns as everywhere. Tapping one opens it. */
+export function BoostedFunds({ funds, label }: { funds: Etf[]; label: string }) {
+  const { go } = useUsNav()
+  const leverage: Column = { label: 'Leverage', v: (e) => ({ text: e.lev ?? '—' }) }
+  const columns: Record<View, Column[]> = { overview: [leverage, COLUMNS.overview[0], COLUMNS.overview[1]], returns: COLUMNS.returns }
+  const open = (fund: string) => {
+    setCurrentEtf(fund)
+    go(ETF_PAGE)
+  }
+  return <FundTable label={label} rows={funds} columns={columns} onOpen={open} />
+}
+
+/** The funds table: a header cell that cycles Overview / Returns, then one row per fund; `self` is the page's own fund. */
+function FundTable({ label, rows, self, columns: views, onOpen, more, ref }: { label: string; rows: Etf[]; self?: Etf; columns: Record<View, Column[]>; onOpen: (sym: string) => void; more?: { rest: Etf[]; onAll: () => void }; ref?: Ref<HTMLDivElement> }) {
+  const [view, setView] = useState<View>('overview')
+  const current = VIEWS.find((v) => v.value === view)!
+  const columns = views[view]
+  const bestOf = columns.map((c) => (c.best ? (c.lowest ? Math.min : Math.max)(...rows.map(c.best)) : undefined))
+  return (
+    <div className={tableStyles.stack} ref={ref}>
+      <div className={tableStyles.table} role="table" aria-label={label}>
+        <div className={tableStyles.tr} data-head="" role="row">
+          <span role="columnheader">
+            <Select
+              size="sm"
+              subtle
+              className={tableStyles.viewSwitch}
+              onClick={() => setView(VIEWS[(VIEWS.findIndex((v) => v.value === view) + 1) % VIEWS.length].value)}
+              aria-label={`Showing ${current.label}, tap to switch`}
+            >
+              <span className={tableStyles.viewName} key={view}>{current.label}</span>
+            </Select>
+          </span>
+          {columns.map((c) => <span role="columnheader" key={c.label}>{c.label}</span>)}
+        </div>
+        {rows.map((e) => (
+          <button
+            key={e.sym}
+            type="button"
+            role="row"
+            className={tableStyles.tr}
+            data-self={e === self || undefined}
+            aria-label={e === self ? `${e.sym} (this ETF)` : `${e.sym}, ${e.name}`}
+            onClick={() => e !== self && onOpen(e.sym)}
+          >
+            <span className={tableStyles.company} role="cell">
+              <EtfDisc sym={e.sym} size={32} />
+              {/* The ticker: ETF names are long and read alike ("… ETF Trust"); the ticker is how funds are known. */}
+              <span className={tableStyles.cardName}>{e.sym}</span>
+            </span>
+            {columns.map((c, i) => {
+              const cell = c.v(e)
+              const best = c.best && c.best(e) === bestOf[i]
+              return (
+                <span key={c.label} role="cell" className={tableStyles.num} data-tone={cell.tone} data-best={best || undefined}>
+                  <span className={tableStyles.figure}>{cell.usd ? <Usd text={cell.text} layout="inline" /> : cell.text}</span>
+                </span>
+              )
+            })}
+          </button>
+        ))}
+      </div>
+      {/* The rest of the funds (18 Nov), as the ETF page's Top holdings "Others" row: a tap opens the full list. */}
+      {more && (
+        <button type="button" className={styles.others} onClick={more.onAll} aria-label={`Others: ${more.rest.length} more ETFs. See all`}>
+          <span className={listStyles.logoStack} aria-hidden="true">
+            {more.rest.slice(0, 3).map((e) => <EtfDisc key={e.sym} sym={e.sym} size={24} />)}
+            {more.rest.length > 3 && <span className={listStyles.moreCount}>+{shortCount(more.rest.length - 3)}</span>}
+          </span>
+          <span className={styles.othersName}>Others</span>
+          <Icon icon={msChevronRight} size={16} className={styles.othersChevron} />
+        </button>
+      )}
+    </div>
+  )
+}
+```
+
 ### `src/flows/us-stocks/screens/etf/EtfPreviousScreen.tsx`
 
 ```tsx
@@ -32267,8 +34383,6 @@ function LeverageStrip({ etf, onOpen }: { etf: ReturnType<typeof getCurrentEtf>;
 // FLAG: the price line is a hand-drawn SVG from made-up points (L3 has a Chart component).
 import type { ReactNode } from 'react'
 import { Actionbar } from '@l3/components/Actionbar'
-import { Button } from '@l3/components/Button'
-import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Card } from '@l3/components/Card'
 import { Tag } from '@l3/components/Tag'
 import { Phone } from '../../components/Phone'
@@ -32276,6 +34390,7 @@ import { useUsNav } from '../../nav'
 import { Usd } from '../../../../shared/money'
 import { useUsJourney } from '../../../../shared/userStatus'
 import { activationFooter, type StockState } from '../activation/StockPage'
+import { TradeDock } from '../activation/details'
 import { getCurrentEtf, setCurrentEtf } from './currentEtf'
 import { BUY_PAD, ETF_LIST, ETF_PAGE, leveragedOn, openHolding, stockName, type Etf } from './data'
 import { EtfDisc, EtfMove, SideTag } from './parts'
@@ -32330,10 +34445,7 @@ export function EtfPreviousScreen({ backdrop }: { backdrop?: boolean }) {
       header={<Actionbar title={etf.sym} onBack={() => back(ETF_LIST)} />}
       footer={
         (gate && activationFooter(gate, (id) => act(() => go(id))())) || (
-          <ButtonGroup aria-label={`Trade ${etf.sym}`} direction="horizontal">
-            <Button variant="buy" size="lg" onClick={act(() => go(buyTo))}>{primary}</Button>
-            <Button variant="sell" size="lg" onClick={act(() => go(buyTo))}>{secondary}</Button>
-          </ButtonGroup>
+          <TradeDock label={`Trade ${etf.sym}`} buy={primary} sell={secondary} onBuy={act(() => go(buyTo))} onSell={act(() => go(buyTo))} />
         )
       }
       gesture="none"
@@ -32414,6 +34526,183 @@ export function EtfPreviousScreen({ backdrop }: { backdrop?: boolean }) {
 }
 ```
 
+### `src/flows/us-stocks/screens/etf/EtfsWithStockScreen.tsx`
+
+```tsx
+// 9001:13 · ETFs with {stock} (18 Nov): the full list behind the stock page's "ETFs with …" table, which shows the first
+// 5 and an Others row. The same table (Overview / Returns switch, weight first), every fund that holds the stock. A row
+// opens that ETF's page; back returns to the stock page. Laid out as the ETF page's Top holdings page (9001:12).
+// FLAG: copy not in copy.json yet (hard-coded).
+import { Actionbar } from '@l3/components/Actionbar'
+import { Section } from '@l3/components/Section'
+import { Phone } from '../../components/Phone'
+import { currentStock } from '../../data'
+import { useUsNav } from '../../nav'
+import { STOCK_PAGE_ID } from './data'
+import { EtfsHolding } from './EtfPeers'
+import { usShortName } from '../../../../shared/data/usShortNames'
+
+
+export function EtfsWithStockScreen() {
+  const { back } = useUsNav()
+  const stock = currentStock()
+  const title = `ETFs with ${usShortName(stock.sym, stock.name)}`
+  return (
+    <Phone label={title} header={<Actionbar onBack={() => back(STOCK_PAGE_ID)} title={title} />} gesture="none" topLine>
+      {/* 24 under the bar, 16 at the sides, as the Top holdings page. */}
+      <Section paddingInline="16" paddingBlock="24" gap="12">
+        <EtfsHolding sym={stock.sym} label={title} />
+      </Section>
+    </Phone>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/etf/FractionalScreen.module.css`
+
+```css
+/* Fractional shares (us-stocks-99): the intro, the example's key-value card, the list's rows and the FAQ. Tokens only. */
+.heading {
+  margin: 0;
+  font: var(--l3-text-heading-20);
+  color: var(--l3-content-primary);
+}
+
+.text {
+  margin: 0;
+  font: var(--l3-text-description-14);
+  color: var(--l3-content-secondary);
+}
+
+.note {
+  margin: 0;
+  font: var(--l3-text-description-12);
+  color: var(--l3-content-secondary);
+}
+
+.list {
+  display: grid;
+  gap: var(--l3-spacing-08);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.faq {
+  display: grid;
+  gap: var(--l3-spacing-16);
+  margin: 0;
+}
+
+.question {
+  margin: 0 0 var(--l3-spacing-04);
+  font: var(--l3-text-label-14);
+  color: var(--l3-content-primary);
+}
+
+.answer {
+  margin: 0;
+  font: var(--l3-text-description-14);
+  color: var(--l3-content-secondary);
+}
+
+/* The popular stocks list runs edge to edge (19 Nov): out of the page's 16 side padding, so the rows' own 16 lines up
+   with the page and the hairlines run as in the Market list. */
+.edgeList { margin-inline: calc(-1 * var(--l3-spacing-16)); }
+```
+
+### `src/flows/us-stocks/screens/etf/FractionalScreen.tsx`
+
+```tsx
+// Fractional shares (us-stocks-99, no Figma, 18 Nov): the page behind the Stocks home's Fractional product card
+// ("$1 to start"). Intro, a worked example from today's price ($10 in NVDA = 0.05 shares), the high-priced stocks you can
+// buy a slice of (the shared StockListCard; a row opens that stock's page, as every other list), a short FAQ.
+// Back returns to where it came from (the Stocks home).
+// FLAG: L3 has no accordion / info list, so the FAQ is plain question-over-answer text (FractionalScreen.module.css).
+// FLAG: no L3 heading-with-paragraph block: the intro heading and paragraphs are hand-made text on L3 type tokens.
+import { Actionbar } from '@l3/components/Actionbar'
+import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
+import { Section } from '@l3/components/Section'
+import { SectionHeader } from '@l3/components/SectionHeader'
+import { Phone } from '../../components/Phone'
+import { openStock, stockFor } from '../../data'
+import { useUsNav } from '../../nav'
+import { Usd } from '../../../../shared/money'
+import { useUsMarketSnapshot } from '../../../../shared/data/usStocks'
+import { StockListCard } from '../../../../shared/ui/StockListCard'
+import { t } from '../money/copy'
+import { HoldingLogo } from './parts'
+import styles from './FractionalScreen.module.css'
+
+/** Where back lands when the page was opened straight from the list: Home · US tab. */
+const HOME_US = '5796:91576'
+/** The worked example: $10 in NVDA. */
+const EXAMPLE = { sym: 'NVDA', amount: 10 }
+/** Stocks offered as a slice, by price today (highest first, the first 8 shown): the point of fractional is a price too high to buy whole. */
+const CANDIDATES = ['NFLX', 'META', 'MSFT', 'TSLA', 'AVGO', 'V', 'MCD', 'AMZN', 'GOOGL', 'AAPL', 'AMD', 'NVDA']
+
+export function FractionalScreen({ backdrop = false }: { backdrop?: boolean }) {
+  const { go, back } = useUsNav()
+  useUsMarketSnapshot() // re-render when a fresher snapshot lands
+  const example = stockFor(EXAMPLE.sym)
+  const shares = (EXAMPLE.amount / example.price).toFixed(3)
+  const popular = CANDIDATES.map((sym) => stockFor(sym)).sort((a, b) => b.price - a.price).slice(0, 8)
+  return (
+    <Phone label={t('fractional.title')} header={<Actionbar onBack={() => back(HOME_US)} title={t('fractional.title')} />} gesture="none" topLine>
+      <Section paddingInline="16" paddingBlock="24" gap="32">
+        <Section gap="08">
+          <h2 className={styles.heading}>{t('fractional.heading')}</h2>
+          <p className={styles.text}>{t('fractional.intro')}</p>
+        </Section>
+
+        <Section gap="16">
+          <SectionHeader title={t('fractional.how.title')} description={t('fractional.how.description')} />
+          <KeyValueList variant="card" aria-label={t('fractional.how.title')}>
+            <KeyValueRow label={t('fractional.how.amount')} value={<Usd value={EXAMPLE.amount} />} />
+            <KeyValueRow label={t('fractional.how.price', { sym: example.sym })} value={<Usd value={example.price} />} />
+            <KeyValueRow label={t('fractional.how.shares')} value={t('fractional.how.sharesValue', { shares })} />
+          </KeyValueList>
+          <p className={styles.note}>{t('fractional.how.note')}</p>
+        </Section>
+
+        <Section gap="16">
+          <SectionHeader title={t('fractional.popular.title')} description={t('fractional.popular.description')} />
+          {/* Edge-to-edge rows split by a hairline (19 Nov; were cards 12 apart): the list breaks out of the page's 16. */}
+          <Section as="ul" gap="00" className={styles.edgeList} aria-label={t('fractional.popular.title')}>
+            {popular.map((s) => (
+              <li key={s.sym}>
+                <StockListCard
+                  symbol={s.sym}
+                  name={s.name}
+                  logo={<HoldingLogo sym={s.sym} size={40} />}
+                  price={<Usd value={s.price} align="end" />}
+                  changePct={s.change}
+                  onOpen={() => { if (!backdrop) openStock(go, s) }}
+                  look="list"
+                  aria-label={`${s.name}, ${s.sym}. Open stock`}
+                />
+              </li>
+            ))}
+          </Section>
+        </Section>
+
+        <Section gap="16">
+          <SectionHeader title={t('fractional.faq.title')} />
+          <dl className={styles.faq}>
+            {[1, 2, 3].map((n) => (
+              <div key={n}>
+                <dt className={styles.question}>{t(`fractional.faq.q${n}` as 'fractional.faq.q1')}</dt>
+                <dd className={styles.answer}>{t(`fractional.faq.a${n}` as 'fractional.faq.a1')}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+      </Section>
+    </Phone>
+  )
+}
+```
+
 ### `src/flows/us-stocks/screens/etf/currentEtf.ts`
 
 ```ts
@@ -32444,6 +34733,7 @@ export const getCurrentEtf = (): Etf => {
 // FLAG: copy not in copy.json yet — all UI text in this part is hard-coded.
 import { catalogue, stockFor, openStock } from '../../data'
 import type { NewsItem } from '../activation/data'
+import { etfInside } from '../../../../shared/data/etfInside'
 
 export type EtfHolding = { sym: string; weight: number }
 export type Etf = {
@@ -32456,7 +34746,8 @@ export type Etf = {
   kind: 'normal' | 'leveraged'
   /** Leveraged ETFs only: long gains when the index rises, short when it falls. */
   side?: 'long' | 'short'
-  lev?: '2x' | '3x'
+  /** How many times the stock's or index's daily move (1x: the same move, the other way, for a short one). */
+  lev?: '1x' | '1.2x' | '1.5x' | '2x' | '3x'
   country: string
   /** Regular ETFs: the sector filter's pick (SECTORS). A country or whole-market fund is 'Broad market'. */
   sector?: EtfSector
@@ -32532,8 +34823,63 @@ export const ETFS: Etf[] = [
   { sym: 'SOXS', name: 'Direxion Daily Semiconductor Bear 3X Shares', description: 'Aims for 3x the opposite daily move of 30 big chip stocks', tracks: 'ICE Semiconductor', kind: 'leveraged', side: 'short', lev: '3x', country: 'US', price: 4.12, change: -5.38, expense: 1.0, aum: '$1.8B', holdings: SEMIS },
   { sym: 'NVDL', name: 'GraniteShares 2x Long NVDA Daily ETF', description: 'Aims for 2x the daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 92.7, change: 2.46, expense: 1.05, aum: '$3.8B', holdings: weights(['NVDA', 100]) },
   { sym: 'NVD', name: 'GraniteShares 2x Short NVDA Daily ETF', description: 'Aims for 2x the opposite daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'short', lev: '2x', country: 'US', price: 6.84, change: -2.5, expense: 1.35, aum: '$55M', holdings: weights(['NVDA', 100]) },
+  // The rest of the single-stock funds on NVIDIA (19 Nov, from the user's screenshot of another app's Related ETFs):
+  // the stock page's "Boosted ETFs on NVIDIA" (long) and "Bet against NVIDIA" (short).
+  { sym: 'NVDU', name: 'Direxion Daily NVDA Bull 2X ETF', description: 'Aims for 2x the daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 60.62, change: 2.44, expense: 0.92, aum: '$0.9B', holdings: weights(['NVDA', 100]) },
+  { sym: 'NVDX', name: 'T-REX 2X Long NVIDIA Daily Target ETF', description: 'Aims for 2x the daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 8.55, change: 2.4, expense: 1.05, aum: '$0.6B', holdings: weights(['NVDA', 100]) },
+  { sym: 'NVDW', name: 'Roundhill NVDA WeeklyPay ETF', description: 'Aims for 1.2x the weekly move of NVIDIA stock, and pays out every week', tracks: 'NVIDIA', kind: 'leveraged', side: 'long', lev: '1.2x', country: 'US', price: 21.41, change: 1.31, expense: 1.0, aum: '$0.3B', holdings: weights(['NVDA', 100]) },
+  { sym: 'NVDG', name: 'Leverage Shares 2X Long NVDA Daily ETF', description: 'Aims for 2x the daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 38.2, change: 2.42, expense: 0.75, aum: '$0.1B', holdings: weights(['NVDA', 100]) },
+  { sym: 'NVDD', name: 'Direxion Daily NVDA Bear 1X ETF', description: 'Aims for the opposite of NVIDIA stock\'s daily move', tracks: 'NVIDIA', kind: 'leveraged', side: 'short', lev: '1x', country: 'US', price: 42.69, change: -1.22, expense: 1.01, aum: '$30M', holdings: weights(['NVDA', 100]) },
+  { sym: 'NVDQ', name: 'T-REX 2X Inverse NVIDIA Daily Target ETF', description: 'Aims for 2x the opposite daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'short', lev: '2x', country: 'US', price: 17.14, change: -2.47, expense: 1.05, aum: '$40M', holdings: weights(['NVDA', 100]) },
+  { sym: 'NVDS', name: 'Tradr 1.5X Short NVDA Daily ETF', description: 'Aims for 1.5x the opposite daily move of NVIDIA stock', tracks: 'NVIDIA', kind: 'leveraged', side: 'short', lev: '1.5x', country: 'US', price: 31.43, change: -1.86, expense: 1.45, aum: '$60M', holdings: weights(['NVDA', 100]) },
   { sym: 'SPXL', name: 'Direxion Daily S&P 500 Bull 3X Shares', description: 'Aims for 3x the S&P 500\'s daily move', tracks: 'S&P 500', kind: 'leveraged', side: 'long', lev: '3x', country: 'US', price: 201.5, change: 1.02, expense: 0.84, aum: '$6.9B', holdings: SP500 },
   { sym: 'SPXS', name: 'Direxion Daily S&P 500 Bear 3X Shares', description: 'Aims for 3x the opposite of the S&P 500\'s daily move', tracks: 'S&P 500', kind: 'leveraged', side: 'short', lev: '3x', country: 'US', price: 4.37, change: -1.04, expense: 1.04, aum: '$339M', holdings: SP500 },
+  // Added to fill every Country / Sector chip and the Boosted tab with real US-listed funds. Sample expense, size and holdings (approx.); price and change are real (snapshot).
+  { sym: 'VFH', name: 'Vanguard Financials ETF', description: 'Banks, insurers and payment companies across the US', tracks: 'MSCI US IMI Financials 25/50', kind: 'normal', country: 'US', sector: 'Financials', price: 125.0, change: 0, expense: 0.09, aum: '$13B', holdings: weights(['JPM', 9.4], ['BRK.B', 7.8], ['V', 6.8], ['MA', 5.6], ['BAC', 4.1], ['WFC', 3.3]) },
+  { sym: 'KRE', name: 'SPDR S&P Regional Banking ETF', description: 'Smaller US banks that lend to local businesses and homeowners', tracks: 'S&P Regional Banks Select Industry', kind: 'normal', country: 'US', sector: 'Financials', price: 63.0, change: 0, expense: 0.35, aum: '$4.5B', holdings: weights(['HBAN', 2.6], ['CFG', 2.5], ['RF', 2.5], ['FITB', 2.4], ['KEY', 2.4], ['MTB', 2.3]) },
+  { sym: 'IYF', name: 'iShares U.S. Financials ETF', description: 'Large and mid-size US banks, insurers and payment firms', tracks: 'Russell 1000 Financials', kind: 'normal', country: 'US', sector: 'Financials', price: 128.0, change: 0, expense: 0.38, aum: '$4B', holdings: weights(['JPM', 11.2], ['BRK.B', 7.6], ['V', 6.8], ['MA', 5.7], ['BAC', 4.2], ['WFC', 3.4]) },
+  { sym: 'VHT', name: 'Vanguard Health Care ETF', description: 'Drug makers, insurers and medical-device companies in the US', tracks: 'MSCI US IMI Health Care 25/50', kind: 'normal', country: 'US', sector: 'Healthcare', price: 260.0, change: 0, expense: 0.09, aum: '$17B', holdings: weights(['LLY', 12.9], ['JNJ', 6.7], ['ABBV', 5.9], ['UNH', 4.2], ['MRK', 3.8], ['ABT', 3.5]) },
+  { sym: 'IBB', name: 'iShares Biotechnology ETF', description: 'US biotech firms that develop new medicines', tracks: 'NYSE Biotechnology', kind: 'normal', country: 'US', sector: 'Healthcare', price: 150.0, change: 0, expense: 0.44, aum: '$7B', holdings: weights(['GILD', 8.4], ['VRTX', 7.9], ['AMGN', 7.6], ['REGN', 5.9], ['ALNY', 4.3], ['ARGX', 3.1]) },
+  { sym: 'IHI', name: 'iShares U.S. Medical Devices ETF', description: 'US makers of surgical robots, implants and medical equipment', tracks: 'Dow Jones U.S. Select Medical Equipment', kind: 'normal', country: 'US', sector: 'Healthcare', price: 57.0, change: 0, expense: 0.38, aum: '$4B', holdings: weights(['ABT', 15.2], ['ISRG', 14.4], ['BSX', 8.9], ['SYK', 7.7], ['MDT', 5.6], ['EW', 4.6]) },
+  { sym: 'VDE', name: 'Vanguard Energy ETF', description: 'Oil, gas and energy companies across the US', tracks: 'MSCI US IMI Energy 25/50', kind: 'normal', country: 'US', sector: 'Energy', price: 128.0, change: 0, expense: 0.09, aum: '$7.5B', holdings: weights(['XOM', 22.8], ['CVX', 14.1], ['COP', 6.5], ['EOG', 3.6], ['WMB', 3.4], ['SLB', 3.3]) },
+  { sym: 'OIH', name: 'VanEck Oil Services ETF', description: 'Companies that drill wells and supply oil rigs and equipment', tracks: 'MVIS US Listed Oil Services 25', kind: 'normal', country: 'US', sector: 'Energy', price: 270.0, change: 0, expense: 0.35, aum: '$1.3B', holdings: weights(['SLB', 20.3], ['BKR', 8.1], ['HAL', 7.4], ['TS', 5.6], ['NOV', 4.9], ['FTI', 4.6]) },
+  { sym: 'XOP', name: 'SPDR S&P Oil & Gas Exploration & Production ETF', description: 'US companies that find and pump oil and gas', tracks: 'S&P Oil & Gas Exploration & Production Select Industry', kind: 'normal', country: 'US', sector: 'Energy', price: 125.0, change: 0, expense: 0.35, aum: '$2.3B', holdings: weights(['VLO', 3.0], ['APA', 2.9], ['OXY', 2.9], ['DVN', 2.9], ['FANG', 2.8], ['EOG', 2.8]) },
+  { sym: 'XLI', name: 'Industrial Select Sector SPDR Fund', description: 'Plane makers, machinery, railways and defence companies of the S&P 500', tracks: 'Industrial Select Sector', kind: 'normal', country: 'US', sector: 'Industrials', price: 155.0, change: 0, expense: 0.08, aum: '$22B', holdings: weights(['GE', 6.4], ['CAT', 5.3], ['RTX', 4.4], ['UBER', 3.8], ['GEV', 3.7], ['BA', 3.5]) },
+  { sym: 'VIS', name: 'Vanguard Industrials ETF', description: 'US industrial companies, big and small', tracks: 'MSCI US IMI Industrials 25/50', kind: 'normal', country: 'US', sector: 'Industrials', price: 300.0, change: 0, expense: 0.09, aum: '$6.5B', holdings: weights(['GE', 4.9], ['CAT', 4.2], ['RTX', 3.7], ['UBER', 3.2], ['GEV', 3.1], ['BA', 2.9]) },
+  { sym: 'INDY', name: 'iShares India 50 ETF', description: 'The 50 biggest Indian companies, bought in dollars', tracks: 'Nifty 50', kind: 'normal', country: 'India', sector: 'Broad market', price: 54.0, change: 0, expense: 0.89, aum: '$0.6B', holdings: weights(['HDB', 13.8], ['IBN', 8.7], ['RELIANCE', 8.5], ['INFY', 5.4], ['BHARTIARTL', 4.8]) },
+  { sym: 'SMIN', name: 'iShares MSCI India Small-Cap ETF', description: 'Smaller Indian companies, bought in dollars', tracks: 'MSCI India Small Cap', kind: 'normal', country: 'India', sector: 'Broad market', price: 72.0, change: 0, expense: 0.74, aum: '$0.8B', holdings: weights(['MCX', 1.7], ['PGHH', 1.5], ['BSE', 1.4], ['NH', 1.3], ['KPIT', 1.2]) },
+  { sym: 'GXC', name: 'SPDR S&P China ETF', description: 'Chinese companies of every size, from tech to banks', tracks: 'S&P China BMI', kind: 'normal', country: 'China', sector: 'Broad market', price: 115.0, change: 0, expense: 0.59, aum: '$0.5B', holdings: weights(['TCEHY', 13.6], ['BABA', 9.8], ['PDD', 3.8], ['MPNGY', 3.2], ['XIACY', 3.0]) },
+  { sym: 'JPXN', name: 'iShares JPX-Nikkei 400 ETF', description: 'Japanese companies picked for profit and how well they treat shareholders', tracks: 'JPX-Nikkei 400', kind: 'normal', country: 'Japan', sector: 'Broad market', price: 82.0, change: 0, expense: 0.48, aum: '$0.1B', holdings: weights(['TM', 4.6], ['SONY', 3.4], ['MUFG', 3.2], ['HTHIY', 2.7], ['NTDOY', 2.5]) },
+  { sym: 'EWG', name: 'iShares MSCI Germany ETF', description: 'Large and mid-size German companies', tracks: 'MSCI Germany', kind: 'normal', country: 'Europe', sector: 'Broad market', price: 40.0, change: 0, expense: 0.5, aum: '$1.5B', holdings: weights(['SAP', 14.8], ['SIEGY', 11.2], ['ALIZY', 7.9], ['DTEGY', 5.6], ['MURGY', 3.6]) },
+  { sym: 'EWU', name: 'iShares MSCI United Kingdom ETF', description: 'Large and mid-size UK companies', tracks: 'MSCI United Kingdom', kind: 'normal', country: 'Europe', sector: 'Broad market', price: 44.0, change: 0, expense: 0.5, aum: '$3B', holdings: weights(['AZN', 8.2], ['SHEL', 7.6], ['HSBC', 7.1], ['UL', 4.4], ['BP', 3.4]) },
+  { sym: 'UPRO', name: 'ProShares UltraPro S&P500', description: "Aims for 3x the S&P 500's daily move", tracks: 'S&P 500', kind: 'leveraged', side: 'long', lev: '3x', country: 'US', price: 95.0, change: 0, expense: 0.91, aum: '$4.5B', holdings: weights(['NVDA', 7.6], ['MSFT', 6.7], ['AAPL', 6.3], ['AMZN', 3.9], ['META', 2.9], ['AVGO', 2.6]) },
+  { sym: 'SPXU', name: 'ProShares UltraPro Short S&P500', description: "Aims for 3x the opposite of the S&P 500's daily move", tracks: 'S&P 500', kind: 'leveraged', side: 'short', lev: '3x', country: 'US', price: 9.0, change: 0, expense: 0.91, aum: '$0.5B', holdings: weights(['NVDA', 7.6], ['MSFT', 6.7], ['AAPL', 6.3], ['AMZN', 3.9], ['META', 2.9], ['AVGO', 2.6]) },
+  { sym: 'TECL', name: 'Direxion Daily Technology Bull 3X Shares', description: "Aims for 3x the tech sector's daily move", tracks: 'Technology Select Sector', kind: 'leveraged', side: 'long', lev: '3x', country: 'US', price: 105.0, change: 0, expense: 0.88, aum: '$3.5B', holdings: weights(['NVDA', 14.6], ['AAPL', 12.4], ['MSFT', 11.9], ['AVGO', 5.2], ['ORCL', 3.0], ['AMD', 2.6]) },
+  { sym: 'TECS', name: 'Direxion Daily Technology Bear 3X Shares', description: "Aims for 3x the opposite of the tech sector's daily move", tracks: 'Technology Select Sector', kind: 'leveraged', side: 'short', lev: '3x', country: 'US', price: 6.0, change: 0, expense: 1.0, aum: '$0.1B', holdings: weights(['NVDA', 14.6], ['AAPL', 12.4], ['MSFT', 11.9], ['AVGO', 5.2], ['ORCL', 3.0], ['AMD', 2.6]) },
+  { sym: 'FAS', name: 'Direxion Daily Financial Bull 3X Shares', description: "Aims for 3x the financial sector's daily move", tracks: 'Financial Select Sector', kind: 'leveraged', side: 'long', lev: '3x', country: 'US', price: 165.0, change: 0, expense: 0.94, aum: '$2.7B', holdings: weights(['BRK.B', 12.5], ['JPM', 11.6], ['V', 7.9], ['MA', 6.6], ['BAC', 4.7], ['WFC', 3.8]) },
+  { sym: 'FAZ', name: 'Direxion Daily Financial Bear 3X Shares', description: "Aims for 3x the opposite of the financial sector's daily move", tracks: 'Financial Select Sector', kind: 'leveraged', side: 'short', lev: '3x', country: 'US', price: 4.5, change: 0, expense: 1.1, aum: '$0.1B', holdings: weights(['BRK.B', 12.5], ['JPM', 11.6], ['V', 7.9], ['MA', 6.6], ['BAC', 4.7], ['WFC', 3.8]) },
+  { sym: 'YINN', name: 'Direxion Daily FTSE China Bull 3X Shares', description: "Aims for 3x the daily move of China's 50 biggest companies", tracks: 'FTSE China 50', kind: 'leveraged', side: 'long', lev: '3x', country: 'US', price: 45.0, change: 0, expense: 1.38, aum: '$1B', holdings: weights(['TCEHY', 11.0], ['BABA', 9.5], ['CICHY', 6.5], ['IDCBY', 5.5], ['XIACY', 4.2], ['MPNGY', 4.0]) },
+  { sym: 'YANG', name: 'Direxion Daily FTSE China Bear 3X Shares', description: "Aims for 3x the opposite of the daily move of China's 50 biggest companies", tracks: 'FTSE China 50', kind: 'leveraged', side: 'short', lev: '3x', country: 'US', price: 3.0, change: 0, expense: 1.4, aum: '$0.1B', holdings: weights(['TCEHY', 11.0], ['BABA', 9.5], ['CICHY', 6.5], ['IDCBY', 5.5], ['XIACY', 4.2], ['MPNGY', 4.0]) },
+  { sym: 'KORU', name: 'Direxion Daily MSCI South Korea Bull 3X Shares', description: "Aims for 3x the daily move of South Korea's big companies", tracks: 'MSCI Korea 25/50', kind: 'leveraged', side: 'long', lev: '3x', country: 'US', price: 20.0, change: 0, expense: 1.06, aum: '$0.1B', holdings: weights(['HXSCF', 23.7], ['SSNLF', 22.8], ['SKSQF', 3.1], ['SMSEF', 2.7], ['KB', 1.9]) },
+  // Single-stock Boosted funds for the big names (19 Nov, so every big stock page has its own Related ETFs). Real
+  // US-listed funds; sample price, expense and size. Their day change follows the stock (the loop below).
+  { sym: 'AAPU', name: 'Direxion Daily AAPL Bull 2X Shares', description: "Aims for 2x Apple's daily move", tracks: 'Apple', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 34.6, change: 0, expense: 0.97, aum: '$0.3B', holdings: weights(['AAPL', 100]) },
+  { sym: 'AAPD', name: 'Direxion Daily AAPL Bear 1X Shares', description: "Aims for the opposite of Apple's daily move", tracks: 'Apple', kind: 'leveraged', side: 'short', lev: '1x', country: 'US', price: 15.2, change: 0, expense: 0.95, aum: '$40M', holdings: weights(['AAPL', 100]) },
+  { sym: 'MSFU', name: 'Direxion Daily MSFT Bull 2X Shares', description: "Aims for 2x Microsoft's daily move", tracks: 'Microsoft', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 51.8, change: 0, expense: 0.97, aum: '$0.2B', holdings: weights(['MSFT', 100]) },
+  { sym: 'MSFD', name: 'Direxion Daily MSFT Bear 1X Shares', description: "Aims for the opposite of Microsoft's daily move", tracks: 'Microsoft', kind: 'leveraged', side: 'short', lev: '1x', country: 'US', price: 13.4, change: 0, expense: 0.95, aum: '$25M', holdings: weights(['MSFT', 100]) },
+  { sym: 'AMZU', name: 'Direxion Daily AMZN Bull 2X Shares', description: "Aims for 2x Amazon's daily move", tracks: 'Amazon', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 40.3, change: 0, expense: 0.97, aum: '$0.3B', holdings: weights(['AMZN', 100]) },
+  { sym: 'AMZD', name: 'Direxion Daily AMZN Bear 1X Shares', description: "Aims for the opposite of Amazon's daily move", tracks: 'Amazon', kind: 'leveraged', side: 'short', lev: '1x', country: 'US', price: 8.1, change: 0, expense: 0.95, aum: '$30M', holdings: weights(['AMZN', 100]) },
+  { sym: 'GGLL', name: 'Direxion Daily GOOGL Bull 2X Shares', description: "Aims for 2x Alphabet's daily move", tracks: 'Google', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 71.2, change: 0, expense: 0.99, aum: '$0.4B', holdings: weights(['GOOGL', 100]) },
+  { sym: 'GGLS', name: 'Direxion Daily GOOGL Bear 1X Shares', description: "Aims for the opposite of Alphabet's daily move", tracks: 'Google', kind: 'leveraged', side: 'short', lev: '1x', country: 'US', price: 9.3, change: 0, expense: 0.95, aum: '$20M', holdings: weights(['GOOGL', 100]) },
+  { sym: 'METU', name: 'Direxion Daily META Bull 2X Shares', description: "Aims for 2x Meta's daily move", tracks: 'Meta', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 58.9, change: 0, expense: 0.97, aum: '$0.3B', holdings: weights(['META', 100]) },
+  { sym: 'METD', name: 'Direxion Daily META Bear 1X Shares', description: "Aims for the opposite of Meta's daily move", tracks: 'Meta', kind: 'leveraged', side: 'short', lev: '1x', country: 'US', price: 12.6, change: 0, expense: 0.95, aum: '$15M', holdings: weights(['META', 100]) },
+  { sym: 'AMDL', name: 'GraniteShares 2x Long AMD Daily ETF', description: "Aims for 2x AMD's daily move", tracks: 'AMD', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 15.4, change: 0, expense: 1.15, aum: '$0.5B', holdings: weights(['AMD', 100]) },
+  { sym: 'AVL', name: 'Direxion Daily AVGO Bull 2X Shares', description: "Aims for 2x Broadcom's daily move", tracks: 'Broadcom', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 68.5, change: 0, expense: 0.97, aum: '$0.1B', holdings: weights(['AVGO', 100]) },
+  { sym: 'PLTU', name: 'Direxion Daily PLTR Bull 2X Shares', description: "Aims for 2x Palantir's daily move", tracks: 'Palantir', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 82.7, change: 0, expense: 0.97, aum: '$0.4B', holdings: weights(['PLTR', 100]) },
+  { sym: 'NFXL', name: 'Direxion Daily NFLX Bull 2X Shares', description: "Aims for 2x Netflix's daily move", tracks: 'Netflix', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 61.0, change: 0, expense: 0.97, aum: '$50M', holdings: weights(['NFLX', 100]) },
+  { sym: 'CONL', name: 'GraniteShares 2x Long COIN Daily ETF', description: "Aims for 2x Coinbase's daily move", tracks: 'Coinbase', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 36.8, change: 0, expense: 1.15, aum: '$1.1B', holdings: weights(['COIN', 100]) },
+  { sym: 'TSLL', name: 'Direxion Daily TSLA Bull 2X Shares', description: "Aims for 2x Tesla's daily move", tracks: 'Tesla', kind: 'leveraged', side: 'long', lev: '2x', country: 'US', price: 13.0, change: 0, expense: 0.95, aum: '$5B', holdings: weights(['TSLA', 100.0]) },
+  { sym: 'TSLQ', name: 'Tradr 2X Short TSLA Daily ETF', description: "Aims for 2x the opposite of Tesla's daily move", tracks: 'Tesla', kind: 'leveraged', side: 'short', lev: '2x', country: 'US', price: 22.0, change: 0, expense: 1.15, aum: '$0.6B', holdings: weights(['TSLA', 100.0]) },
 ]
 
 /** Region chips on the Regular tab (after "All"). */
@@ -32542,8 +34888,15 @@ for (const etf of ETFS) {
   const real = catalogue[etf.sym]
   if (real) Object.assign(etf, { price: real.price, change: real.change })
 }
+// A fund built on one stock that the snapshot doesn't have yet (the NVIDIA ones added 19 Nov) moves with that stock
+// today: its real move × the leverage, the other way for a short one — so the Related ETFs never show a Boosted fund
+// rising on a day its stock falls. The next `npm run us:snapshot` fetches their own prices.
+for (const etf of ETFS) {
+  const stock = etf.kind === 'leveraged' && etf.holdings.length === 1 && !catalogue[etf.sym] ? catalogue[etf.holdings[0].sym] : undefined
+  if (stock) etf.change = Math.round(stock.change * parseFloat(etf.lev ?? '1') * (etf.side === 'short' ? -1 : 1) * 100) / 100
+}
 
-export const COUNTRIES = ['US', 'China', 'Japan', 'Europe', 'Korea']
+export const COUNTRIES = ['US', 'India', 'China', 'Japan', 'Europe', 'Korea']
 
 /** Sector chips on the Regular tab (after "All"), the other filter the switcher chip picks. */
 export type EtfSector = 'Broad market' | 'Technology' | 'Financials' | 'Healthcare' | 'Energy' | 'Industrials'
@@ -32555,7 +34908,7 @@ export const ETF_SECTORS = ['Technology', 'Chips', 'Oil & gas', 'Defence', 'Robo
 const SECTOR_OF: Record<string, string> = {
   QQQ: 'Technology', SMH: 'Chips', XLE: 'Oil & gas', ITA: 'Defence', BOTZ: 'Robots & AI', UFO: 'Space', KWEB: 'Internet',
   // Leveraged (3 Nov, for the Leveraged tab's Sector chips); the S&P 500 pair has none.
-  TQQQ: 'Technology', SQQQ: 'Technology', SOXL: 'Chips', SOXS: 'Chips', NVDL: 'Chips', NVD: 'Chips',
+  TQQQ: 'Technology', SQQQ: 'Technology', SOXL: 'Chips', SOXS: 'Chips', NVDL: 'Chips', NVD: 'Chips', TECL: 'Technology', TECS: 'Technology',
 }
 
 /** The ETF list's sector for a fund, or undefined for the whole-market and country funds. */
@@ -32603,6 +34956,34 @@ const PLAIN: Record<string, EtfPlain> = {
   NVD: { plain: 'NVIDIA', known: ['NVIDIA'], does: 'Aims to move 2x opposite to NVIDIA each day.' },
   SPXL: { plain: 'S&P 500', known: ['Apple', 'Microsoft', 'NVIDIA'], does: 'Aims to move 3x the S&P 500 each day.' },
   SPXS: { plain: 'S&P 500', known: ['Apple', 'Microsoft', 'NVIDIA'], does: 'Aims to move 3x opposite to the S&P 500 each day.' },
+  VFH: { plain: 'US bank & finance stocks', known: ['JPMorgan', 'Berkshire Hathaway', 'Visa'], does: 'Owns about 390 US banks, insurers and payment companies, big and small.' },
+  KRE: { plain: 'US regional banks', known: ['Huntington', 'Citizens', 'Regions Financial'], does: 'Owns around 145 US regional and community banks, each a small, similar-sized slice.' },
+  IYF: { plain: 'US bank & finance stocks', known: ['JPMorgan', 'Visa', 'Mastercard'], does: 'Owns about 270 large and mid-size US finance companies.' },
+  VHT: { plain: 'US healthcare stocks', known: ['Eli Lilly', 'Johnson & Johnson', 'UnitedHealth'], does: 'Owns about 410 US drug makers, insurers and medical-device companies.' },
+  IBB: { plain: 'US biotech stocks', known: ['Gilead Sciences', 'Vertex', 'Amgen'], does: 'Owns about 270 biotech companies that research and sell new medicines.' },
+  IHI: { plain: 'US medical-device stocks', known: ['Abbott', 'Intuitive Surgical', 'Boston Scientific'], does: 'Owns about 60 companies that make medical devices, from heart valves to surgery robots.' },
+  VDE: { plain: 'US oil & gas stocks', known: ['ExxonMobil', 'Chevron', 'ConocoPhillips'], does: 'Owns about 105 US oil and gas producers, refiners and pipeline companies.' },
+  OIH: { plain: 'Oil drilling & services stocks', known: ['Schlumberger', 'Baker Hughes', 'Halliburton'], does: 'Owns the 25 biggest companies that drill wells and supply oil and gas equipment.' },
+  XOP: { plain: 'US oil producers', known: ['Occidental', 'Devon Energy', 'EOG Resources'], does: 'Owns about 55 US companies that find and pump oil and natural gas, in roughly equal slices.' },
+  XLI: { plain: 'US industrial stocks', known: ['GE Aerospace', 'Caterpillar', 'Boeing'], does: 'Owns the 80 industrial companies of the S&P 500: planes, machinery, railways and delivery.' },
+  VIS: { plain: 'US industrial stocks', known: ['GE Aerospace', 'Caterpillar', 'Boeing'], does: 'Owns about 390 US industrial companies, from giants to small makers.' },
+  INDY: { plain: 'Top 50 Indian stocks', known: ['HDFC Bank', 'Reliance', 'Infosys'], does: "Owns India's 50 biggest companies, in dollars." },
+  SMIN: { plain: 'Small Indian stocks', known: ['MCX', 'BSE', 'KPIT Technologies'], does: 'Owns about 480 smaller Indian companies, each a tiny slice.' },
+  GXC: { plain: 'Chinese stocks, every size', known: ['Tencent', 'Alibaba', 'Meituan'], does: 'Owns about 270 Chinese companies of every size.' },
+  JPXN: { plain: 'Japanese stocks, well run', known: ['Toyota', 'Sony', 'Nintendo'], does: 'Owns about 400 Japanese companies picked for profit and shareholder returns.' },
+  EWG: { plain: 'Big German stocks', known: ['SAP', 'Siemens', 'Allianz'], does: "Owns Germany's biggest companies." },
+  EWU: { plain: 'Big UK stocks', known: ['AstraZeneca', 'Shell', 'HSBC'], does: "Owns the UK's biggest companies." },
+  UPRO: { plain: 'S&P 500', known: ['Apple', 'Microsoft', 'NVIDIA'], does: 'Aims to move 3x the S&P 500 each day.' },
+  SPXU: { plain: 'S&P 500', known: ['Apple', 'Microsoft', 'NVIDIA'], does: 'Aims to move 3x opposite to the S&P 500 each day.' },
+  TECL: { plain: 'US tech stocks', known: ['Apple', 'Microsoft', 'NVIDIA'], does: 'Aims to move 3x a US tech-stock index each day.' },
+  TECS: { plain: 'US tech stocks', known: ['Apple', 'Microsoft', 'NVIDIA'], does: 'Aims to move 3x opposite to a US tech-stock index each day.' },
+  FAS: { plain: 'US finance stocks', known: ['Berkshire Hathaway', 'JPMorgan', 'Visa'], does: 'Aims to move 3x a US finance-stock index each day.' },
+  FAZ: { plain: 'US finance stocks', known: ['Berkshire Hathaway', 'JPMorgan', 'Visa'], does: 'Aims to move 3x opposite to a US finance-stock index each day.' },
+  YINN: { plain: 'Chinese stocks', known: ['Tencent', 'Alibaba', 'Meituan'], does: 'Aims to move 3x a China large-cap index each day.' },
+  YANG: { plain: 'Chinese stocks', known: ['Tencent', 'Alibaba', 'Meituan'], does: 'Aims to move 3x opposite to a China large-cap index each day.' },
+  KORU: { plain: 'Korean stocks', known: ['Samsung', 'SK Hynix', 'Hyundai'], does: 'Aims to move 3x a South Korea stock index each day.' },
+  TSLL: { plain: 'Tesla', known: ['Tesla'], does: 'Aims to move 2x Tesla each day.' },
+  TSLQ: { plain: 'Tesla', known: ['Tesla'], does: 'Aims to move 2x opposite to Tesla each day.' },
 }
 // Short tags beside "ETF" on the ETF page (3 Nov): what's in it, in a word or two. Plain facts — what it tracks and
 // where — no "best" / "safe" style labels.
@@ -32614,6 +34995,23 @@ const TAGS: Record<string, string[]> = {
   XLF: ['Finance', 'US'], XLV: ['Healthcare', 'US'], FXI: ['China', 'Top 50'], CQQQ: ['China', 'Tech'],
   DXJ: ['Japan', 'Yen-hedged'], HEWJ: ['Japan', 'Yen-hedged'], SCJ: ['Japan', 'Small cap'], FEZ: ['Eurozone', 'Top 50'],
   EZU: ['Eurozone', 'Large & mid'], IEUR: ['Europe', 'All sizes'], FLKR: ['South Korea', 'Large & mid'],
+  VFH: ['Finance', 'US'],
+  KRE: ['Regional banks', 'US'],
+  IYF: ['Finance', 'US'],
+  VHT: ['Healthcare', 'US'],
+  IBB: ['Biotech', 'US'],
+  IHI: ['Med devices', 'US'],
+  VDE: ['Oil & gas', 'US'],
+  OIH: ['Oil services', 'Global'],
+  XOP: ['Oil producers', 'US'],
+  XLI: ['Industrials', 'US'],
+  VIS: ['Industrials', 'US'],
+  INDY: ['India', 'Top 50'],
+  SMIN: ['India', 'Small cap'],
+  GXC: ['China', 'All sizes'],
+  JPXN: ['Japan', 'Quality'],
+  EWG: ['Germany', 'Large & mid'],
+  EWU: ['UK', 'Large & mid'],
 }
 /** The ETF page's tags after "ETF" (none for leveraged ones, which show their long / short tag). */
 export const tagsFor = (etf: Etf) => TAGS[etf.sym] ?? []
@@ -32621,25 +35019,8 @@ export const tagsFor = (etf: Etf) => TAGS[etf.sym] ?? []
 /** The plain-English side of an ETF; leveraged ones (off for now) fall back to the fund's name. */
 export const plainFor = (etf: Etf): EtfPlain => PLAIN[etf.sym] ?? { plain: etf.name, known: [], does: etf.tracks }
 
-// The ETF cards' second line (3 Nov): after the ticker, what kind of companies are inside, with a name people know —
-// "QQQ · Mostly big tech, like Apple" (was the fund's legal name, which says little; it stays on the ETF page).
-// Kept to about 28 characters so it fits one line at 360. Sample copy; the API would send it with the fund.
-const INSIDE: Record<string, string> = {
-  SPY: 'Big US firms in every sector', QQQ: 'Mostly big tech, like Apple', VTI: 'Every US firm, big to small',
-  SMH: 'Chip makers, like NVIDIA', ITA: 'Plane, jet & weapon makers', XLE: 'Oil & gas, like ExxonMobil',
-  XLF: 'Banks, insurers & card firms', XLV: 'Drug makers & health insurers', BOTZ: 'Robot makers & AI chip firms',
-  UFO: 'Rocket, satellite & GPS firms', INDA: 'Big Indian banks, IT & energy', EPI: 'Indian firms with big profits',
-  MCHI: 'Chinese giants, like Tencent', KWEB: 'Chinese shopping & chat apps', EWJ: "Japan's giants, like Toyota",
-  VGK: "Europe's giants, like ASML", EWY: "Korea's giants, like Samsung", FXI: "China's top 50, like Alibaba",
-  CQQQ: 'Chinese tech, chips to apps', DXJ: 'Exporters, like Toyota & Honda', HEWJ: "Japan's giants, yen-protected",
-  SCJ: 'Smaller firms, like Sanrio', FEZ: "Eurozone's top 50, like SAP", EZU: 'Euro-area firms, like Siemens',
-  IEUR: '1,000+ European firms', FLKR: "Korea's giants, like SK Hynix",
-  TQQQ: 'Mostly big tech, like Apple', SQQQ: 'Mostly big tech, like Apple', SOXL: 'Chip makers, like NVIDIA',
-  SOXS: 'Chip makers, like NVIDIA', NVDL: 'One stock: NVIDIA', NVD: 'One stock: NVIDIA',
-  SPXL: 'Big US firms, like Apple', SPXS: 'Big US firms, like Apple',
-}
 /** What kind of companies the fund holds, in a few words (the ETF cards' second line, after the ticker). */
-export const insideFor = (etf: Etf) => INSIDE[etf.sym] ?? plainFor(etf).does
+export const insideFor = (etf: Etf) => etfInside(etf.sym) ?? plainFor(etf).does
 
 // The ETF page's description (2–3 Nov): a short paragraph on what's inside — which kinds of companies, the biggest
 // names, and how many it holds. Written to follow the ticker ("SPY tracks …"). Sample copy; the API would send it with the fund.
@@ -32680,6 +35061,34 @@ const ABOUT: Record<string, string> = {
   NVD: "Aims to move 2x opposite to NVIDIA's share price each day: when NVIDIA falls 1% it aims to rise 2%, and the other way round. It follows one stock, holds swaps rather than shares, and resets every day.",
   SPXL: 'Aims to move 3x the S&P 500 each day — the index SPY tracks: the 500 largest companies listed in the US, led by Apple, Microsoft, NVIDIA and Amazon. It gets the 3x mostly through swaps with banks, and resets every day, so over weeks the result can differ from 3x the index.',
   SPXS: 'Aims to move 3x opposite to the S&P 500 each day — the index SPY tracks: the 500 largest companies listed in the US. When the index falls 1% in a day it aims to rise 3%, and the other way round. It holds swaps, not the stocks, and resets every day.',
+  VFH: 'Holds about 390 US financial companies: JPMorgan, Berkshire Hathaway, Visa, Mastercard, Bank of America and Wells Fargo lead it, with smaller banks and insurers behind.',
+  KRE: 'Holds about 145 US regional banks, each a small, similar-sized slice (about 2% or less): Huntington, Citizens Financial, Regions, Fifth Third and KeyCorp. Its price tends to follow interest rates and lending.',
+  IYF: 'Holds about 270 large and mid-size US financial companies: JPMorgan, Berkshire Hathaway, Visa, Mastercard, Bank of America and Wells Fargo.',
+  VHT: 'Holds about 410 US healthcare companies: drug makers like Eli Lilly, Johnson & Johnson, AbbVie and Merck, insurer UnitedHealth, and makers of medical equipment such as Abbott.',
+  IBB: 'Holds about 270 biotech companies that research and sell new medicines: Gilead, Vertex, Amgen, Regeneron and Alnylam are the biggest. Smaller biotechs can swing a lot on trial results.',
+  IHI: 'Holds about 60 US medical-device makers: Abbott, Intuitive Surgical (surgery robots), Boston Scientific, Stryker, Medtronic and Edwards Lifesciences.',
+  VDE: 'Holds about 105 US energy companies: ExxonMobil and Chevron make up over a third, followed by ConocoPhillips, EOG, Williams and Schlumberger. Its price tends to move with oil prices.',
+  OIH: 'Holds about 25 companies that drill wells and supply the equipment for them: Schlumberger, Baker Hughes, Halliburton, Tenaris, NOV and TechnipFMC. Their business rises and falls with oil companies’ spending.',
+  XOP: 'Holds about 55 US oil and gas producers in roughly equal slices (3% or less each): Occidental, Devon, Diamondback, EOG and APA. Its price tends to follow oil and gas prices, often more sharply than the big oil majors.',
+  XLI: 'Holds the 80 industrial companies in the S&P 500: GE Aerospace, Caterpillar, RTX, Uber, GE Vernova and Boeing lead it, with railways like Union Pacific and machine makers like Deere behind.',
+  VIS: 'Holds about 390 US industrial companies, big and small: GE Aerospace, Caterpillar, RTX, Uber, GE Vernova and Boeing lead, followed by railways, machine makers and delivery firms.',
+  INDY: "Holds India's 50 biggest companies, bought in dollars on a US exchange: HDFC Bank, ICICI Bank, Reliance, Infosys and Bharti Airtel lead it. Banks and IT are the biggest parts.",
+  SMIN: 'Holds about 480 smaller Indian companies, each a tiny part of the fund. They are less followed than the big names, and their prices can move more.',
+  GXC: 'Holds about 270 Chinese companies of every size: Tencent (WeChat), Alibaba, PDD (Temu), Meituan and Xiaomi lead it, alongside banks, carmakers and phone makers.',
+  JPXN: 'Holds about 400 Japanese companies picked for high profits and good treatment of shareholders: Toyota, Sony, Mitsubishi UFJ, Hitachi and Nintendo are among the biggest.',
+  EWG: "Holds about 60 of Germany's large and mid-size companies: SAP (software), Siemens, Allianz (insurance), Deutsche Telekom and Munich Re lead it.",
+  EWU: "Holds about 80 of the UK's large and mid-size companies: AstraZeneca, Shell, HSBC, Unilever and BP lead it.",
+  UPRO: 'Aims to move 3x the S&P 500 each day — the index SPY tracks: the 500 largest companies listed in the US, led by Apple, Microsoft, NVIDIA and Amazon. It gets the 3x mostly through swaps with banks, and resets every day, so over weeks the result can differ from 3x the index.',
+  SPXU: 'Aims to move 3x opposite to the S&P 500 each day — the 500 largest companies listed in the US. When the index falls 1% in a day it aims to rise 3%, and the other way round. It holds swaps, not the stocks, and resets every day.',
+  TECL: 'Aims to move 3x the Technology Select Sector Index each day — the tech companies of the S&P 500, led by NVIDIA, Apple and Microsoft. It gets the 3x mostly through swaps with banks, and resets every day, so over weeks the result can differ from 3x the index.',
+  TECS: 'Aims to move 3x opposite to the Technology Select Sector Index each day — the tech companies of the S&P 500. When the index falls 1% in a day it aims to rise 3%, and the other way round. It holds swaps, not the stocks, and resets every day.',
+  FAS: 'Aims to move 3x the Financial Select Sector Index each day — the banks, insurers and payment companies of the S&P 500, led by Berkshire Hathaway, JPMorgan and Visa. It gets the 3x mostly through swaps with banks, and resets every day.',
+  FAZ: 'Aims to move 3x opposite to the Financial Select Sector Index each day — the banks, insurers and payment companies of the S&P 500. When the index falls 1% in a day it aims to rise 3%, and the other way round. It holds swaps and resets every day.',
+  YINN: 'Aims to move 3x the FTSE China 50 Index each day — the 50 biggest Chinese companies listed in Hong Kong, led by Tencent and Alibaba. It gets the 3x mostly through swaps with banks, and resets every day, so over weeks the result can differ from 3x the index.',
+  YANG: 'Aims to move 3x opposite to the FTSE China 50 Index each day — the 50 biggest Chinese companies listed in Hong Kong. When the index falls 1% in a day it aims to rise 3%, and the other way round. It holds swaps and resets every day.',
+  KORU: 'Aims to move 3x the MSCI Korea 25/50 Index each day — large and mid-size South Korean companies, led by Samsung Electronics and SK Hynix. It gets the 3x mostly through swaps with banks, and resets every day, so over weeks the result can differ from 3x the index.',
+  TSLL: "Aims to move 2x Tesla's share price each day. It follows one stock, not an index, and gets the 2x mostly through swaps with banks. It resets every day, so over weeks the result can differ from 2x Tesla's move.",
+  TSLQ: "Aims to move 2x opposite to Tesla's share price each day: when Tesla falls 1% it aims to rise 2%, and the other way round. It follows one stock, holds swaps rather than shares, and resets every day.",
 }
 /**
  * The ETF page's opening line, led by the ticker: "SPY tracks the S&P 500 — …", "SMH holds about 25 …" (3 Nov). Plain
@@ -32730,6 +35139,34 @@ const SECTOR_SPLIT: Record<string, [string, number][]> = {
   NVD: [['Chip makers', 100]],
   SPXL: [['Technology', 34], ['Financials', 13], ['Healthcare', 10], ['Consumer', 10]],
   SPXS: [['Technology', 34], ['Financials', 13], ['Healthcare', 10], ['Consumer', 10]],
+  VFH: [['Banks', 33], ['Payments', 22], ['Insurance', 19], ['Investing', 16]],
+  KRE: [['Banks', 96], ['Investing', 3], ['Insurance', 1]],
+  IYF: [['Banks', 30], ['Payments', 23], ['Insurance', 17], ['Investing', 20]],
+  VHT: [['Drug makers', 44], ['Med devices', 20], ['Biotech', 14], ['Health plans', 12]],
+  IBB: [['Biotech', 72], ['Drug makers', 14], ['Life science tools', 10], ['Med devices', 2]],
+  IHI: [['Med devices', 88], ['Life science tools', 7], ['Health plans', 3], ['Drug makers', 2]],
+  VDE: [['Integrated oil', 37], ['Oil producers', 28], ['Pipelines', 18], ['Oil services', 9]],
+  OIH: [['Oil services', 82], ['Oil producers', 10], ['Industrials', 6]],
+  XOP: [['Oil producers', 72], ['Refining', 18], ['Integrated oil', 6], ['Pipelines', 4]],
+  XLI: [['Aerospace', 24], ['Machinery', 22], ['Transport', 21], ['Electrical', 14]],
+  VIS: [['Machinery', 24], ['Aerospace', 20], ['Transport', 20], ['Electrical', 14]],
+  INDY: [['Financials', 37], ['Technology', 13], ['Energy', 10], ['Consumer', 9]],
+  SMIN: [['Industrials', 20], ['Financials', 17], ['Materials', 14], ['Consumer', 13]],
+  GXC: [['Consumer', 28], ['Media', 22], ['Financials', 16], ['Technology', 9]],
+  JPXN: [['Industrials', 24], ['Consumer', 20], ['Technology', 16], ['Financials', 14]],
+  EWG: [['Technology', 22], ['Industrials', 22], ['Financials', 20], ['Consumer', 10]],
+  EWU: [['Financials', 23], ['Healthcare', 16], ['Consumer', 16], ['Energy', 13]],
+  UPRO: [['Technology', 34], ['Financials', 13], ['Healthcare', 10], ['Consumer', 10]],
+  SPXU: [['Technology', 34], ['Financials', 13], ['Healthcare', 10], ['Consumer', 10]],
+  TECL: [['Chip makers', 34], ['Software', 32], ['Hardware', 20], ['IT services', 6]],
+  TECS: [['Chip makers', 34], ['Software', 32], ['Hardware', 20], ['IT services', 6]],
+  FAS: [['Banks', 32], ['Payments', 24], ['Insurance', 18], ['Investing', 16]],
+  FAZ: [['Banks', 32], ['Payments', 24], ['Insurance', 18], ['Investing', 16]],
+  YINN: [['Consumer', 30], ['Financials', 28], ['Media', 20], ['Technology', 8]],
+  YANG: [['Consumer', 30], ['Financials', 28], ['Media', 20], ['Technology', 8]],
+  KORU: [['Technology', 40], ['Financials', 13], ['Industrials', 12], ['Consumer', 9]],
+  TSLL: [['Carmakers', 100]],
+  TSLQ: [['Carmakers', 100]],
 }
 /** Every sector name any fund has (and "Other"): the legend's name column is as wide as the widest of them on every ETF. */
 export const SECTOR_NAMES = [...new Set([...Object.values(SECTOR_SPLIT).flat().map(([name]) => name), 'Other'])]
@@ -32774,13 +35211,25 @@ export const matchesEtf = (etf: Etf, query: string) => {
 }
 
 export const etfFor = (sym: string): Etf => ETFS.find((e) => e.sym === sym) ?? ETFS[0]
+/**
+ * Up to five ETFs like this one, for its page's "Similar ETFs" table (4 Nov). A regular fund: the same sector first
+ * (Technology with Technology) in the same country, then either one, then the rest, in the sample list's order. A Boosted (leveraged) fund:
+ * the same direction (long / short) and leverage first, then the other Boosted funds.
+ */
+export const similarEtfs = (etf: Etf, count = 5): Etf[] => {
+  const others = ETFS.filter((e) => e.sym !== etf.sym && e.kind === etf.kind)
+  // How alike: 2 = same sector (or direction + leverage) and same country, 1 = one of the two, 0 = neither.
+  const match = (e: Etf) => (etf.kind === 'leveraged' ? e.side === etf.side && e.lev === etf.lev : e.sector === etf.sector)
+  const score = (e: Etf) => Number(match(e)) + Number(e.country === etf.country)
+  return [...others].sort((a, b) => score(b) - score(a)).slice(0, count)
+}
 /** Leveraged ETFs on one index / theme (the long and the short). */
 export const leveragedOn = (tracks: string) => ETFS.filter((e) => e.kind === 'leveraged' && e.tracks === tracks)
 /** Leveraged ETFs grouped by what they track, the long first. */
 export const leveragedGroups = () =>
   [...new Set(ETFS.filter((e) => e.kind === 'leveraged').map((e) => e.tracks))].map((tracks) => ({
     tracks,
-    etfs: leveragedOn(tracks).sort((a) => (a.side === 'long' ? -1 : 1)),
+    etfs: leveragedOn(tracks).sort((a, b) => Number(b.side === 'long') - Number(a.side === 'long')),
   }))
 
 /** Open a stock (a holding of the ETF) on its stock page. */
@@ -32796,10 +35245,11 @@ const HOLDING_COUNT: Record<string, string> = {
   SPY: '503', QQQ: '101', VTI: '3,612', SMH: '26', VGK: '1,284', ITA: '38', XLE: '22', EWJ: '186', MCHI: '558',
   BOTZ: '81', UFO: '68', INDA: '169', EPI: '558', KWEB: '45', EWY: '82',
   XLF: '72', XLV: '60', FXI: '50', CQQQ: '148', DXJ: '434', HEWJ: '186', SCJ: '772', FEZ: '50', EZU: '221', IEUR: '1,009', FLKR: '153',
+  VFH: '390', KRE: '145', IYF: '270', VHT: '410', IBB: '270', IHI: '60', VDE: '105', OIH: '26', XOP: '55', XLI: '80', VIS: '390', INDY: '51', SMIN: '480', GXC: '270', JPXN: '400', EWG: '60', EWU: '80',
 }
 // Leveraged funds hold mostly swaps, not the stocks: the ETF page shows the stocks of the index each one follows —
 // Nasdaq-100, S&P 500, the ICE Semiconductor Index (30), or NVIDIA alone.
-const FOLLOWS_COUNT: Record<string, number> = { TQQQ: 101, SQQQ: 101, SPXL: 503, SPXS: 503, SOXL: 30, SOXS: 30, NVDL: 1, NVD: 1 }
+const FOLLOWS_COUNT: Record<string, number> = { TQQQ: 101, SQQQ: 101, SPXL: 503, SPXS: 503, SOXL: 30, SOXS: 30, NVDL: 1, NVD: 1, UPRO: 503, SPXU: 503, TECL: 70, TECS: 70, FAS: 72, FAZ: 72, YINN: 50, YANG: 50, KORU: 82, TSLL: 1, TSLQ: 1 }
 
 /** Everything the ETF page shows beyond the catalogue row: the day's range, 52-week range, NAV, yield and events. */
 export function detailsFor(etf: Etf) {
@@ -32840,8 +35290,51 @@ export const percent = (n: number) => `${n.toFixed(2)}%`
 // Where the screens go.
 export const ETF_LIST = '9001:1'
 export const ETF_PAGE = '9001:2'
+
+/** A Boosted (leveraged) fund built on this one stock (NVDL on NVIDIA). */
+const isBoostedOn = (etf: Etf, sym: string) => etf.kind === 'leveraged' && etf.holdings.length === 1 && etf.holdings[0].sym === sym
+
+// A Boosted fund that follows a whole index or sector, named the way a stock page says it ("Boosted ETFs on chip stocks").
+const BOOSTED_GROUP: Record<string, string> = {
+  'ICE Semiconductor': 'chip stocks', 'Technology Select Sector': 'tech stocks', 'Financial Select Sector': 'bank stocks',
+  'Nasdaq-100': 'the Nasdaq-100', 'S&P 500': 'the S&P 500', 'FTSE China 50': "China's big companies", 'MSCI Korea': 'Korean stocks',
+}
+const byLeverage = (a: Etf, b: Etf) => parseFloat(b.lev ?? '1') - parseFloat(a.lev ?? '1') || a.expense - b.expense
+const sides = (funds: Etf[]) => ({ long: funds.filter((e) => e.side === 'long'), short: funds.filter((e) => e.side === 'short') })
+
+/**
+ * A stock's Related ETFs (19 Nov): Boosted funds split by side — `long` gains when the stock rises (Boosted ETFs on …),
+ * `short` when it falls (Bet against …). Highest leverage first, then the cheapest.
+ * - The funds built on this one stock (NVDL on NVIDIA), when it has any (`on` is undefined: they're on the stock).
+ * - Otherwise (every other stock, 19 Nov) the Boosted index / sector funds that hold it the most (AMD in SOXL, JPM in
+ *   FAS), and the S&P 500 pair for a stock none of them holds — `on` names what they follow ("chip stocks").
+ */
+export function boostedOn(sym: string): { long: Etf[]; short: Etf[]; on?: string } {
+  const own = ETFS.filter((etf) => isBoostedOn(etf, sym)).sort(byLeverage)
+  if (own.length) return sides(own)
+  const groups = ETFS.filter((etf) => etf.kind === 'leveraged' && BOOSTED_GROUP[etf.tracks])
+  const weightIn = (etf: Etf) => etf.holdings.find((h) => h.sym === sym)?.weight ?? 0
+  const best = groups.reduce<Etf | undefined>((top, etf) => (weightIn(etf) > (top ? weightIn(top) : 0) ? etf : top), undefined)
+  const tracks = best?.tracks ?? 'S&P 500'
+  return { ...sides(groups.filter((etf) => etf.tracks === tracks).sort(byLeverage)), on: BOOSTED_GROUP[tracks] }
+}
+
+/** Every ETF in the catalogue that holds this stock, the biggest share of the fund first (a stock page's "ETFs with …"). */
+export function etfsHolding(sym: string): { etf: Etf; weight: number }[] {
+  const { long, short } = boostedOn(sym)
+  const related = new Set([...long, ...short])
+  return ETFS.flatMap((etf) => {
+    // The page's Related ETFs (boostedOn) aren't listed again here.
+    if (related.has(etf)) return []
+    const h = etf.holdings.find((x) => x.sym === sym)
+    return h ? [{ etf, weight: h.weight }] : []
+  }).sort((a, b) => b.weight - a.weight)
+}
 export const ETF_PAGE_PREVIOUS = '9001:6'
 export const ETF_HOLDINGS = '9001:12'
+/** The full "ETFs with {stock}" list (18 Nov), and the stock page it goes back to (us-stocks-13). */
+export const ETFS_WITH_STOCK = '9001:13'
+export const STOCK_PAGE_ID = '5826:93627'
 /** The order pad (Buy). */
 export const BUY_PAD = '5837:95201'
 /** Stocks home (stocks-01, follows the user status) — the back fallback of the ETF list. */
@@ -32863,6 +35356,8 @@ const HOLDING_NAMES: Record<string, string> = {
   PANW: 'Palo Alto Networks', CMCSA: 'Comcast', ADP: 'ADP', APP: 'AppLovin', VRTX: 'Vertex Pharmaceuticals',
   MELI: 'MercadoLibre', CEG: 'Constellation Energy', ORLY: "O'Reilly Automotive", CDNS: 'Cadence Design', SNPS: 'Synopsys',
   DASH: 'DoorDash', CTAS: 'Cintas', MAR: 'Marriott',
+  // Holdings of the funds added for the Country / Sector chips and the Boosted tab (non-US listings show their US ticker).
+  HWM: 'Howmet Aerospace', TDG: 'TransDigm', VLO: 'Valero Energy', MPC: 'Marathon Petroleum', PSX: 'Phillips 66', FANUY: 'Fanuc', KYCCF: 'Keyence', ABBNY: 'ABB', SMCAY: 'SMC', TRMB: 'Trimble', SATS: 'EchoStar', VSAT: 'Viasat', RELIANCE: 'Reliance Industries', BHARTIARTL: 'Bharti Airtel', HINDPETRO: 'Hindustan Petroleum', ONGC: 'ONGC', TCEHY: 'Tencent', CICHY: 'China Construction Bank', IDCBY: 'ICBC', XIACY: 'Xiaomi', MPNGY: 'Meituan', NTES: 'NetEase', LNVGY: 'Lenovo', TOELY: 'Tokyo Electron', SMFG: 'Sumitomo Mitsui', ATEYY: 'Advantest', HTHIY: 'Hitachi', HSBC: 'HSBC', RHHBY: 'Roche', SHEL: 'Shell', NVS: 'Novartis', AZN: 'AstraZeneca', HXSCF: 'SK Hynix', SKSQF: 'SK Square', SMSEF: 'Samsung SDI', KB: 'KB Financial', SNE: 'Sony', SMTOY: 'Sumitomo', IIJIY: 'Internet Initiative Japan', NPSCY: 'Nippon Steel', KAJMY: 'Kajima', TKOMY: 'Tokio Marine', SIEGY: 'Siemens', LVMUY: 'Louis Vuitton (LVMH)', ALIZY: 'Allianz', TTE: 'TotalEnergies', SNY: 'Sanofi', NSRGY: 'Nestlé', HBAN: 'Huntington Bancshares', CFG: 'Citizens Financial', RF: 'Regions Financial', FITB: 'Fifth Third', KEY: 'KeyCorp', MTB: 'M&T Bank', REGN: 'Regeneron', ALNY: 'Alnylam', ARGX: 'argenx', BSX: 'Boston Scientific', SYK: 'Stryker', MDT: 'Medtronic', EW: 'Edwards Lifesciences', EOG: 'EOG Resources', WMB: 'Williams', BKR: 'Baker Hughes', HAL: 'Halliburton', NOV: 'NOV', FTI: 'TechnipFMC', APA: 'APA', OXY: 'Occidental Petroleum', DVN: 'Devon Energy', FANG: 'Diamondback Energy', CAT: 'Caterpillar', GEV: 'GE Vernova', MCX: 'MCX India', PGHH: 'Procter & Gamble Hygiene (India)', BSE: 'BSE', NH: 'Narayana Hrudayalaya', KPIT: 'KPIT Technologies', NTDOY: 'Nintendo', DTEGY: 'Deutsche Telekom', MURGY: 'Munich Re', UL: 'Unilever', BP: 'BP',
 }
 /** A holding's display name (the catalogue's, a known name, or the symbol). */
 export const stockName = (sym: string) => {
@@ -32908,6 +35403,8 @@ export const infoIcon = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 import type { UsScreenMap } from '../types'
 import { EtfListScreen } from './EtfListScreen'
 import { EtfHoldingsScreen } from './EtfHoldingsScreen'
+import { EtfsWithStockScreen } from './EtfsWithStockScreen'
+import { FractionalScreen } from './FractionalScreen'
 import { EtfPage } from './EtfPage'
 import { EtfPreviousScreen } from './EtfPreviousScreen'
 
@@ -32916,6 +35413,8 @@ export const screens: UsScreenMap = {
   '9001:2': EtfPage, // ETF page
   '9001:6': EtfPreviousScreen, // ETF page · previous
   '9001:12': EtfHoldingsScreen, // Top holdings (the full list behind "Others")
+  '9001:14': FractionalScreen, // Fractional shares (the Stocks home's Fractional product card)
+  '9001:13': EtfsWithStockScreen, // ETFs with {stock} (the full list behind the stock page's Others row)
 }
 ```
 
@@ -32939,14 +35438,14 @@ import styles from './Etf.module.css'
  */
 export function HoldingLogo({ sym, size }: { sym: string; size: 24 | 32 | 40 }) {
   const plate = logoPlate(sym)
-  return <Avatar src={logoFor(sym)} initials={sym} size={size} className={plate === 'black' ? styles.plateBlack : plate === 'white' ? styles.plateWhite : undefined} />
+  return <Avatar src={logoFor(sym)} initials={sym.slice(0, 1)} size={size} className={plate === 'black' ? styles.plateBlack : plate === 'white' ? styles.plateWhite : undefined} />
 }
 
 /** The issuer's logo on its plate; initials when the issuer has none. */
 export function EtfDisc({ sym, size = 32 }: { sym: string; size?: 24 | 32 | 40 }) {
   const logo = issuerLogo(sym)
   if (!logo) {
-    return <span className={styles.disc} data-size={size} aria-hidden="true">{sym.slice(0, size === 40 ? 4 : size === 24 ? 2 : 3)}</span>
+    return <span className={styles.disc} data-size={size} aria-hidden="true">{sym.slice(0, 1)}</span>
   }
   return (
     <span className={styles.disc} data-size={size} data-fill={logo.fill || undefined} data-plate="" style={{ background: logo.plate }} aria-hidden="true">
@@ -32999,6 +35498,7 @@ export function SideTag({ etf, size = 'sm', filled, className }: { etf: Etf; siz
 ```ts
 // Every imported screen by Figma node id — the parts in the teammate's folders (screens/<part>/index.tsx).
 import type { UsScreenMap } from './types'
+import { screens as activate } from './activate'
 import { screens as activation } from './activation'
 import { screens as entry } from './entry'
 import { screens as etf } from './etf'
@@ -33007,7 +35507,7 @@ import { screens as orders } from './orders'
 import { screens as trade } from './trade'
 import { screens as wallet } from './wallet'
 
-export const allScreens: UsScreenMap = { ...activation, ...entry, ...etf, ...money, ...orders, ...trade, ...wallet }
+export const allScreens: UsScreenMap = { ...activate, ...activation, ...entry, ...etf, ...money, ...orders, ...trade, ...wallet }
 ```
 
 ### `src/flows/us-stocks/screens/money/AddMoneyScreen.tsx`
@@ -33029,14 +35529,17 @@ import { Stack } from '@l3/components/Stack'
 import { Tab } from '@l3/components/Tabs'
 import { Phone } from '../../components/Phone'
 import { useUsNav } from '../../nav'
-import { BankRow, type BankPickerCopy } from '../../../../shared/ui/BankPicker'
-import { useLinkedBanks } from '../../../../shared/userStatus'
+import { BankRow, bankLine, type BankPickerCopy } from '../../../../shared/ui/BankPicker'
+import { usePreview } from '../../../../shared/prototype'
+import { newlyLinkedBank, startAddBank, useLinkedBanks } from '../../../../shared/userStatus'
+import { isUsSupported } from '../../../../shared/data/usBanks'
 import { AmountDock, AmountEntry, amountValue, typeAmount } from '../../../../shared/ui/AmountEntry'
 import { formatInr, formatUsd, useUsdInrRate } from '../../../../shared/money'
 import { DEPOSIT_QUICK_ADD_USD, LRS_LIMIT_USD, MIN_DEPOSIT_USD, depositBreakdown, depositRate, inrForUsd } from './amounts'
 import { BankPickSheet } from './BankPickSheet'
 import { ChargesBreakdownSheet } from './ChargesBreakdownSheet'
 import { t } from './copy'
+import { setSentDeposit } from '../../../../shared/data/usDeposit'
 import { setHandoff, takeHandoff } from './handoff'
 import { infoIcon } from './icons'
 import { FIGMA } from '../wallet/data'
@@ -33071,13 +35574,22 @@ const toTyped = (usd: number) => (usd > 0 ? String(usd) : '')
 
 export function AddMoneyScreen({ id, initial, breakdown = false, mismatch = false, sheet, backdrop, banksOpen = false, noBank = false }: AddMoneyScreenProps) {
   const { go, back } = useUsNav()
+  const { screenId } = usePreview()
+  // "Add bank account" comes back here once the account is verified; it only takes a bank US Stocks can use.
+  const addBank = () => { startAddBank(screenId, { usStocks: true }); go(ADD_BANK) }
   const [typed, setTyped] = useState(() => toTyped(takeHandoff(id, initial)))
   const [showBreakdown, setShowBreakdown] = useState(breakdown)
   const linked = useLinkedBanks()
-  const banks = noBank ? [] : linked
-  const [bankId, setBankId] = useState(banks[0]?.id)
+  // Just added on "Add bank account": it counts even on the no-bank state, and it's the one picked.
+  const added = newlyLinkedBank()
+  const banks = noBank ? (added ? [added] : []) : linked
+  // Only ICICI, HDFC, Kotak, IDFC FIRST and Axis can send money abroad: the others are listed greyed out in "Pay from"
+  // and never picked. With none of those linked, the row and the button ask to add one (as with no bank).
+  const usable = banks.filter(isUsSupported)
+  const unsupported = banks.filter((b) => !isUsSupported(b))
+  const [bankId, setBankId] = useState(added?.id ?? usable[0]?.id)
   const [showBanks, setShowBanks] = useState(banksOpen)
-  const bank = banks.find((b) => b.id === bankId) ?? banks[0]
+  const bank = usable.find((b) => b.id === bankId) ?? usable[0]
   const bankCopy: BankPickerCopy = { method: t('addMoney.methodLabel'), addTitle: t('addMoney.addTitle'), addDescription: t('addMoney.addDescription'), sheetTitle: t('addMoney.sheetTitle'), addAnother: t('addMoney.addAnother') }
   // What you pay is in ₹ (your bank); the rate it converts at follows the live rate, plus the partner's markup.
   const rate = depositRate(useUsdInrRate())
@@ -33096,6 +35608,7 @@ export function AddMoneyScreen({ id, initial, breakdown = false, mismatch = fals
   const addToWallet = () => {
     // Straight to the bank's page (no "pay on your bank's page" sheet first); coming back keeps the typed $.
     setHandoff(moneyIds.m01, usd)
+    if (bank) setSentDeposit({ usd, inr: inrText, bank: bankLine(bank) })
     go(moneyIds.bank)
   }
 
@@ -33120,7 +35633,7 @@ export function AddMoneyScreen({ id, initial, breakdown = false, mismatch = fals
         <AmountDock
           decimal
           onKey={type}
-          method={<BankRow bank={bank} copy={bankCopy} note={t('addMoney.landsBy')} onChange={() => setShowBanks(true)} onAdd={() => go(ADD_BANK)} />}
+          method={<BankRow bank={bank} copy={bankCopy} note={t('addMoney.landsBy')} onChange={() => setShowBanks(true)} onAdd={addBank} />}
           action={
             <ButtonGroup aria-label={t('addMoney.title')}>
               {bank ? (
@@ -33130,7 +35643,7 @@ export function AddMoneyScreen({ id, initial, breakdown = false, mismatch = fals
                   {usd > 0 && !invalid && <span className={styles.ctaInr}>{t('addMoney.ctaInr', { inr: inrText })}</span>}
                 </Button>
               ) : (
-                <Button variant="primary" size="lg" fullWidth onClick={() => go(ADD_BANK)}>{t('addMoney.addBankCta')}</Button>
+                <Button variant="primary" size="lg" fullWidth onClick={addBank}>{t('addMoney.addBankCta')}</Button>
               )}
             </ButtonGroup>
           }
@@ -33154,7 +35667,7 @@ export function AddMoneyScreen({ id, initial, breakdown = false, mismatch = fals
           </Stack>
         }
       />
-      {bank && <BankPickSheet open={showBanks} banks={banks} selected={bank.id} copy={bankCopy} onSelect={setBankId} onAdd={() => { setShowBanks(false); go(ADD_BANK) }} onClose={() => setShowBanks(false)} />}
+      {bank && <BankPickSheet open={showBanks} banks={usable} unsupported={unsupported} selected={bank.id} copy={bankCopy} onSelect={setBankId} onAdd={() => { setShowBanks(false); addBank() }} onClose={() => setShowBanks(false)} />}
       <ChargesBreakdownSheet open={showBreakdown} onClose={() => setShowBreakdown(false)} amount={inr} rate={rate} charges={charges} />
     </Phone>
   )
@@ -33164,16 +35677,29 @@ export function AddMoneyScreen({ id, initial, breakdown = false, mismatch = fals
 ### `src/flows/us-stocks/screens/money/BankAppScreen.tsx`
 
 ```tsx
-// The bank's own page, a placeholder: tap anywhere to come back to Lemonn.
+// The bank's own page, a placeholder. The user pays there; after a moment (1 s in the prototype) the bank hands back to
+// Lemonn, which opens the USD wallet with the "money sent" sheet (us-stocks-93). Tapping comes back at once.
 // FLAG: hand-made full-screen button (Money.module.css .bankApp) — not an L3 pattern; fills the screen at any width.
+import { useEffect, useRef } from 'react'
 import { useUsNav } from '../../nav'
 import { moneyIds } from './ids'
 import styles from './Money.module.css'
 
+/** How long the bank's page shows before it hands back to Lemonn (prototype). */
+const BANK_MS = 1000
+
 export function BankAppScreen({ backdrop }: { backdrop?: boolean }) {
   const { go } = useUsNav()
+  // The timer starts once; `go` changes on every render.
+  const goRef = useRef(go)
+  goRef.current = go
+  useEffect(() => {
+    if (backdrop) return
+    const timer = window.setTimeout(() => goRef.current(moneyIds.sent), BANK_MS)
+    return () => window.clearTimeout(timer)
+  }, [backdrop])
   return (
-    <button type="button" className={styles.bankApp} onClick={() => !backdrop && go(moneyIds.wallet)} aria-label="Bank app (placeholder). Tap to go back to Lemonn">
+    <button type="button" className={styles.bankApp} onClick={() => !backdrop && go(moneyIds.sent)} aria-label="Bank app (placeholder). Tap to go back to Lemonn">
       <span className={styles.bankAppTitle}>BANK APP</span>
     </button>
   )
@@ -33183,22 +35709,32 @@ export function BankAppScreen({ backdrop }: { backdrop?: boolean }) {
 ### `src/flows/us-stocks/screens/money/BankPickSheet.tsx`
 
 ```tsx
-// "Pay from" sheet opened from the bank row on add money: the linked banks (shared BankOptions) in this flow's own
-// L3 BottomSheet (it lives in the Phone's sheet layer, like the charges breakdown).
+// "Pay from" sheet opened from the bank row on add money: the linked banks US Stocks can use (shared BankOptions), then
+// the ones it can't (another bank can't send money abroad for US Stocks) greyed out and tagged "Not supported" — in this
+// flow's own L3 BottomSheet (it lives in the Phone's sheet layer, like the charges breakdown). "Add another bank account"
+// opens Add bank account for US Stocks (the supported banks on top; another bank's IFSC is refused).
 import { useId } from 'react'
 import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
 import { Button } from '@l3/components/Button'
 import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { Icon } from '@l3/components/Icon'
+import { ListCell } from '@l3/components/ListCell'
+import { Stack } from '@l3/components/Stack'
+import { Tag } from '@l3/components/Tag'
+import { Avatar } from '@l3/components/Avatar'
 import { msAdd } from '@l3/icons/material'
 import type { LinkedBank } from '../../../../shared/data/user'
-import { BankOptions, type BankPickerCopy } from '../../../../shared/ui/BankPicker'
+import { getCompany } from '../../../../shared/data/companies'
+import { BankOptions, bankLine, type BankPickerCopy } from '../../../../shared/ui/BankPicker'
 import { useSheetLayer } from '../../components/Phone'
+import { t } from './copy'
 import styles from './Money.module.css'
 
-export function BankPickSheet({ open, banks, selected, copy, onSelect, onAdd, onClose }: {
+export function BankPickSheet({ open, banks, unsupported = [], selected, copy, onSelect, onAdd, onClose }: {
   open: boolean
   banks: LinkedBank[]
+  /** Linked banks US Stocks money can't go from: shown, greyed out, can't be picked. */
+  unsupported?: LinkedBank[]
   selected: string
   copy: BankPickerCopy
   onSelect: (id: string) => void
@@ -33213,7 +35749,6 @@ export function BankPickSheet({ open, banks, selected, copy, onSelect, onAdd, on
       onClose={onClose}
       container={layer}
       aria-labelledby={id}
-      utility={<div className={styles.gesture} aria-hidden="true"><span /></div>}
       header={<BottomSheetHeader heading={copy.sheetTitle} headingId={id} />}
       footer={
         <ButtonGroup aria-label={copy.sheetTitle}>
@@ -33221,7 +35756,20 @@ export function BankPickSheet({ open, banks, selected, copy, onSelect, onAdd, on
         </ButtonGroup>
       }
     >
-      <BankOptions variant="card" banks={banks} selected={selected} name={id} onPick={(bankId) => { onSelect(bankId); onClose() }} />
+      <Stack gap="08">
+        <BankOptions variant="card" banks={banks} selected={selected} name={id} onPick={(bankId) => { onSelect(bankId); onClose() }} />
+        {unsupported.map((bank) => (
+          <ListCell
+            key={bank.id}
+            variant="card"
+            className={styles.unsupportedBank}
+            iconLeft={<Avatar src={getCompany(bank.logoSymbol)?.logoUrl} initials={bank.bank.slice(0, 1)} shape="rounded" size={32} label={bank.bank} />}
+            label={bankLine(bank)}
+            description={`${bank.type} · ${bank.branch}`}
+            trailing={<Tag size="sm" disabled>{t('addMoney.notSupported')}</Tag>}
+          />
+        ))}
+      </Stack>
     </BottomSheet>
   )
 }
@@ -33239,7 +35787,6 @@ import { useSheetLayer } from '../../components/Phone'
 import { Usd, formatInr } from '../../../../shared/money'
 import { PARTNER_FEE_USD, depositBreakdown } from './amounts'
 import { TwoLineLabel } from './components/TwoLineLabel'
-import styles from './Money.module.css'
 
 export function ChargesBreakdownSheet({ open, onClose, amount, rate, charges }: { open: boolean; onClose: () => void; amount: number; rate: number; charges: number }) {
   const layer = useSheetLayer()
@@ -33250,7 +35797,6 @@ export function ChargesBreakdownSheet({ open, onClose, amount, rate, charges }: 
       onClose={onClose}
       container={layer}
       aria-labelledby="charges-title"
-      utility={<div className={styles.gesture} aria-hidden="true"><span /></div>}
       header={<BottomSheetHeader heading="Charges breakdown" headingId="charges-title" description={`At ${formatInr(rate)}/$ (indicative) · ${formatInr(charges, { decimals: 0 })} total charges`} />}
       footer={
         <ButtonGroup aria-label="Charges breakdown">
@@ -33274,7 +35820,6 @@ export function ChargesBreakdownSheet({ open, onClose, amount, rate, charges }: 
 
 ```css
 /* FLAG: layout is raw display:flex + gap/padding on every block, not L3 Stack / Section / Inset (applies to the whole file). */
-/* FLAG: sheet grabber (.gesture) is hand-drawn; L3 BottomSheet draws its own handle. */
 
 .content {
   gap: var(--l3-spacing-24);
@@ -33500,20 +36045,7 @@ export function ChargesBreakdownSheet({ open, onClose, amount, rate, charges }: 
   font: var(--l3-text-description-12);
 }
 
-.gesture {
-  padding: var(--l3-spacing-10) var(--l3-spacing-16);
-  background: var(--l3-surface-primary);
-  justify-content: center;
-  display: flex;
-}
 
-.gesture span {
-  width: calc(var(--l3-spacing-96) + var(--l3-spacing-24));
-  height: var(--l3-size-04);
-  border-radius: var(--l3-radius-full);
-  background: var(--l3-surface-inverted);
-  opacity: .5; /* FLAG: raw opacity */
-}
 
 .sep {
   margin: 0 var(--l3-spacing-06);
@@ -33524,6 +36056,11 @@ export function ChargesBreakdownSheet({ open, onClose, amount, rate, charges }: 
 .ctaInr {
   margin-left: var(--l3-spacing-04);
   font: var(--l3-text-label-12);
+}
+
+/* "Pay from": a linked bank US Stocks money can't go from — greyed out, can't be picked. */
+.unsupportedBank {
+  opacity: var(--l3-opacity-60);
 }
 ```
 
@@ -33650,7 +36187,6 @@ import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
 import { useSheetLayer } from '../../components/Phone'
 import { Usd, formatInr } from '../../../../shared/money'
-import styles from './Money.module.css'
 
 export function WithdrawBreakdownSheet({ open, onClose, amount, rate }: { open: boolean; onClose: () => void; amount: number; rate: number }) {
   const layer = useSheetLayer()
@@ -33660,7 +36196,6 @@ export function WithdrawBreakdownSheet({ open, onClose, amount, rate }: { open: 
       onClose={onClose}
       container={layer}
       aria-labelledby="withdraw-breakdown-title"
-      utility={<div className={styles.gesture} aria-hidden="true"><span /></div>}
       header={
         <BottomSheetHeader
           heading="Withdrawal breakdown"
@@ -34064,6 +36599,8 @@ export const moneyIds = {
   banks: '9001:21',
   /** Bank app placeholder */
   bank: '5796:86336',
+  /** Wallet · back from the bank · "money sent" sheet (screen of the wallet part; not in Figma) */
+  sent: '9001:22',
   /** Wallet · US tab · Add money transfer in progress (screen of the wallet part) */
   wallet: '5776:84195',
   /** Where "Add money" starts (screen of another part) */
@@ -34095,18 +36632,18 @@ import { WithdrawPlacedScreen } from './WithdrawPlacedScreen'
 import { WithdrawScreen } from './WithdrawScreen'
 
 // M01 · enter $ ($1,000) — Groww-style $ entry; the ₹ cost is the line under the amount
-const AddMoneyEnter = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m01} initial={1000} backdrop={backdrop} />
+const AddMoneyEnter = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m01} initial={50} backdrop={backdrop} />
 // M02 · charges breakdown sheet open
-const AddMoneyCharges = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m02} initial={1000} breakdown backdrop={backdrop} />
+const AddMoneyCharges = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m02} initial={50} breakdown backdrop={backdrop} />
 // M03 · below the first-deposit minimum ($20)
 const AddMoneyBelowMinimum = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m03} initial={20} backdrop={backdrop} />
 // M07 · above the LRS limit ($3,00,000 typed → over $2,50,000)
 const AddMoneyAboveLrs = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m07} initial={300000} backdrop={backdrop} />
 // M05 · bank name does not match PAN
-const AddMoneyBankMismatch = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m05} initial={1000} mismatch backdrop={backdrop} />
+const AddMoneyBankMismatch = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.m05} initial={50} mismatch backdrop={backdrop} />
 // No bank linked: the bank row and the button ask to add one · the "Pay from" sheet open (both not in Figma)
 const AddMoneyNoBank = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.noBank} initial={0} noBank backdrop={backdrop} />
-const AddMoneyBanks = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.banks} initial={1000} banksOpen backdrop={backdrop} />
+const AddMoneyBanks = ({ backdrop }: { backdrop?: boolean }) => <AddMoneyScreen id={moneyIds.banks} initial={50} banksOpen backdrop={backdrop} />
 // H08 · withdraw $100 · H09 · withdraw $500 (more than the withdrawable balance: error state)
 const WithdrawEnter = ({ backdrop }: { backdrop?: boolean }) => <WithdrawScreen id={moneyIds.h08} initial={100} backdrop={backdrop} />
 const WithdrawTooMuch = ({ backdrop }: { backdrop?: boolean }) => <WithdrawScreen id={moneyIds.h09} initial={500} backdrop={backdrop} />
@@ -34235,10 +36772,6 @@ export function CancelOrderSheet({ open, order, onKeep, onCancel }: { open: bool
   font: var(--l3-text-label-12);
   color: var(--l3-content-secondary);
 }
-
-/* No shadow (3 Nov): border only, still pressing like a clickable Card. L3 gap: a clickable Card has no shadow-free
-   bordered option, so the elevation is dropped here (keeps the Card's own border). */
-.card.card { box-shadow: var(--card-border); }
 ```
 
 ### `src/flows/us-stocks/screens/orders/OrderCard.tsx`
@@ -34283,7 +36816,7 @@ function orderPrice(order: UsOrder): { label: string; value?: number } {
 }
 
 function OrderLogo({ order }: { order: UsOrder }) {
-  if (order.kind === 'etf') return <Avatar src={etfLogoUrl(order.sym)} initials={order.sym} size={24} />
+  if (order.kind === 'etf') return <Avatar src={etfLogoUrl(order.sym)} initials={order.sym.slice(0, 1)} size={24} />
   return <HoldingLogo sym={order.sym} size={24} />
 }
 
@@ -34544,7 +37077,7 @@ export function OrderDetailsScreen({ backdrop, order: given }: { backdrop?: bool
   })
 
   const logo = order.kind === 'etf'
-    ? <Avatar src={etfLogoUrl(order.sym)} initials={order.sym} size={40} />
+    ? <Avatar src={etfLogoUrl(order.sym)} initials={order.sym.slice(0, 1)} size={40} />
     : <HoldingLogo sym={order.sym} size={40} />
 
   const againLabel = order.status === 'failed' ? 'Retry' : order.status === 'cancelled' || order.status === 'expired' ? 'Place again' : 'Repeat order'
@@ -34617,7 +37150,7 @@ export function OrderDetailsScreen({ backdrop, order: given }: { backdrop?: bool
         <hr className={styles.rule} />
 
         {/* Where the order has been. */}
-        <Section paddingInline="16" paddingBlock="24" gap="16">
+        <Section paddingInline="16" paddingBlock="24" gap="16" data-page-end>
           <SectionHeader title="Order status" />
           <div className={styles.timeline} data-tone={timeline.tone}>
             <Steps label="Order status" steps={timeline.steps} />
@@ -35308,7 +37841,7 @@ export const qtyText = (qty: number) => qty.toLocaleString('en-US', { maximumFra
 
 /** The stock's logo (on its plate) or the ETF issuer's, in an L3 Avatar. */
 export function PositionLogo({ position, size = 40 }: { position: UsPosition; size?: 32 | 40 }) {
-  if (position.kind === 'etf') return <Avatar src={etfLogoUrl(position.sym)} initials={position.sym.slice(0, 2)} size={size} />
+  if (position.kind === 'etf') return <Avatar src={etfLogoUrl(position.sym)} initials={position.sym.slice(0, 1)} size={size} />
   return <HoldingLogo sym={position.sym} size={size} />
 }
 
@@ -35678,99 +38211,56 @@ export const screens: UsScreenMap = {
 ### `src/flows/us-stocks/screens/trade/FeeBreakdown.module.css`
 
 ```css
-/* FLAG: layout is raw display:flex + gap, not L3 Stack / Section; hand-drawn sheet grabber and hr dividers. */
-
+/* "View Order" on the SL pad (orderPads.tsx). The fee sheet itself is all L3 now. */
 .link {
   font: var(--l3-text-label-12);
   color: var(--l3-content-accent-discover-default);
-}
-
-.body {
-  gap: var(--l3-spacing-16);
-  flex-direction: column;
-  display: flex;
-}
-
-.group {
-  gap: var(--l3-spacing-04);
-  flex-direction: column;
-  display: flex;
-}
-
-.divider {
-  border: 0;
-  border-top: 1px solid var(--l3-border-light);
-  margin: 0;
-}
-
-.small {
-  font: var(--l3-text-description-12);
-  color: var(--l3-content-secondary);
-  margin: 0;
-}
-
-.small[data-narrow] {
-  max-width: 78%; /* ≈ 255px of the 328px content width at 360 */
-}
-
-.close {
-  color: var(--l3-content-primary);
-  cursor: pointer;
-  background: 0 0;
-  border: 0;
-  place-items: center;
-  margin: 0;
-  padding: 0;
-  display: inline-grid;
-}
-
-.small[data-center] {
-  text-align: center;
-}
-
-.gesture {
-  padding: var(--l3-spacing-10) var(--l3-spacing-16);
-  justify-content: center;
-  display: flex;
-}
-
-.gesture span {
-  width: calc(var(--l3-spacing-96) + var(--l3-spacing-24));
-  height: var(--l3-size-04);
-  border-radius: var(--l3-radius-full);
-  background: var(--l3-content-secondary);
 }
 ```
 
 ### `src/flows/us-stocks/screens/trade/FeeBreakdown.tsx`
 
 ```tsx
-// T11 · Fee Breakdown sheet over the order pad (opened from "View Charges" on the SL order).
-// FLAG: the sheet's rows are hand-laid: <hr> dividers, "•" bullets typed into labels, small grey notes — not L3 KeyValueList groups.
-// FLAG: layout is raw display:flex + gap (FeeBreakdown.module.css), not L3 Stack / Section.
-// FLAG: the close button is a hand-made <button> (not an L3 Button) and the sheet draws its own grabber.
+// T11 · Fee Breakdown sheet over the order pad (opened from "View Charges" on the SL order, and "Req." on order pad V2).
+// Built as the app's other breakdowns (Add money's "Charges breakdown"): one L3 KeyValueList — a row per fee with what it
+// is under its name, the estimated total at the foot — the "approximate" note as the header's description, and Got it.
+// Differs from Figma (the user's call, 19 Nov: use the breakdown component): Figma's separate Brokerage / Charges / Taxes
+// groups with "•" sub-rows, hand-drawn dividers, notes and a ✕ are now that one list.
 import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
-import { Icon } from '@l3/components/Icon'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
 import { useSheetLayer } from '../../components/Phone'
 import { useUsNav } from '../../nav'
-import { Usd } from '../../../../shared/money'
-import { closeIcon } from '../money/icons'
+import { PadAmount, usePadCurrency } from './padMoney'
+import { TwoLineLabel } from '../money/components/TwoLineLabel'
 import { useSheetClose } from '../money/useSheetClose'
 import { OrderPad } from './OrderPad'
 import { tradeIds } from './ids'
 import { orderPads } from './orderPads'
-import styles from './FeeBreakdown.module.css'
 
 const FEES = { total: 1.13, brokerage: 0.94, charges: 0.02, taxes: 0.17 }
 
-/** The order pad (Shares state) drawn behind, with the fee sheet on top. */
-export function FeeBreakdownScreen({ backdrop }: { backdrop?: boolean }) {
-  const { back } = useUsNav()
-  return <OrderPad config={orderPads[tradeIds.T02]} backdrop sheet={backdrop ? undefined : <FeeBreakdownSheet onClose={() => back(tradeIds.T08)} />} />
+/** The fees on an order of `orderUsd` — the 0.3% the pads add to "Req." (CHARGE_FACTOR), split: brokerage 0.25%, GST 18%
+ * of it (0.045%), IFSCA turnover fee 0.005%. */
+export function feesFor(orderUsd: number) {
+  const brokerage = orderUsd * 0.0025
+  const taxes = brokerage * 0.18
+  const charges = orderUsd * 0.00005
+  return { total: brokerage + taxes + charges, brokerage, charges, taxes }
 }
 
-function FeeBreakdownSheet({ onClose }: { onClose: () => void }) {
+/** The SL order pad drawn behind (its own screen, us-stocks-41, stays put: this is a sheet over it), with the fee sheet on top. */
+export function FeeBreakdownScreen({ backdrop }: { backdrop?: boolean }) {
+  const { back } = useUsNav()
+  return <OrderPad config={orderPads[tradeIds.T08]} backdrop sheet={backdrop ? undefined : <FeeBreakdownSheet onClose={() => back(tradeIds.T08)} />} />
+}
+
+/** Fee Breakdown: fixed Figma amounts (the SL screen), or the fees on `orderUsd` (order pad V2's "Req." link). */
+export function FeeBreakdownSheet({ onClose, orderUsd }: { onClose: () => void; orderUsd?: number }) {
+  const fees = orderUsd === undefined ? FEES : feesFor(orderUsd)
+  // On the Indian pad (₹, padMoney.tsx) the last fee is the exchange's, not IFSCA's.
+  const exchangeFee = usePadCurrency() === 'inr' ? 'Exchange transaction fee' : 'IFSCA turnover fee'
   const layer = useSheetLayer()
   const { open, close } = useSheetClose(onClose)
   return (
@@ -35781,43 +38271,716 @@ function FeeBreakdownSheet({ onClose }: { onClose: () => void }) {
       aria-labelledby="fee-title"
       header={
         <BottomSheetHeader
-          size="sm"
-          heading="Fee Breakdown"
+          heading="Fee breakdown"
           headingId="fee-title"
-          trailing={
-            <button type="button" className={styles.close} aria-label="Close" onClick={close}>
-              <Icon icon={closeIcon} size={24} />
-            </button>
-          }
+          description="Approximate — the final fee may vary slightly at the time of execution."
         />
       }
-      utility={<span className={styles.gesture} aria-hidden="true"><span /></span>}
+      footer={
+        <ButtonGroup aria-label="Fee breakdown">
+          <Button variant="primary" size="lg" fullWidth onClick={close}>Got it</Button>
+        </ButtonGroup>
+      }
     >
-      <div className={styles.body}>
-        <KeyValueList aria-label="Estimated fee">
-          <KeyValueRow total label="Estimated Fee" value={<Usd value={FEES.total} align="end" layout="stack" />} />
-        </KeyValueList>
-        <hr className={styles.divider} />
-        <div className={styles.group} data-gap="4">
-          <KeyValueList aria-label="Brokerage">
-            <KeyValueRow label="Brokerage" value={<Usd value={FEES.brokerage} align="end" layout="stack" />} />
-          </KeyValueList>
-          <p className={styles.small} data-narrow>Note: Brokerage is 0.25% of the order value. GST at 18% is charged on it.</p>
-        </div>
-        <hr className={styles.divider} />
-        <KeyValueList size="sm" aria-label="Charges">
-          <KeyValueRow size="md" label="Charges" value={<Usd value={FEES.charges} align="end" layout="stack" />} />
-          <KeyValueRow label="• IFSCA turnover fee" value={<Usd value={FEES.charges} align="end" layout="stack" />} />
-        </KeyValueList>
-        <hr className={styles.divider} />
-        <KeyValueList size="sm" aria-label="Taxes">
-          <KeyValueRow size="md" label="Taxes" value={<Usd value={FEES.taxes} align="end" layout="stack" />} />
-          <KeyValueRow label="• GST on brokerage" value={<Usd value={FEES.taxes} align="end" layout="stack" />} />
-        </KeyValueList>
-        <hr className={styles.divider} />
-        <p className={styles.small} data-center>Note: The amounts mentioned above are approximate values and may vary slightly at the time of execution.</p>
-      </div>
+      <KeyValueList aria-label="Fee breakdown" total={{ label: 'Estimated fee', value: <PadAmount value={fees.total} /> }}>
+        <KeyValueRow label={<TwoLineLabel top="Brokerage" sub="(0.25% of the order value)" />} value={<PadAmount value={fees.brokerage} />} />
+        <KeyValueRow label={<TwoLineLabel top="GST" sub="(18% on brokerage)" />} value={<PadAmount value={fees.taxes} />} />
+        <KeyValueRow label={exchangeFee} value={<PadAmount value={fees.charges} />} />
+      </KeyValueList>
     </BottomSheet>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/LeverageCard.module.css`
+
+```css
+/* Leverage card (Minted, Figma 8870:209735): a 56 header row, then (on) the info strip. */
+/* The card, its head row, the tile and the title: PadCard (shared with TP/SL). */
+.chosen { color: var(--l3-content-accent-success-default); }
+
+/* Grows open / shut (Minted: 0.2s ease-out) — a 0fr → 1fr row, so it animates to the content's own height. */
+.grow {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+.grow > * { min-height: 0; overflow: hidden; }
+.on .grow { grid-template-rows: 1fr; }
+@media (prefers-reduced-motion: reduce) { .grow { transition: none; } }
+
+/* On: a line under the header, then the info strip across the card's foot. */
+/* The line only while open: a border on the shut row would keep it 1 tall. */
+.on .body { border-top: 1px solid var(--l3-border-light); }
+.strip {
+  /* A button (opens the explainer sheet): reset its own box. */
+  width: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--l3-spacing-06);
+  height: var(--l3-size-32);
+  margin: 0;
+  background: var(--l3-surface-secondary);
+  font: var(--l3-text-description-12);
+  color: var(--l3-content-secondary);
+}
+```
+
+### `src/flows/us-stocks/screens/trade/LeverageCard.tsx`
+
+```tsx
+// Leverage card on the Market pad (19 Nov, the user's call: "import the boosted / leverage thing from Minted"), Minted's
+// card (Figma 8870:209735, ~/minted reference s05 / s13): a bolt tile, "Enable leverage upto 3x" (3x in green) and a
+// switch. On: a line, then an info strip — "Leverage can multiply your profits and losses."
+// Interaction as in Minted: the first switch-on opens the "Activate leverage" sheet (LeverageSheet) and the card
+// switches on only on Confirm (until "Don't show this again" is confirmed); the card grows open / shut (0.2s ease-out)
+// instead of jumping. Plain card and bolt (the user's call: no gradients).
+// Chips: L3 pill chips, secondary emphasis (the user's call), not the primary pill group.
+// Prototype only: the leverage doesn't change the dock's numbers (Balance / Req. / the ₹ value).
+// FLAG: copy hard-coded like the rest of the pad (no copy.ts in this flow yet).
+// 19 Nov (the user's call): a simple toggle at a fixed multiple — no rolling number, no 2x · 3x · 4x choice.
+// 20 Nov (the user's call): the title is production's "Boost returns by 4x" (4x in green), not Minted's "Enable leverage upto 3x".
+// FLAG: the grow is hand-made (LeverageCard.module.css); L3 has none. The card, its head row and the bolt tile are the
+// shared PadCard (19 Nov: the title is Label 14, as TP/SL's).
+import { useId, useState } from 'react'
+import { Icon } from '@l3/components/Icon'
+import { Switch } from '@l3/components/Switch'
+import { msBoltFill, msInfo } from '@l3/icons/material'
+import { PadCard, PadCardTile, padCard } from './PadCard'
+import { LeverageSheet, leverageSheetSeen } from './LeverageSheet'
+import styles from './LeverageCard.module.css'
+
+const LEVERAGE = 4
+
+export function LeverageCard() {
+  const [on, setOn] = useState(false)
+  const [sheet, setSheet] = useState(false)
+  const [explainer, setExplainer] = useState(false)
+  const titleId = useId()
+  const toggle = () => {
+    if (on) setOn(false)
+    else if (leverageSheetSeen()) setOn(true)
+    else setSheet(true)
+  }
+  return (
+    <>
+      {/* The pad card (PadCard.tsx), shared with TP/SL: Raised soft, the 56 head row (19 Nov, the user's call). */}
+      <PadCard className={on ? styles.on : undefined}>
+          {/* The header row toggles (pointer-down kept off the amount field, so the keypad stays on it). */}
+          <div className={padCard.head} onPointerDown={(e) => e.preventDefault()} onClick={toggle}>
+            <PadCardTile icon={msBoltFill} tone="success" />
+            <p id={titleId} className={padCard.title}>
+              Boost returns by <span className={styles.chosen}>{LEVERAGE}x</span>
+            </p>
+            <Switch size="sm" checked={on} onChange={toggle} onClick={(e) => e.stopPropagation()} aria-labelledby={titleId} />
+          </div>
+          {/* Always rendered so it can grow open and shut; hidden from everyone while shut. */}
+          <div className={styles.grow} aria-hidden={!on} inert={!on}>
+            <div className={styles.body} onPointerDown={(e) => e.preventDefault()}>
+              {/* A tap opens the explainer sheet (19 Nov, the user's call). */}
+              <button type="button" className={styles.strip} onClick={() => setExplainer(true)}>
+                <Icon icon={msInfo} size={14} />
+                Leverage can multiply your profits and losses.
+              </button>
+            </div>
+          </div>
+      </PadCard>
+      <LeverageSheet
+        open={sheet}
+        onClose={() => setSheet(false)}
+        onConfirm={() => {
+          setSheet(false)
+          setOn(true)
+        }}
+      />
+      <LeverageSheet mode="explain" open={explainer} onClose={() => setExplainer(false)} onConfirm={() => setExplainer(false)} />
+    </>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/LeverageSheet.module.css`
+
+```css
+/* The $100 example: a bordered table, a light header row, hairlines between rows (Minted's .lvx-ex). */
+.table {
+  border: 1px solid var(--l3-border-light);
+  border-radius: var(--l3-radius-12);
+  overflow: hidden;
+}
+.row {
+  padding: var(--l3-spacing-12);
+  font: var(--l3-text-label-12);
+  color: var(--l3-content-primary);
+}
+.row + .row { border-top: 1px solid var(--l3-border-light); }
+.head {
+  background: var(--l3-surface-secondary);
+  font: var(--l3-text-description-10);
+  color: var(--l3-content-secondary);
+}
+.row > :nth-child(2),
+.row > :nth-child(3) { text-align: center; }
+.row > :nth-child(4) { text-align: right; }
+.up { color: var(--l3-content-accent-success-default); }
+.down { color: var(--l3-content-accent-error-default); }
+
+/* The row is the checkbox's 48 tap target tall, so its invisible input (48 around the 24 box) stays inside the sheet's
+   content — otherwise it overflows 12, the content scrolls, and ticking it scrolls the sheet. Pulled up 12 so the
+   gap above still reads as 16. */
+.dontShow {
+  min-height: var(--l3-size-tap-target);
+  margin-top: calc(-1 * var(--l3-spacing-12));
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-08);
+  font: var(--l3-text-label-14);
+  color: var(--l3-content-primary);
+  cursor: pointer;
+}
+
+/* The liquidation warning's line in content/secondary (19 Nov, the user's call): L3 Aerobar's soft paragraph is
+   secondary at 60%, which reads as tertiary. FLAG: L3 gap — Aerobar has no option for a full-strength paragraph; set
+   through its --ab-paragraph variable. */
+```
+
+### `src/flows/us-stocks/screens/trade/LeverageSheet.tsx`
+
+```tsx
+// "Activate leverage" sheet (19 Nov, the user's call: Minted shows it before leverage switches on the first time —
+// ~/minted reference, "Combined asset page: Activate leverage confirmation sheet"). It explains leverage with a
+// $100 example at 1x and 3x, warns about liquidation, and has "Don't show this again" (ticked, as in Minted) +
+// Confirm. Confirm switches the card on; closing the sheet (backdrop, drag) leaves it off.
+// FLAG: copy hard-coded like the rest of the pad (no copy.ts in this flow yet).
+// FLAG: the example table is hand-laid (LeverageSheet.module.css) — L3 has no table.
+import { useId, useState } from 'react'
+import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Checkbox } from '@l3/components/Checkbox'
+import { Grid } from '@l3/components/Grid'
+import { Stack } from '@l3/components/Stack'
+import { useSheetLayer } from '../../components/Phone'
+import { PadAmount, usePadCurrency, usePadMoney } from './padMoney'
+import styles from './LeverageSheet.module.css'
+
+const SKIP_KEY = 'us-stocks.leverage-sheet-seen'
+
+/** Whether the sheet was confirmed with "Don't show this again" ticked. */
+export function leverageSheetSeen(): boolean {
+  try {
+    return localStorage.getItem(SKIP_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const EXAMPLE = [
+  { leverage: 1, move: 1 },
+  { leverage: 3, move: 3 },
+]
+
+/**
+ * `activate` (the first switch-on): Confirm + "Don't show this again". `explain` (a tap on the card's info strip, 19 Nov,
+ * the user's call): the same explainer, read-only — "Got it" closes it, no checkbox.
+ */
+export function LeverageSheet({ open, onClose, onConfirm, mode = 'activate' }: { open: boolean; onClose: () => void; onConfirm: () => void; mode?: 'activate' | 'explain' }) {
+  const explain = mode === 'explain'
+  // The example's investment: $100 on the US pad, ₹10,000 on the Indian pad (padMoney.tsx); a 1% move scales with it.
+  const invest = usePadCurrency() === 'inr' ? 10000 : 100
+  const money = usePadMoney()
+  const layer = useSheetLayer()
+  const headingId = useId()
+  const [dontShow, setDontShow] = useState(true)
+  const confirm = () => {
+    if (dontShow) {
+      try {
+        localStorage.setItem(SKIP_KEY, '1')
+      } catch {
+        /* prototype: the sheet just shows again */
+      }
+    }
+    onConfirm()
+  }
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      container={layer}
+      aria-labelledby={headingId}
+      header={<BottomSheetHeader size="sm" heading={explain ? 'How leverage works' : 'Activate leverage'} headingId={headingId} description="Leverage multiplies your gains and your losses." />}
+      footer={
+        <ButtonGroup>
+          {explain
+            ? <Button size="lg" onClick={onClose}>Got it</Button>
+            : <Button size="lg" onClick={confirm}>Confirm</Button>}
+        </ButtonGroup>
+      }
+    >
+      <Stack gap="16">
+        <div className={styles.table} role="table" aria-label={`Example with ${money(invest, { decimals: 0 })}`}>
+          <Grid columns={4} gap="00" className={`${styles.row} ${styles.head}`} role="row">
+            <span role="columnheader">Investment</span>
+            <span role="columnheader">Leverage</span>
+            <span role="columnheader">Price +1%</span>
+            <span role="columnheader">Price −1%</span>
+          </Grid>
+          {EXAMPLE.map(({ leverage, move }) => (
+            <Grid key={leverage} columns={4} gap="00" className={styles.row} role="row">
+              <span role="cell"><PadAmount value={invest} decimals={0} /></span>
+              <span role="cell">{leverage}x</span>
+              <span role="cell" className={styles.up}><PadAmount value={(move * invest) / 100} decimals={0} sign /></span>
+              <span role="cell" className={styles.down}><PadAmount value={(-move * invest) / 100} decimals={0} /></span>
+            </Grid>
+          ))}
+        </div>
+        {!explain && <label className={styles.dontShow}>
+          <Checkbox checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} />
+          Don’t show this again
+        </label>}
+      </Stack>
+    </BottomSheet>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/OrderLoader.module.css`
+
+```css
+/* Order processing art (OrderLoader.tsx), from Minted's prototype styles (#groW glass ring, .proc P2–P5).
+   Minted's greys → L3 content / surface tokens, its mint → success; so the art reads in light and dark.
+   FLAG (L3 gap): the motion timings below are Minted's, not L3 motion tokens (L3 has no loader choreography). */
+
+.loader {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--l3-size-80);
+  height: var(--l3-size-80);
+}
+.loader:not([data-variant='glass']) { width: var(--l3-size-128); height: var(--l3-size-128); }
+.loader[data-variant='ticker'] { width: 100%; }
+
+/* ---------- G · glass ring ---------- */
+.glass {
+  position: absolute;
+  inset: 0;
+  transition: opacity var(--l3-motion-duration-short) ease, transform var(--l3-motion-duration-medium) var(--l3-motion-easing-standard);
+}
+.glass svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wellIn { stop-color: var(--l3-surface-default); }
+.wellMid { stop-color: var(--l3-surface-primary); }
+.wellRim { stop-color: var(--l3-surface-tertiary); }
+.wellEdge { fill: none; stroke: var(--l3-border-light); }
+.shine0 { stop-color: var(--l3-content-primary); stop-opacity: .16; }
+.shine1 { stop-color: var(--l3-content-primary); stop-opacity: 0; }
+/* The spinning ring, its glow, the ripple and the drop are discover blue while the order runs (the user's call,
+   19 Nov: "use discover color for the loading state"), not content/primary; the badge then lands in success green. */
+.ring0 { stop-color: color-mix(in srgb, var(--l3-content-accent-discover-default) 45%, transparent); }
+.ring1 { stop-color: color-mix(in srgb, var(--l3-content-accent-discover-default) 80%, transparent); }
+.ring2 { stop-color: var(--l3-content-accent-discover-default); }
+.ringSvg { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--l3-content-accent-discover-default) 45%, transparent)) drop-shadow(0 0 9px color-mix(in srgb, var(--l3-content-accent-discover-default) 30%, transparent)); }
+.dropSvg { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--l3-content-accent-discover-default) 45%, transparent)); }
+.ripple { fill: none; stroke: color-mix(in srgb, var(--l3-content-accent-discover-default) 60%, transparent); stroke-width: 1; }
+.goo { fill: var(--l3-content-accent-discover-default); }
+
+/* The glass ring's end (phase done): the ring shrinks away, the badge pops in with a burst ring going out. */
+.loader[data-phase='done'] .glass { opacity: 0; transform: scale(.82); }
+.result { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transform: scale(.6); }
+.loader[data-phase='done'] .result { animation: badgePop .5s cubic-bezier(.2, .9, .25, 1.35) forwards; }
+.burst { position: absolute; width: 76%; height: 76%; border-radius: var(--l3-radius-full); opacity: 0; }
+.loader[data-phase='done'] .burst { border: 2px solid var(--l3-content-accent-success-default); animation: burst .7s ease-out forwards; }
+.loader[data-phase='done'][data-outcome='error'] .burst { border-color: var(--l3-content-accent-error-default); animation-duration: .6s; }
+@keyframes badgePop { 0% { opacity: 0; transform: scale(.6); } 60% { opacity: 1; } 100% { opacity: 1; transform: scale(1); } }
+@keyframes burst { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.9); } }
+
+/* ---------- Result badge: Lemonnade colours — the L3 success (or error) disc with a white mark, on its light plate ---------- */
+.badge { display: block; overflow: visible; }
+.badgePlate { fill: var(--l3-surface-accent-success-light); }
+.badgeDisc { fill: var(--l3-content-accent-success-default); }
+.badgeMark { fill: var(--l3-static-white); }
+.badge[data-outcome='error'] .badgePlate { fill: var(--l3-surface-accent-error-light); }
+.badge[data-outcome='error'] .badgeDisc { fill: var(--l3-content-accent-error-default); }
+
+/* ---------- P5 · radar: an arc spins round the logo, pulses go out; done → a full ring and a tick ---------- */
+.radar { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
+.wave {
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  border-radius: var(--l3-radius-full);
+  border: 2px solid color-mix(in srgb, var(--l3-content-accent-success-default) 55%, transparent);
+  opacity: 0;
+  animation: wave 2.1s cubic-bezier(.2, .6, .4, 1) infinite;
+}
+.wave:nth-child(2) { animation-delay: .7s; }
+.wave:nth-child(3) { animation-delay: 1.4s; }
+@keyframes wave { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.4); opacity: 0; } }
+.radarRing { position: absolute; width: 60%; height: 60%; overflow: visible; }
+.radarTrack, .radarArc { fill: none; stroke-width: 4; }
+.radarTrack { stroke: var(--l3-border-light); }
+.radarArc {
+  stroke: var(--l3-content-accent-success-default);
+  stroke-linecap: round;
+  stroke-dasharray: 46 189;
+  transform-origin: 36px 36px;
+  animation: spin .9s linear infinite;
+  transition: stroke-dasharray .45s cubic-bezier(.4, 0, .2, 1);
+}
+.radarTick { fill: none; stroke: var(--l3-content-accent-success-default); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; transition: stroke-dashoffset .4s .35s cubic-bezier(.3, .6, .2, 1); }
+.radarCore { position: relative; display: grid; place-items: center; transition: opacity var(--l3-motion-duration-short); }
+.loader[data-phase='done'] .radarArc { animation: none; stroke-dasharray: 189 0; }
+.loader[data-phase='done'] .radarTick { stroke-dashoffset: 0; }
+.loader[data-phase='done'] .radarCore { opacity: 0; }
+.loader[data-phase='done'] .wave { animation-play-state: paused; opacity: 0; transition: opacity .3s; }
+
+/* ---------- P2 · orbit: other US stocks circle the one being bought ---------- */
+.orbit { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
+.orbitRing { position: absolute; inset: var(--l3-spacing-14); border-radius: var(--l3-radius-full); border: 1px dashed color-mix(in srgb, var(--l3-content-accent-success-default) 45%, transparent); animation: spin 6s linear infinite; }
+.orbiter { position: absolute; inset: 0; animation: spin 3.2s linear infinite; }
+.orbiterLogo { position: absolute; left: calc(50% - var(--l3-size-12)); top: 0; display: block; animation: spin 3.2s linear infinite reverse; }
+.orbitCore { position: relative; border-radius: var(--l3-radius-full); box-shadow: 0 0 0 8px color-mix(in srgb, var(--l3-content-accent-success-default) 14%, transparent), 0 0 40px color-mix(in srgb, var(--l3-content-accent-success-default) 35%, transparent); }
+
+/* ---------- P3 · candles rise and settle ---------- */
+.candles { display: flex; align-items: flex-end; justify-content: center; gap: var(--l3-spacing-12); height: 100%; padding-block: var(--l3-spacing-16); box-sizing: border-box; }
+.candle { position: relative; width: var(--l3-size-20); border-radius: var(--l3-radius-04); background: var(--l3-content-accent-indicator-up-default); transform-origin: bottom; animation: candle 1.4s ease-in-out infinite; }
+.candle::before { content: ''; position: absolute; left: 50%; top: calc(-1 * var(--l3-spacing-12)); bottom: calc(-1 * var(--l3-spacing-08)); width: 3px; margin-left: -1.5px; border-radius: var(--l3-radius-02); background: inherit; z-index: -1; }
+.candle:nth-child(1) { height: 36%; }
+.candle:nth-child(2) { height: 55%; animation-delay: .15s; }
+.candle:nth-child(3) { height: 45%; animation-delay: .3s; }
+.candle:nth-child(4) { height: 75%; animation-delay: .45s; }
+.candle:nth-child(5) { height: 90%; animation-delay: .6s; }
+.candle[data-down] { background: var(--l3-content-accent-indicator-down-default); }
+@keyframes candle { 0%, 100% { transform: scaleY(.55); opacity: .55; } 50% { transform: scaleY(1); opacity: 1; } }
+
+/* ---------- P4 · ticker tapes behind a card of the order ---------- */
+.ticker { position: relative; display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; }
+.tape { position: absolute; left: 0; right: 0; top: var(--l3-spacing-08); height: var(--l3-size-32); overflow: hidden; opacity: .7; }
+.tape[data-reverse] { top: auto; bottom: var(--l3-spacing-08); }
+.tapeRow { display: flex; gap: var(--l3-spacing-16); width: max-content; animation: tape 7s linear infinite; }
+.tape[data-reverse] .tapeRow { animation-direction: reverse; }
+.tapeItem { display: flex; align-items: center; gap: var(--l3-spacing-08); font: var(--l3-text-label-12); color: var(--l3-content-secondary); white-space: nowrap; }
+@keyframes tape { to { transform: translateX(-50%); } }
+.tickerCard {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  padding: var(--l3-spacing-12) var(--l3-spacing-16);
+  border-radius: var(--l3-radius-16);
+  background: var(--l3-surface-primary);
+  border: 1px solid var(--l3-border-light);
+  box-shadow: var(--l3-shadow-elevation-medium);
+}
+.tickerText { display: flex; flex-direction: column; }
+.tickerText b { font: var(--l3-text-heading-16); color: var(--l3-content-primary); }
+.tickerText small { font: var(--l3-text-label-12); color: var(--l3-content-accent-success-default); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .loader *, .loader *::before { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
+}
+```
+
+### `src/flows/us-stocks/screens/trade/OrderLoader.tsx`
+
+```tsx
+// Order processing art, imported from Minted's prototype (~/minted public/prototype/app.js, "Order processing", 19 Nov,
+// the user's call: "import the Minted app layout & design … it has some loader also, import those also").
+// Five of Minted's seven processing animations; the flow option "Processing animation" picks one:
+//  · glass   · G · the glass ring (Minted's default): a ring spins round a glass well and dips into it, a drop rises
+//              back out; at the end the art turns into the result badge (tick or alert) with a burst.
+//  · radar   · P5 · an arc spins round the stock's logo with pulses going out; closes into a full ring + tick.
+//  · orbit   · P2 · other US stocks' logos orbit the stock being bought.
+//  · candles · P3 · five candles rise and settle.
+//  · ticker  · P4 · two ticker tapes of US stocks run behind a card of the order.
+// Minted's P1 (its logo drawing itself) and P6 (coin flip to its logo) are its brand mark, so they're not imported.
+// Colours are L3 tokens (Minted's greys → content / surface, its mint → success), so it works light and dark.
+// FLAG: hand-drawn SVG animation art — L3 has only the Loader ring; this is the motion Minted designed.
+import { useEffect, useId, useRef, type CSSProperties } from 'react'
+import { Avatar } from '@l3/components/Avatar'
+import { logoFor } from '../../data'
+import styles from './OrderLoader.module.css'
+
+export type LoaderStyle = 'glass' | 'radar' | 'orbit' | 'candles' | 'ticker'
+/** run · working; settle · the art stops (bar full); done · the result badge has taken the art's place. */
+export type LoaderPhase = 'run' | 'settle' | 'done'
+export type LoaderOutcome = 'success' | 'error'
+
+/** US stocks shown orbiting / on the tapes (logos from the app's US catalogue). */
+const TAPE = ['AAPL', 'TSLA', 'NVDA', 'MSFT', 'GOOGL', 'AMZN', 'META', 'AMD']
+
+/** The result badge Minted's loader turns into: a round tinted plate with a tick (or an alert) cut out of a disc.
+ *  Lemonnade colours (19 Nov, the user's call): an L3 success / error disc with a white mark on its light plate — not
+ *  Minted's mint gradient. */
+export function ResultBadge({ outcome, className, style }: { outcome: LoaderOutcome; className?: string; style?: CSSProperties }) {
+  return (
+    <svg className={[styles.badge, className].filter(Boolean).join(' ')} data-outcome={outcome} viewBox="0 0 84 84" aria-hidden="true" style={style}>
+      <rect className={styles.badgePlate} x="9.6" y="9.6" width="64" height="64" rx="32" />
+      {/* White under the disc: the mark is cut out of it, so it shows white. */}
+      <circle className={styles.badgeMark} cx="41.6" cy="41.6" r="18" />
+      {outcome === 'success' ? (
+        <path className={styles.badgeDisc} d="M41.6 22.4a19.2 19.2 0 1 0 0 38.4 19.2 19.2 0 0 0 0-38.4Zm11.09 13.12L41.73 50.38a1.6 1.6 0 0 1-2.29.3l-7.82-6.25a1.6 1.6 0 0 1 1.98-2.5l6.53 5.22 9.98-13.55a1.6 1.6 0 0 1 2.58 1.92Z" />
+      ) : (
+        <path className={styles.badgeDisc} fillRule="evenodd" d="M41.6 60.8a19.2 19.2 0 1 1 0-38.4 19.2 19.2 0 0 1 0 38.4Zm-1.68-12.7a1.69 1.69 0 1 0 3.37-.17 1.69 1.69 0 0 0-3.37.17Zm.41-5.65v-7.6a1.27 1.27 0 0 1 2.54 0v7.6a1.27 1.27 0 0 1-2.54 0Z" />
+      )}
+    </svg>
+  )
+}
+
+export function OrderLoader({ variant, phase, outcome, symbol, side, amount }: {
+  variant: LoaderStyle
+  phase: LoaderPhase
+  outcome: LoaderOutcome
+  /** The stock being traded (logo in radar / orbit / ticker). */
+  symbol: string
+  /** "Buy" / "Sell" (ticker's order card). */
+  side: string
+  /** The order value line on the ticker's card ("$376.84"). */
+  amount: string
+}) {
+  const logo = logoFor(symbol)
+  const stockLogo = (size: 24 | 40 | 48, className?: string) => <Avatar src={logo} initials={symbol.slice(0, 1)} size={size} className={className} />
+  return (
+    <div className={styles.loader} data-variant={variant} data-phase={phase} data-outcome={outcome} aria-hidden="true">
+      {variant === 'glass' && <GlassRing frozen={phase !== 'run'} />}
+      {variant === 'radar' && (
+        <div className={styles.radar}>
+          <span className={styles.wave} /><span className={styles.wave} /><span className={styles.wave} />
+          <svg className={styles.radarRing} viewBox="0 0 72 72">
+            <circle className={styles.radarTrack} cx="36" cy="36" r="30" />
+            <circle className={styles.radarArc} cx="36" cy="36" r="30" />
+            <path className={styles.radarTick} d="M25 37l7.5 7.5L48 29" />
+          </svg>
+          <span className={styles.radarCore}>{stockLogo(40)}</span>
+        </div>
+      )}
+      {variant === 'orbit' && (
+        <div className={styles.orbit}>
+          <span className={styles.orbitRing} />
+          {TAPE.filter((s) => s !== symbol).slice(0, 6).map((s, i, all) => (
+            <span key={s} className={styles.orbiter} style={{ animationDelay: `-${((3.2 / all.length) * i).toFixed(2)}s` } as CSSProperties}>
+              <span className={styles.orbiterLogo} style={{ animationDelay: `-${((3.2 / all.length) * i).toFixed(2)}s` } as CSSProperties}>
+                <Avatar src={logoFor(s)} initials={s.slice(0, 1)} size={24} />
+              </span>
+            </span>
+          ))}
+          <span className={styles.orbitCore}>{stockLogo(48)}</span>
+        </div>
+      )}
+      {variant === 'candles' && (
+        <div className={styles.candles}>
+          {[0, 1, 2, 3, 4].map((i) => <span key={i} className={styles.candle} data-down={i === 2 || undefined} />)}
+        </div>
+      )}
+      {variant === 'ticker' && (
+        <div className={styles.ticker}>
+          {[0, 3].map((shift) => (
+            <div key={shift} className={styles.tape} data-reverse={shift > 0 || undefined}>
+              <div className={styles.tapeRow}>
+                {[...TAPE, ...TAPE].map((s, i) => (
+                  <span key={i} className={styles.tapeItem}>
+                    <Avatar src={logoFor(TAPE[(i + shift) % 8])} initials={TAPE[(i + shift) % 8].slice(0, 1)} size={24} />
+                    {TAPE[(i + shift) % 8]} ▲{(0.4 + ((i * 37 + shift) % 23) / 10).toFixed(1)}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className={styles.tickerCard}>
+            {stockLogo(40)}
+            <span className={styles.tickerText}>
+              <b>{side} {symbol}</b>
+              <small>{amount}</small>
+            </span>
+          </div>
+        </div>
+      )}
+      {/* The glass ring's end: the result badge pops in where the ring was, with a burst ring going out. */}
+      {variant === 'glass' && (
+        <>
+          <span className={styles.burst} />
+          <ResultBadge outcome={outcome} className={styles.result} />
+        </>
+      )}
+    </div>
+  )
+}
+
+// ---------- Minted's glass-ring engine (same maths as its prototype: a ring in 3D that sinks into the well, a drop that
+// rises back out through a goo filter). Drawn on a 200 × 200 grid; one loop of 4.4 s. ----------
+const LOOP = 4400
+const R = 92
+const CORE = 82
+const PERSPECTIVE = 700
+const AXIS: [number, number, number] = [Math.SQRT1_2, -Math.SQRT1_2, 0]
+const CIRC = 2 * Math.PI * R
+const CX = 100
+const CY = 100
+const FLOOR = 182
+const DROP = 11
+const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x))
+const seg = (t: number, a: number, b: number) => clamp((t - a) / (b - a))
+const inOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2)
+const outCubic = (x: number) => 1 - Math.pow(1 - x, 3)
+const inOutSine = (x: number) => -(Math.cos(Math.PI * x) - 1) / 2
+
+/** The ring's path: `length` of the circle, turned `deg` round the tilted axis, hidden where it passes behind the well. */
+function ringPath(length: number, deg: number) {
+  const L = clamp(length, 0, CIRC)
+  const span = L / R
+  const th = (deg * Math.PI) / 180
+  const c = Math.cos(th)
+  const s = Math.sin(th)
+  const [ux, uy, uz] = AXIS
+  const n = Math.max(2, Math.ceil((span / (Math.PI * 2)) * 160))
+  let d = ''
+  let pen = false
+  for (let i = 0; i <= n; i++) {
+    const f = Math.PI / 2 - span / 2 + (span * i) / n
+    const px = R * Math.cos(f)
+    const py = R * Math.sin(f)
+    const dot = ux * px + uy * py
+    const x = px * c + -uz * py * s + ux * dot * (1 - c)
+    const y = py * c + uz * px * s + uy * dot * (1 - c)
+    const z = (ux * py - uy * px) * s + uz * dot * (1 - c)
+    const k = PERSPECTIVE / (PERSPECTIVE - z)
+    const X = x * k
+    const Y = y * k
+    if (z < -0.5 && Math.hypot(X, Y) < CORE + 2) { pen = false; continue }
+    d += (pen ? 'L' : 'M') + (CX + X).toFixed(1) + ',' + (CY + Y).toFixed(1)
+    pen = true
+  }
+  return d
+}
+
+type GlassEls = { ring: SVGPathElement; ringSvg: SVGSVGElement; ripple: SVGCircleElement; drop: SVGEllipseElement; neck: SVGPathElement }
+
+function drawGlass(E: GlassEls, t: number) {
+  let rot = 0
+  let L = CIRC
+  let op = 1
+  if (t < 0.4) { /* still */ } else if (t < 2.25) { rot = 360 * inOutSine(seg(t, 0.4, 2.1)); op = 1 - inOutSine(seg(t, 1.25, 2.1)) } else if (t < 2.45) { L = 0; op = 0 } else { L = CIRC * inOutCubic(seg(t, 2.45, 3.05)) }
+  E.ring.setAttribute('d', ringPath(L, rot % 360))
+  E.ringSvg.style.opacity = String(op)
+  let hy = CY
+  let rx = DROP
+  let ry = DROP
+  let neck = ''
+  let tail = ''
+  const rp = seg(t, 0.75, 1.35)
+  E.ripple.setAttribute('r', String(rp > 0 && rp < 1 ? 8 + 30 * outCubic(rp) : 0))
+  E.ripple.setAttribute('opacity', String((1 - rp) * 0.9))
+  if (t < 1.4) { /* drop sits in the well */ } else if (t < 2.3) {
+    const k = seg(t, 1.35, 2.2)
+    hy = CY + (FLOOR + DROP + 2 - CY) * k * k * k
+    ry = DROP * (1 + 0.18 * Math.sin(Math.PI * k))
+    rx = DROP * (1 - 0.1 * Math.sin(Math.PI * k))
+  } else if (t < 3.05) { rx = ry = 0 } else if (t < 4.25) {
+    const u = seg(t, 3.05, 4.25)
+    hy = FLOOR + DROP - (FLOOR + DROP - CY) * inOutSine(seg(u, 0, 0.82))
+    if (u < 0.56) {
+      const k = seg(u, 0.08, 0.56)
+      const bw = 30 - 12 * k
+      const ww = DROP * 0.78 * (1 - Math.pow(inOutSine(seg(k, 0.35, 1)), 1.2))
+      const wy = FLOOR - 6 - (FLOOR - 6 - hy) * 0.42
+      const lift = Math.min(16, (FLOOR - hy) * 0.45)
+      neck = `M${CX - bw},${FLOOR + 8} C${CX - bw * 0.45},${FLOOR + 6} ${CX - ww - 2},${FLOOR - lift} ${CX - ww},${wy} C${CX - ww},${wy - 8} ${CX - DROP * 0.85},${hy + DROP * 0.9} ${CX - DROP * 0.6},${hy} L${CX + DROP * 0.6},${hy} C${CX + DROP * 0.85},${hy + DROP * 0.9} ${CX + ww},${wy - 8} ${CX + ww},${wy} C${CX + ww + 2},${FLOOR - lift} ${CX + bw * 0.45},${FLOOR + 6} ${CX + bw},${FLOOR + 8} Z`
+    } else {
+      const k = seg(u, 0.56, 0.84)
+      const len = (1 - outCubic(k)) * (FLOOR - hy) * 0.38
+      if (k < 1) {
+        const wt = DROP * 0.55 * (1 - k * 0.6)
+        tail = `M${CX - wt},${hy} Q${CX - wt * 0.5},${hy + DROP + len * 0.5} ${CX},${hy + DROP + len} Q${CX + wt * 0.5},${hy + DROP + len * 0.5} ${CX + wt},${hy} Z`
+      }
+      const r = seg(u, 0.56, 1)
+      const bob = 10 * Math.exp(-6 * r) * Math.cos(14 * r)
+      if (bob > 0.5) neck = `M${CX - 14},${FLOOR + 8} Q${CX},${FLOOR + 8 - bob * 2} ${CX + 14},${FLOOR + 8} Z`
+      const sq = Math.exp(-5 * r) * Math.sin(16 * r)
+      ry = DROP * (1 + 0.22 * sq)
+      rx = DROP * (1 - 0.16 * sq)
+    }
+    if (u > 0.82) { const k = seg(u, 0.82, 1); hy = CY - 2 * Math.sin(Math.PI * k) * (1 - k) }
+  }
+  E.drop.setAttribute('cy', String(hy))
+  E.drop.setAttribute('rx', String(Math.max(0, rx)))
+  E.drop.setAttribute('ry', String(Math.max(0, ry)))
+  E.neck.setAttribute('d', neck + tail)
+}
+
+function GlassRing({ frozen }: { frozen: boolean }) {
+  const id = useId().replace(/:/g, '')
+  const ring = useRef<SVGPathElement>(null)
+  const ringSvg = useRef<SVGSVGElement>(null)
+  const ripple = useRef<SVGCircleElement>(null)
+  const drop = useRef<SVGEllipseElement>(null)
+  const neck = useRef<SVGPathElement>(null)
+  const frozenRef = useRef(frozen)
+  frozenRef.current = frozen
+  useEffect(() => {
+    const E = { ring: ring.current!, ringSvg: ringSvg.current!, ripple: ripple.current!, drop: drop.current!, neck: neck.current! }
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduce) { drawGlass(E, 0); return }
+    const t0 = performance.now()
+    let raf = 0
+    const loop = (now: number) => {
+      if (!frozenRef.current) drawGlass(E, ((now - t0) % LOOP) / 1000)
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return (
+    <div className={styles.glass}>
+      <svg viewBox="0 0 200 200">
+        <defs>
+          <radialGradient id={`well${id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0" className={styles.wellIn} />
+            <stop offset=".6" className={styles.wellIn} />
+            <stop offset=".82" className={styles.wellMid} />
+            <stop offset=".96" className={styles.wellRim} />
+            <stop offset="1" className={styles.wellIn} />
+          </radialGradient>
+          <linearGradient id={`shine${id}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" className={styles.shine0} />
+            <stop offset=".45" className={styles.shine1} />
+          </linearGradient>
+        </defs>
+        <circle cx="100" cy="100" r="82" fill={`url(#well${id})`} />
+        <circle className={styles.wellEdge} cx="100" cy="100" r="81.5" />
+        <path d="M38 70 A68 68 0 0 1 92 30" fill="none" stroke={`url(#shine${id})`} strokeWidth="6" strokeLinecap="round" opacity=".7" />
+      </svg>
+      <svg viewBox="0 0 200 200" ref={ringSvg} className={styles.ringSvg}>
+        <defs>
+          <linearGradient id={`ring${id}`} gradientUnits="userSpaceOnUse" x1="0" y1="6" x2="0" y2="194">
+            <stop offset="0" className={styles.ring0} />
+            <stop offset=".5" className={styles.ring1} />
+            <stop offset="1" className={styles.ring2} />
+          </linearGradient>
+        </defs>
+        <path ref={ring} fill="none" stroke={`url(#ring${id})`} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <svg viewBox="0 0 200 200" className={styles.dropSvg}>
+        <defs>
+          <filter id={`goo${id}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3.2" />
+            <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" />
+          </filter>
+          <clipPath id={`pool${id}`}><circle cx="100" cy="100" r="82" /></clipPath>
+        </defs>
+        <circle ref={ripple} className={styles.ripple} cx="100" cy="100" r="0" />
+        <g className={styles.goo} filter={`url(#goo${id})`} clipPath={`url(#pool${id})`}>
+          <path ref={neck} />
+          <ellipse ref={drop} cx="100" cy="100" rx="11" ry="11" />
+        </g>
+      </svg>
+    </div>
   )
 }
 ```
@@ -35841,7 +39004,9 @@ function FeeBreakdownSheet({ onClose }: { onClose: () => void }) {
 /* The amount / shares switch, as the commodity pad's Quantity ⇕ Lots. */
 .toggle { display: inline-flex; align-items: center; gap: var(--l3-spacing-02); padding: 0; border: 0; background: none; color: var(--l3-content-primary); font: var(--l3-text-label-12); cursor: pointer; }
 .amount { flex: 1; min-width: 0; height: var(--l3-size-32); margin: 0; padding: 0 var(--l3-spacing-08); border: 0; outline: none; background: none; font: var(--l3-text-heading-12); color: var(--l3-content-primary); text-align: right; caret-color: var(--l3-content-primary); }
-/* Steppers are the L3 Stepper Small as it is (dark + / −), as on the commodity pad. */
+/* Steppers: L3 Stepper Small, its enabled ± buttons white (surface/primary) with the blue icon on the grey pill
+   (as OrderPadV2). L3 gap: Stepper has no on-grey button option. */
+.stepper.stepper[data-size] button:not(:disabled) { background: var(--l3-surface-primary); color: var(--l3-content-accent-discover-default); }
 
 .helper { display: flex; justify-content: space-between; gap: var(--l3-spacing-08); font: var(--l3-text-label-12); color: var(--l3-content-secondary); }
 .error { margin: 0; font: var(--l3-text-label-12); color: var(--l3-content-accent-error-default); }
@@ -35859,7 +39024,8 @@ function FeeBreakdownSheet({ onClose }: { onClose: () => void }) {
 ### `src/flows/us-stocks/screens/trade/OrderPad.tsx`
 
 ```tsx
-// The Buy / Sell order pad (T01–T10, H03–H05, H11): order type tabs, amount or shares field, limit / trigger prices,
+// The Buy / Sell order pad (T01–T10, H03–H05, H11). `OrderPad` picks V2 (OrderPadV2.tsx, Minted's layout, the default) or
+// V1 (below, `OrderPadV1`) by version.ts. V1: order type tabs, amount or shares field, limit / trigger prices,
 // helper line, and the dock with Avail. / Req. and the main button.
 // Layout and look follow the commodity options order pad (F&O fno-25 … 31): header with the price and signed change,
 // small pill order types with the validity Select beside them, 40-high bordered rows with L3 Stepper Small, and the
@@ -35883,6 +39049,8 @@ import { useUsNav } from '../../nav'
 import { Usd, useInrEquivalent, useUsd } from '../../../../shared/money'
 import { al, forCurrentStock, il } from './format'
 import type { Derived, OrderPadConfig, OrderType, PadMode } from './types'
+import { OrderPadV2 } from './OrderPadV2'
+import { useOrderPadVersion } from './version'
 import styles from './OrderPad.module.css'
 
 const ORDER_TYPES: { value: OrderType; label: string }[] = [
@@ -35902,7 +39070,14 @@ let shownPad: { type: OrderType; closedAt: number | null } | null = null
  * The order pad. Switching order type keeps the header, tabs and dock in place; only the fields under the tabs slide in —
  * from the right when the new type is further along (Market → Limit → SL), from the left when it's back.
  */
-export function OrderPad({ config, backdrop, sheet }: { config: OrderPadConfig; backdrop?: boolean; sheet?: ReactNode }) {
+type OrderPadProps = { config: OrderPadConfig; backdrop?: boolean; sheet?: ReactNode }
+
+/** The order pad: V1 (this file) or V2 (OrderPadV2.tsx), by the flow option "Order pad" (version.ts). */
+export function OrderPad(props: OrderPadProps) {
+  return useOrderPadVersion() === 'v2' ? <OrderPadV2 {...props} /> : <OrderPadV1 {...props} />
+}
+
+function OrderPadV1({ config, backdrop, sheet }: OrderPadProps) {
   const { go, back } = useUsNav()
   const usd = useUsd()
   const inr = useInrEquivalent()
@@ -36099,15 +39274,732 @@ export function OrderPad({ config, backdrop, sheet }: { config: OrderPadConfig; 
 }
 ```
 
+### `src/flows/us-stocks/screens/trade/OrderPadV2.module.css`
+
+```css
+/* US Stocks order pad V2, laid out like Minted's order pad (s05 / s13 / s14). */
+.contract { display: flex; flex-direction: column; align-items: center; gap: var(--l3-spacing-02); text-align: center; }
+.contractName { display: inline-flex; align-items: center; gap: var(--l3-spacing-08); font: var(--l3-text-heading-14); color: var(--l3-content-primary); }
+.contractPrice { display: inline-flex; align-items: center; gap: var(--l3-spacing-08); font: var(--l3-text-label-12); color: var(--l3-content-primary); }
+
+.body { padding: var(--l3-spacing-32) var(--l3-spacing-16) var(--l3-spacing-16); overflow-x: clip; }
+.fields { align-self: stretch; }
+
+/* The big amount: "$" and the typed digits, centred; the input is focused (Typing) with the keypad up. */
+.amountRow { display: inline-flex; align-items: center; justify-content: center; gap: var(--l3-spacing-04); max-width: 100%; }
+.prefix { font: var(--l3-text-heading-36); font-size: var(--app-orderpad-currency-size); color: var(--l3-content-secondary); } /* 2 under the amount (34, a local token: L3 has no 34), still secondary */
+.amount { min-width: 0; margin: 0; padding: 0; border: 0; outline: none; background: none; font: var(--l3-text-heading-36); color: var(--l3-content-primary); text-align: left; field-sizing: content; height: var(--l3-size-48); /* fixed: an empty field (placeholder) would be 3 taller and push the cards down */ caret-color: transparent; }
+/* The typing caret, drawn (the native one only paints while the page has focus and hides in captures): always blinking
+   while the keypad is up, as L3 TextField's Typing state (--tf-caret colour). 2px is the caret's own width. */
+.caret { align-self: center; width: 2px; height: var(--l3-size-40); background: var(--l3-content-accent-discover-default); animation: caretBlink 1s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+.amount::placeholder { color: var(--l3-content-tertiary); opacity: 1; }
+.amountRow[data-error] .amount, .amountRow[data-error] .prefix { color: var(--l3-content-accent-error-default); }
+
+.helper { margin: 0; font: var(--l3-text-label-12); color: var(--l3-content-secondary); text-align: center; white-space: nowrap; }
+.helperLine + .helperLine { margin-left: var(--l3-spacing-08); }
+.error { margin: 0; font: var(--l3-text-label-12); color: var(--l3-content-accent-error-default); text-align: center; }
+
+/* Limit / trigger price cards: PriceField.tsx (one component for every price card, 19 Nov). */
+
+/* Dock: the note strip, Balance · Approx. req., the main button, then the keypad. The note sits above the dock's
+   hairline (on the page, outside the button dock); the hairline opens the dock itself. */
+.dock { background: var(--l3-surface-primary); }
+.note { margin: 0; padding: var(--l3-spacing-08) var(--l3-spacing-16); font: var(--l3-text-label-12); color: var(--l3-content-secondary); text-align: center; }
+.dockBody { padding: var(--l3-spacing-12) var(--l3-spacing-16); border-top: 1px solid var(--l3-border-light); }
+.funds { font: var(--l3-text-label-12); }
+.funds strong { font: var(--l3-text-heading-12); color: var(--l3-content-primary); }
+.muted { color: var(--l3-content-secondary); }
+
+/* Balances the back button (24) so the centred title sits at the screen's centre (L3 gap: no centred Actionbar title). */
+.backBalance { display: block; width: var(--l3-size-24); }
+
+/* Header logo at 16 (design ask). L3 gap: Avatar's smallest size is 24 — sized down locally until L3 adds 16. */
+.logo16.logo16 { --av-size: var(--l3-size-16); }
+
+
+/* Order type: the pill group hugs its pills, and the three pills are equal (each as wide as the widest, "Market").
+   L3 gap: a pill group is either hug (pills as wide as their labels) or fill (full width) — no equal-width hug. */
+/* Market / Limit / SL, centred. */
+.typeRow { position: relative; align-self: stretch; }
+/* Indian pad's Day / Year switch: at the row's right edge, out of the flow, so Market / Limit / SL stays centred. */
+.validity { position: absolute; inset-inline-end: 0; top: 50%; transform: translateY(-50%); }
+.orderTypes.orderTypes { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: fit-content; }
+/* V3: each pill as wide as its label. */
+.orderTypes.orderTypes[data-width='hug'] { grid-auto-columns: auto; }
+.ctaInr { font: var(--l3-text-heading-14); white-space: pre; } /* 2 smaller than the label (Heading/16), same weight */
+
+/* "Req." opens the fee sheet: secondary text, underlined like a link (L3 gap: no link-style Button). */
+.reqLink.reqLink { color: var(--l3-content-secondary); text-decoration: underline; text-underline-offset: var(--l3-spacing-02); }
+
+
+/* 6 under the two-line title, so it doesn't sit on the bar's line (the user's call). */
+.bar.bar { padding-bottom: var(--l3-spacing-06); }
+/* Indian pad: the product tabs sit at the bar's foot, so their underline and the bar's line are one (20 Nov, the user's call). */
+.bar.barTabs { padding-bottom: 0; }
+
+/* Validity switch V2: the order type's grey track runs on past Market / Limit / SL — a short divider, then the validity.
+   The Tabs keep their own track (4 padding); this one only adds the fill and the room after the validity.
+   L3 gap: a pill group can't hold a trailing control. */
+.typeTrack {
+  border-radius: var(--l3-radius-full);
+  background: var(--l3-surface-secondary);
+  padding-inline-end: var(--l3-spacing-04);
+}
+.trackDivider { width: 1px; height: var(--l3-spacing-16); background: var(--l3-border-intense); } /* 1px hairline */
+/* V2's validity pill: in a slot as wide as the "Instant ⇕" pill (a hidden copy shares the cell); the real pill stretches
+   to it, its label and icon centred together, so the track keeps one width while the label cycles. */
+.validitySlot { display: inline-grid; }
+.validitySlot > * { grid-area: 1 / 1; }
+.validitySizer { visibility: hidden; }
+/* No fill, no border (20 Nov, the user's call): the validity reads like the see-through Market / Limit / SL pills in the
+   track, not a white button. L3 gap: the action pill has no see-through version — a pill group's unselected pills
+   are see-through (Tabs.module.css), this borrows that look. */
+.validitySlot > .validityPill[data-action] { --tab-surface: transparent; --tab-border: transparent; }
+
+/* Validity switch V3 (20 Nov, the user's call): both switches above the amount — Amount ⇕ | Day ⇕ — each hugging its label;
+   OrderPadV2 slides them when a label changes size. */
+.switchRow { max-width: 100%; }
+```
+
+### `src/flows/us-stocks/screens/trade/OrderPadV2.tsx`
+
+```tsx
+// Order pad V2 (T01–T10, H03–H05, H11): the layout of Minted's order pad (~/minted, screens s05 / s13 / s14), with the
+// US pad's own content and navigation (same OrderPadConfig as V1). Top to bottom: header with the logo, symbol and
+// price + change; the order type switch (Market / Limit / SL); the big centred amount (or share count) typed on the
+// app keypad, with the amount ⇄ shares switch under it; quick chips; one helper line; the limit / trigger price cards
+// with a Stepper; then the dock: note strip, Balance · Approx. req., the main button and the keypad.
+// Differences from Minted: no Markets / Futures tabs (US stocks are cash only); the leverage card is on the Market pad
+// (LeverageCard, 19 Nov) but is a prototype only; the switch is
+// Market / Limit / SL (not Instant / Limit / SIP) and moves between the pads of the same page group like V1;
+// the US "Day" validity is not a Tag any more — Limit / SL notes start with "Day order ·".
+// FLAG: L3 Actionbar has no centred title; the logo + symbol + price block is centred inside the Actionbar's content.
+// FLAG: the big amount is a raw <input> (L3 has no large amount field); it is focused, typed from the shared Keyboard.
+// The keypad has "." (shared Keyboard `decimal`): $ amounts take 2 decimals, shares 4, whole-share stocks none. The first key replaces the prefilled value.
+// FLAG: duplicates the app's Indian order pad (src/flows/stocks) for US stocks.
+// Flow option "Order pad" = india (20 Nov, the user's call): the same screens as an Indian stock's pad — RELIANCE, in ₹
+// (indianPad.ts) — with the production Indian pad's controls in this layout: NSE / BSE in the header, Delivery / Intraday
+// / MTF tabs under it (no MTF on BSE), a validity at the right of Market / Limit / SL (Market: Day / Instant; Limit: Day → Instant → Year, cycled; SL: Day / Year; not on Intraday), SL's second
+// price Limit ⇄ Market ("At market"), Intraday's "Margin (5x)" in place of Req.
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
+import { Actionbar } from '@l3/components/Actionbar'
+import { Avatar } from '@l3/components/Avatar'
+import { Button } from '@l3/components/Button'
+import { PriceChange } from '@l3/components/PriceChange'
+import { Select } from '@l3/components/Select'
+import { Stack } from '@l3/components/Stack'
+import { Icon } from '@l3/components/Icon'
+import { Tab, Tabs } from '@l3/components/Tabs'
+import { lmSwitchArrowVertical } from '@l3/icons/lemonnade'
+import { Keyboard, KeypadSlide, keypadFieldProps, typeKey } from '../../../../shared/ui/Keyboard'
+import { Phone } from '../../components/Phone'
+import { currentStock, logoFor } from '../../data'
+import { asset } from '../../asset'
+import { useUsNav } from '../../nav'
+import { formatInr, useUsdInrRate } from '../../../../shared/money'
+import { getCompany, useMarketSnapshot } from '../../../../shared/data/companies'
+import { al, forCurrentStock } from './format'
+import type { Derived, OrderPadConfig, OrderType, PadChip, PadMode } from './types'
+import { usePadVersion, usePriceCards, useValidityPlace } from './version'
+import { LeverageCard } from './LeverageCard'
+import { TPSL_INDIA, TPSL_US, TpslControl } from './Tpsl'
+import { FeeBreakdownSheet } from './FeeBreakdown'
+import { CHARGE_FACTOR } from './orderPads'
+import { PriceField, PriceFieldBox } from './PriceField'
+import { PadAmount, PadCurrencyProvider, usePadMoney, usePadSymbol } from './padMoney'
+import { LIMIT_VALIDITY_LABELS, NEXT_LIMIT_VALIDITY, PRODUCT_LABELS, indianPadFor, productsOn, requiredFor, setIndianPad, useIndianPad, validityPrefix, type Product } from './indianPad'
+import styles from './OrderPadV2.module.css'
+
+/** Buy, shares mode: +1 / +5 / +10 / +20 shares (the amount's +$10 … row, in shares). */
+const SHARE_CHIPS: PadChip[] = [1, 5, 10, 20].map((n) => ({ label: `+${n}`, apply: (value: number) => value + n }))
+/** Buy, amount mode on a pad that starts in shares: +$10, +$50, +$100. */
+const addAmountChip = (n: number): PadChip => ({ label: (fmt) => `+${fmt(n, { decimals: 0 })}`, apply: (value) => value + n })
+
+const ORDER_TYPES: { value: OrderType; label: string }[] = [
+  { value: 'market', label: 'Market' },
+  { value: 'limit', label: 'Limit' },
+  { value: 'sl', label: 'SL' },
+]
+
+/** The pad on screen (its order type, and when it closed): an order type switch dissolves the fields (leaveTo / fields below). */
+let shownPad: { type: OrderType; closedAt: number | null } | null = null
+/** The pad just switched away from (a Market / Limit / SL tap), if any. */
+const padSwitchedFrom = () => (shownPad && (shownPad.closedAt === null || performance.now() - shownPad.closedAt < 500) ? shownPad : undefined)
+/** The keypad as it was when Market / Limit / SL was tapped: the next pad takes it over (read once). */
+let keypadOnSwitch: boolean | null = null
+
+const MAX_DIGITS = 7
+
+/** How far the fields drop / rise in the order-type dissolve (L3 spacing 08). */
+const DISSOLVE_SHIFT = 'var(--l3-spacing-08)'
+
+/** The logo of the stock being traded (as the stock page picks it). */
+/** Add money: type the $ (registry M01, Figma 5776:84630). */
+const ADD_MONEY = '5776:84630'
+
+function useStockLogo(symbol: string) {
+  const stock = currentStock()
+  if (stock.sym !== symbol) return logoFor(symbol)
+  if (stock.logo) return /^(\/|https?:)/.test(stock.logo) ? stock.logo : asset(stock.logo)
+  return logoFor(symbol)
+}
+
+type PadProps = { config: OrderPadConfig; backdrop?: boolean; sheet?: ReactNode }
+
+/** The pad for the flow option "Order pad": US (the config as it is, in $) or Indian (the same state as RELIANCE, in ₹).
+ *  Switching remounts the pad. */
+export function OrderPadV2(props: PadProps) {
+  const padVersion = usePadVersion()
+  // The Indian pad reads RELIANCE's price from the market snapshot and its settings (exchange, product …) from a store.
+  useMarketSnapshot()
+  useIndianPad()
+  const config = padVersion === 'india' ? indianPadFor(props.config) : props.config
+  return (
+    <PadCurrencyProvider value={config.currency ?? 'usd'}>
+      <OrderPadV2Body key={padVersion} {...props} config={config} />
+    </PadCurrencyProvider>
+  )
+}
+
+function OrderPadV2Body({ config, backdrop, sheet }: PadProps) {
+  const { go, back } = useUsNav()
+  const money = usePadMoney()
+  const symbol = usePadSymbol()
+  const india = config.currency === 'inr'
+  const indian = useIndianPad()
+  // The US pad always shows what the order is worth in ₹ (in the Buy button), whatever the app's ₹ setting: you pay in
+  // from an Indian bank, so the ₹ figure is part of deciding the order. The Indian pad is in ₹ already.
+  const rate = useUsdInrRate()
+  const inr = (n: number) => (!india && n > 0 ? `≈ ${formatInr(n * rate, { decimals: 0 })}` : undefined)
+  const usLogo = useStockLogo(config.stock.symbol)
+  const logo = (india && getCompany(config.stock.symbol)?.logoUrl) || usLogo
+  // Indian pad: SL's second price at market (no limit price).
+  const slAtMarket = india && config.type === 'sl' && indian.slAtMarket
+  // Indian pad: the validity (Delivery and MTF; Intraday orders end with the day). Market: Day ⇄ Instant (Day by
+  // default); SL: Day ⇄ Year (Year by default); Limit: Day / Instant / Year, picked in a sheet (Year by default).
+  const validity = india && indian.product !== 'intraday'
+  const validityPlace = useValidityPlace()
+  const validityLabel =
+    config.type === 'market' ? (indian.marketValidity === 'instant' ? 'Instant' : 'Day')
+      : config.type === 'limit' ? LIMIT_VALIDITY_LABELS[indian.limitValidity]
+        : indian.validity === 'day' ? 'Day' : 'Year'
+  const validityNext =
+    config.type === 'market' ? (indian.marketValidity === 'instant' ? 'Day' : 'Instant')
+      : config.type === 'limit' ? LIMIT_VALIDITY_LABELS[NEXT_LIMIT_VALIDITY[indian.limitValidity]]
+        : indian.validity === 'day' ? 'Year' : 'Day'
+  const onValidity = () =>
+    setIndianPad(config.type === 'market' ? { marketValidity: indian.marketValidity === 'day' ? 'instant' : 'day' }
+      : config.type === 'limit' ? { limitValidity: NEXT_LIMIT_VALIDITY[indian.limitValidity] }
+        : { validity: indian.validity === 'day' ? 'year' : 'day' })
+  const priceCards = usePriceCards()
+  // The unit the field is showing; `value` is always kept in the config's own unit (config.mode).
+  const [mode, setMode] = useState<PadMode>(config.mode)
+  const [value, setValue] = useState(config.value)
+  const [amountText, setAmountText] = useState(config.value ? String(config.value) : '')
+  const [pcts, setPcts] = useState(() => (config.prices ?? []).map((price) => price.pct))
+  // The field the keypad types into: the amount, or a price card (its index). Tapping a field picks it; the blue caret
+  // shows on that one. A typed price is kept as text while you type and sets its % (the Stepper follows).
+  const [active, setActive] = useState<'amount' | number>('amount')
+  const [priceDraft, setPriceDraft] = useState<string | null>(null)
+  const activeRef = useRef<HTMLInputElement | null>(null)
+  // The keypad is up while a field is being typed. A tap anywhere on the page outside the fields closes it (the field
+  // loses its caret); tapping a field (the amount, or a price card's price) opens it again on that field.
+  // Switching Market / Limit / SL keeps it as it was — up stays up (no slide), closed stays closed (the user's call, 19 Nov).
+  const [startKeypad] = useState(() => keypadOnSwitch ?? true)
+  // Read once: cleared after mount (not in the initializer, which React may run twice).
+  useEffect(() => { keypadOnSwitch = null }, [])
+  const [keypad, setKeypad] = useState(startKeypad)
+  // Flow option "Order pad": us · SL only, no leverage (the default); india · leverage card + TP/SL + trailing..
+  const padVersion = usePadVersion()
+  const keypadRef = useRef(startKeypad)
+  // It slides in and out (KeypadSlide).
+  const showKeypad = (open: boolean) => {
+    keypadRef.current = open
+    setKeypad(open)
+  }
+
+  const prices = pcts.map((pct) => al(config.stock.price, pct))
+  // The price one share costs: market price, or the last price field (limit / SL limit).
+  const unitPrice = config.type === 'market' ? config.stock.price : slAtMarket ? prices[0] : (prices[prices.length - 1] ?? config.stock.price)
+  // Indian stocks trade in whole shares: an amount shown as shares rounds down.
+  const toShares = (amount: number) => (india ? Math.floor(amount / unitPrice) : Number((amount / unitPrice).toFixed(4)))
+  const shown = (m: PadMode) => (m === config.mode ? value : m === 'shares' ? toShares(value) : Number((value * unitPrice).toFixed(2)))
+  const current = shown(mode)
+  const setShown = (next: number) => setValue(mode === config.mode ? next : config.mode === 'amount' ? next * unitPrice : next / unitPrice)
+
+  const tpslOrder = { symbol: config.stock.symbol, ltp: config.stock.price, change: config.stock.change, qty: config.mode === 'shares' ? value : unitPrice ? value / unitPrice : 0, entry: unitPrice }
+  const derived: Derived = config.derive(value, prices, mode, { usd: money, inr: (n) => inr(n) })
+  // What the order is worth in the pad's currency (the field is kept in the config's unit), for the ₹ on the Buy / Sell button.
+  const orderValue = config.mode === 'amount' ? value : value * unitPrice
+  // What the order takes from the balance: the order + charges (Indian Intraday / MTF: the margin on it).
+  const required = (order: number) => (india ? requiredFor(order, indian.product) : order * CHARGE_FACTOR)
+  // Buying for more than the balance (the order + charges, = Req.): the button becomes "Add money" — no amount on it
+  // (19 Nov, the user's call) — and goes to Add money (M01). Whole again under the balance: back to Buy.
+  const balance = config.side === 'buy' ? Number(config.avail.replace(/[^\d.]/g, '')) : NaN
+  const short = config.side === 'buy' && required(orderValue) > balance
+  // Quick chips for the mode on screen. A buy pad keeps a row of 4 in both modes so the layout doesn't jump when the
+  // amount ⇄ shares switch flips (20 Nov, the user's call): shares get +1 / +5 / +10 / +20; an amount the pad has no
+  // chips for gets +$10 / +$50 / +$100 / Max (Max = what the balance buys after charges). The pad's own chips win.
+  const chips: PadChip[] | undefined =
+    mode === config.mode && config.chips
+      ? config.chips
+      : config.side !== 'buy'
+        ? undefined
+        : mode === 'shares'
+          ? SHARE_CHIPS
+          : [...(india ? [1000, 5000, 10000] : [10, 50, 100]).map(addAmountChip), { label: 'Max', apply: () => balance / required(1) }]
+  const ctaInr = !india && orderValue > 0 && !short ? formatInr(orderValue * rate, { decimals: 0 }) : undefined
+  const ctaLabel = short ? 'Add money' : config.cta.label
+  // Nothing entered (amount or shares at 0): Buy / Sell is disabled until there is (20 Nov, the user's call). Only the
+  // button that places the order: Add money (an empty wallet) stays live.
+  const placesOrder = config.cta.label === 'Buy' || config.cta.label === 'Sell'
+  const ctaDisabled = short
+    ? false
+    : (placesOrder && !(value > 0)) || (typeof config.cta.disabled === 'function' ? config.cta.disabled(derived) : config.cta.disabled)
+  const goTo = (key: keyof NonNullable<OrderPadConfig['to']>) => (config.to?.[key] ? () => go(config.to![key]!) : undefined)
+  const onCta = short ? () => go(ADD_MONEY) : goTo('cta')
+  // "Req." is always a link (19 Nov, the user's call): a pad with its own target goes there (SL → the Fee Breakdown
+  // screen); every other pad opens the same Fee Breakdown sheet over itself, with the fees on this order.
+  const [feesOpen, setFeesOpen] = useState(false)
+  const onReq = goTo('req') ?? (() => setFeesOpen(true))
+
+  const textOf = (n: number) => (n ? String(n) : '')
+  const switchMode = () => {
+    const next: PadMode = mode === 'amount' ? 'shares' : 'amount'
+    setAmountText(textOf(shown(next)))
+    setMode(next)
+    setFresh(true)
+  }
+  // Whole-share stocks (BRK.B, every Indian stock) take no decimals; amounts up to 2, shares up to 4.
+  const decimals = mode === 'shares' ? (india || ((config.min ?? 0) >= 1 && mode === config.mode) ? 0 : 4) : 2
+  // The prefilled value is "selected": the first key replaces it, as when tapping into a filled amount.
+  const [fresh, setFresh] = useState(true)
+  // One key into a text with up to `places` decimals; undefined = the key is ignored.
+  const typeInto = (base: string, key: string, places: number) => {
+    if (key === '.') return !places || base.includes('.') ? undefined : (base || '0') + '.'
+    const [, frac] = base.split('.')
+    if (/^\d$/.test(key) && frac !== undefined && frac.length >= places) return undefined
+    return typeKey(base, key, MAX_DIGITS).replace(/^0+(?=\d)/, '')
+  }
+  const onKey = (key: string) => {
+    if (typeof active === 'number') {
+      const text = typeInto(fresh ? '' : (priceDraft ?? prices[active].toFixed(2)), key, 2)
+      setFresh(false)
+      if (text === undefined) return
+      setPriceDraft(text)
+      const price = Number(text) || 0
+      // The price sets its % from the last price (not rounded, so the card shows exactly what was typed).
+      if (price > 0) setPcts((all) => all.map((old, j) => (j === active ? (price / config.stock.price - 1) * 100 : old)))
+      return
+    }
+    const text = typeInto(fresh ? '' : amountText, key, decimals)
+    setFresh(false)
+    if (text === undefined) return
+    setAmountText(text)
+    setShown(Number(text) || 0)
+  }
+  // Picking a field: its value is "selected", so the first key replaces it.
+  const pick = (field: 'amount' | number) => (e: SyntheticEvent<HTMLInputElement>) => pickField(field, e.currentTarget)
+  const pickField = (field: 'amount' | number, input: HTMLInputElement) => {
+    activeRef.current = input
+    if (!keypadRef.current) {
+      showKeypad(true)
+      setFresh(true)
+    }
+    if (field === active) return
+    setActive(field)
+    setPriceDraft(null)
+    setFresh(true)
+  }
+  // While the keypad is up the field shows the typing caret: when focus leaves for a key or another field it stays
+  // (the keypad never takes focus). Once the keypad is closed (a tap outside the fields), the field lets it go.
+  const keepFocus = () => {
+    requestAnimationFrame(() => {
+      const field = activeRef.current
+      if (keypadRef.current && field?.isConnected && !(document.activeElement instanceof HTMLInputElement)) field.focus({ preventScroll: true })
+    })
+  }
+  const applyChip = (apply: (current: number) => number) => {
+    const next = mode === 'shares' && india ? Math.floor(apply(current)) : Number(apply(current).toFixed(mode === 'amount' ? 2 : 4))
+    setShown(next)
+    setAmountText(textOf(next))
+    setFresh(true)
+  }
+
+  // Header: back arrow, then the logo + symbol over the price and signed change, centred.
+  const header = (
+    <Actionbar
+      headingLevel={1}
+      className={[styles.bar, india && styles.barTabs].filter(Boolean).join(' ')}
+      onBack={() => back(config.back)}
+      title={
+        // Spans, not Stack: the title sits inside the Actionbar's <h1>, where L3's block-level Stack isn't valid.
+        // L3 gap: Actionbar has no centred "logo + symbol over price" title.
+        <span className={styles.contract}>
+          <span className={styles.contractName}>
+            <Avatar src={logo} initials={config.stock.symbol.slice(0, 1)} size={24} className={styles.logo16} />
+            {config.stock.symbol}
+          </span>
+          <span className={styles.contractPrice}>
+            <PadAmount value={config.stock.price} />
+            <PriceChange value={config.stock.change} unit="percent" size="sm" />
+          </span>
+        </span>
+      }
+      // US: an empty slot as wide as the back button on the right, so the title sits at the screen's centre.
+      // Indian pad: the exchange switch (NSE ⇄ BSE), as the production pad's top right.
+      actions={
+        india ? (
+          <Select size="sm" icon="swap" onClick={() => setIndianPad({ exchange: indian.exchange === 'NSE' ? 'BSE' : 'NSE' })} aria-label={`Exchange ${indian.exchange}. Switch to ${indian.exchange === 'NSE' ? 'BSE' : 'NSE'}`}>
+            {indian.exchange}
+          </Select>
+        ) : (
+          <span className={styles.backBalance} aria-hidden="true" />
+        )
+      }
+      // Indian pad: Delivery / Intraday / MTF (no MTF on BSE), sticky under the header.
+      bottom={
+        india ? (
+          <Tabs
+            appearance="underline"
+            behavior="tabs"
+            width="fill"
+            aria-label="Product"
+            items={productsOn(indian.exchange).map((product) => ({ value: product, label: PRODUCT_LABELS[product] }))}
+            value={indian.product}
+            onChange={(product) => setIndianPad({ product: product as Product })}
+          />
+        ) : undefined
+      }
+    />
+  )
+
+  const reqLabel = onReq
+    ? <Button variant="ghost" size="sm" onClick={onReq} className={styles.reqLink}>{derived.reqLabel ?? config.reqLabel}</Button>
+    : <span className={styles.muted}>{derived.reqLabel ?? config.reqLabel}</span>
+  // Day is the only validity for US orders: Limit / SL notes say so. The Indian pad's say the validity picked.
+  // A Market order says nothing unless it's Instant.
+  const notePrefix = india ? validityPrefix(indian, config.type) : config.type === 'market' ? '' : 'Day order · '
+  const note = derived.note ? `${notePrefix}${forCurrentStock(derived.note)}` : undefined
+  const footer = (
+    <div className={styles.dock}>
+      {note && <p className={styles.note}>{note}</p>}
+      <Stack gap="12" className={styles.dockBody}>
+        <Stack direction="horizontal" justify="between" align="center" className={styles.funds}>
+          <span><span className={styles.muted}>{config.availLabel === 'Avail.' ? 'Balance:' : config.availLabel}</span> <strong><PadAmount text={config.avail} /></strong></span>
+          <Stack direction="horizontal" gap="04" align="center">{reqLabel}{derived.req && <strong>{derived.req}</strong>}</Stack>
+        </Stack>
+        <Button variant={config.side === 'buy' ? 'brand' : 'sell'} size="lg" fullWidth disabled={ctaDisabled} onClick={onCta}>
+          {ctaLabel}
+          {/* The order's value in ₹ after the label ("Buy · ₹9,345"), same weight as the label, 2 smaller. */}
+          {ctaInr && <span className={styles.ctaInr}> · {ctaInr}</span>}
+        </Button>
+      </Stack>
+      <KeypadSlide open={keypad}>
+        <Keyboard onKey={onKey} decimal={decimals > 0} />
+      </KeypadSlide>
+    </div>
+  )
+
+  // A tap on the page or header outside the typable areas — the amount row, a price card's label + price — closes the
+  // keypad. The dock (note, Balance · Req., the button, the keypad) and the Market / Limit / SL switch leave it open
+  // (the user's call, 19 Nov).
+  useEffect(() => {
+    // On the document, checked at tap time: the phone mounts its body after this pad renders.
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement
+      const screen = bodyRef.current?.closest('section')
+      if (!screen?.contains(target)) return
+      if (!keypadRef.current || target.closest(`input, .${styles.amountRow}, [data-price-field], footer, .${styles.typeRow}, .${styles.validity}, .${styles.switchRow}`)) return
+      showKeypad(false)
+      activeRef.current?.blur()
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [])
+  // Slides the fields in once, when they first attach (a callback ref: the phone mounts its body after this pad renders).
+  const [cameFrom] = useState(() => padSwitchedFrom()?.type)
+  useLayoutEffect(() => {
+    const pad = { type: config.type, closedAt: null as number | null }
+    shownPad = pad
+    return () => { pad.closedAt = performance.now() }
+  }, [config.type])
+  // The order-type pill slides from the type you came from: each type is its own screen, so the tabs remount. Start them
+  // on the previous type, then select this one once the slider is placed (L3 Tabs animates a change of value).
+  const [tabValue, setTabValue] = useState<OrderType>(cameFrom ?? config.type)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (tabValue === config.type) return
+    // Wait until the slider sits on the old type and is ready to animate (the phone mounts its body a little later).
+    let frame = 0
+    const wait = () => {
+      const ready = bodyRef.current?.querySelector('[role="tablist"] [data-ready]')
+      if (ready) frame = requestAnimationFrame(() => setTabValue(config.type))
+      else frame = requestAnimationFrame(wait)
+    }
+    frame = requestAnimationFrame(wait)
+    const giveUp = setTimeout(() => setTabValue(config.type), 1000)
+    return () => { cancelAnimationFrame(frame); clearTimeout(giveUp) }
+  }, [tabValue, config.type])
+  // V3's switch row hugs its labels, so a label that changes size (Day → Instant, Amount → Shares) moves the row's other
+  // parts: each one slides from where it was to its new place (a FLIP; 20 Nov, the user's call: animated, never a jump).
+  const switchRowRef = useRef<HTMLDivElement>(null)
+  const switchLefts = useRef<number[]>([])
+  useLayoutEffect(() => {
+    const row = switchRowRef.current
+    if (!row) { switchLefts.current = []; return }
+    const items = [...row.children] as HTMLElement[]
+    // A slide still running: where each part shows now (its old place + the running offset) is where it starts from.
+    const shown = items.map((el) => el.getBoundingClientRect().left)
+    items.forEach((el) => el.getAnimations().forEach((run) => run.cancel()))
+    const lefts = items.map((el) => el.getBoundingClientRect().left)
+    const before = switchLefts.current
+    switchLefts.current = lefts
+    if (before.length !== lefts.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    items.forEach((el, i) => {
+      const from = before[i] + (shown[i] - lefts[i]) - lefts[i]
+      if (Math.abs(from) < 0.5) return
+      el.animate([{ translate: `${from}px 0` }, { translate: '0 0' }], { duration: 250, easing: 'cubic-bezier(0.2, 0, 0, 1)' })
+    })
+  }, [mode, validityLabel, validityPlace])
+
+  // Order type switch = a dissolve: the old fields drop a little and fade out (leaveTo), then this type's fields rise
+  // into place and fade in (here, once, when they first attach: a callback ref, the phone mounts its body later).
+  const slid = useRef(false)
+  const fieldsEl = useRef<HTMLElement | null>(null)
+  const fields = (el: HTMLElement | null) => {
+    fieldsEl.current = el
+    if (!el || slid.current) return
+    slid.current = true
+    if (!cameFrom || cameFrom === config.type || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    el.animate(
+      [{ translate: `0 ${DISSOLVE_SHIFT}`, opacity: 0 }, { translate: '0 0', opacity: 1 }],
+      { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+    )
+  }
+  const leaveTo = (target: string) => {
+    const el = fieldsEl.current
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return go(target)
+    el.animate(
+      [{ translate: '0 0', opacity: 1 }, { translate: `0 ${DISSOLVE_SHIFT}`, opacity: 0 }],
+      { duration: 140, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+    ).finished.then(() => go(target), () => go(target))
+  }
+
+  // One price row (PriceField, use 1): the label + typed price (the tap target for typing) and its % Stepper.
+  // Indian pad, SL: the second price's label is its switch, Limit ⇄ Market; at Market it reads "At market".
+  const slSwitch = india && config.type === 'sl'
+  const slUnit = {
+    label: slAtMarket ? 'Market' : 'Limit',
+    onSwitch: () => setIndianPad({ slAtMarket: !indian.slAtMarket }),
+    'aria-label': `${slAtMarket ? 'Market' : 'Limit'} price. Switch to ${slAtMarket ? 'a limit price' : 'market'}`,
+  }
+  const priceRow = (price: NonNullable<OrderPadConfig['prices']>[number], i: number) =>
+    slSwitch && i === 1 && slAtMarket ? (
+      <PriceField key={price.label} label="" unit={slUnit} fixed="At market" />
+    ) : (
+    <PriceField
+      key={price.label}
+      label={slSwitch && i === 1 ? '' : price.label}
+      unit={slSwitch && i === 1 ? slUnit : undefined}
+      price={{
+        text: active === i && priceDraft !== null ? priceDraft : prices[i].toFixed(2),
+        typing: keypad && active === i,
+        'aria-label': price.label,
+        onPick: (input) => pickField(i, input),
+        inputProps: { onBlur: keepFocus },
+      }}
+      stepper={{
+        label: `${price.label} % from last price`,
+        value: pcts[i],
+        onChange: (pct) => {
+          setPcts((all) => all.map((old, j) => (j === i ? pct : old)))
+          if (active === i) { setPriceDraft(null); setFresh(true) }
+        },
+        min: -20,
+        max: 20,
+        step: 0.5,
+        format: (pct) => `${pct.toFixed(1)}%`,
+      }}
+    />
+    )
+
+  const fieldError = typeof config.fieldError === 'function' ? config.fieldError(derived) : config.fieldError
+  const unitLabel = mode === 'amount' ? 'Amount' : 'Shares'
+  const switchLabel = `${unitLabel}. Switch to ${mode === 'amount' ? 'shares' : 'amount'}`
+
+  // FLAG: the order type switch is L3 Tabs (pill-group, toggle) but its choice also goes to another screen of the same page group.
+  const orderTypeTabs = (
+    <Tabs
+      appearance="pill-group"
+      size="md"
+      behavior="toggle"
+      // V3: each pill hugs its label (20 Nov, the user's call); V1 / V2 keep equal pills.
+      width={validityPlace === 'v3' ? 'hug' : 'fill'}
+      className={styles.orderTypes}
+      aria-label="Order type"
+      items={ORDER_TYPES}
+      value={tabValue}
+      onChange={(type) => {
+        const target = config.to?.[type]
+        if (type === config.type || !target) return
+        keypadOnSwitch = keypadRef.current
+        leaveTo(target)
+      }}
+    />
+  )
+
+  return (
+    <Phone label={forCurrentStock(config.label)} header={header} footer={footer} gesture="none" topLine>
+      <Stack
+        gap="16"
+        align="center"
+        className={styles.body}
+        inert={backdrop || undefined}
+        ref={bodyRef}
+      >
+        <Stack direction="horizontal" justify="center" align="center" gap="12" className={styles.typeRow}>
+          {/* Indian pad, Delivery / MTF: how long the order stays (Market Day / Instant, Limit Day / Instant / Year, SL Day /
+              Year). An A/B test (flow option "Validity switch", 20 Nov, the user's call): V2 · inside the order type's
+              track, after a short divider, the whole track centred; V1 · alone at the row's right edge, out of the flow,
+              so Market / Limit / SL stays centred. */}
+          {validity && validityPlace === 'v2' ? (
+            <Stack direction="horizontal" align="center" gap="04" className={styles.typeTrack}>
+              {orderTypeTabs}
+              <span className={styles.trackDivider} aria-hidden />
+              {/* An L3 action pill (a plain button that looks like an unselected pill), in a fixed-width slot as wide as
+                  the "Instant ⇕" pill (a hidden copy shares the cell): the pill keeps one width as it cycles, its label
+                  and icon centred together (20 Nov, the user's call). */}
+              <span className={styles.validitySlot}>
+                <span className={styles.validitySizer} inert aria-hidden>
+                  <Tab appearance="pill" emphasis="tertiary" action raised="none" iconRight={<Icon icon={lmSwitchArrowVertical} size={16} />}>Instant</Tab>
+                </span>
+                <Tab appearance="pill" emphasis="tertiary" action raised="none" className={styles.validityPill} iconRight={<Icon icon={lmSwitchArrowVertical} size={16} />} onClick={onValidity} aria-label={`Validity ${validityLabel}. Switch to ${validityNext}`}>
+                  {validityLabel}
+                </Tab>
+              </span>
+            </Stack>
+          ) : (
+            <>
+              {orderTypeTabs}
+              {validity && validityPlace === 'v1' && (
+                <Select size="sm" className={styles.validity} icon="swap" onClick={onValidity} aria-label={`Validity ${validityLabel}. Switch to ${validityNext}`}>
+                  {validityLabel}
+                </Select>
+              )}
+            </>
+          )}
+        </Stack>
+        <Stack gap="16" align="center" className={styles.fields}>
+          {/* The amount is the same on every order type: it stays put while the part under it dissolves. */}
+          <Stack gap="08" align="center">
+            {/* V3: Amount / Shares and the validity sit together above the amount, each hugging its label (20 Nov, the user's
+                call); when a label changes size the row re-centres with a slide (switchRowRef). */}
+            {validityPlace === 'v3' && (config.toggle || validity) && (
+              <Stack direction="horizontal" align="center" gap="12" className={styles.switchRow} ref={switchRowRef}>
+                {config.toggle && (
+                  <Select size="sm" subtle icon="swap" onClick={switchMode} aria-label={switchLabel}>
+                    {unitLabel}
+                  </Select>
+                )}
+                {config.toggle && validity && <span className={styles.trackDivider} aria-hidden />}
+                {validity && (
+                  <Select size="sm" subtle icon="swap" onClick={onValidity} aria-label={`Validity ${validityLabel}. Switch to ${validityNext}`}>
+                    {validityLabel}
+                  </Select>
+                )}
+              </Stack>
+            )}
+            <label className={styles.amountRow} data-error={fieldError || undefined}>
+              {mode === 'amount' && <span className={styles.prefix}>{symbol}</span>}
+              <input
+                className={styles.amount}
+                {...keypadFieldProps()}
+                autoFocus={startKeypad}
+                onFocus={pick('amount')}
+                onPointerDown={pick('amount')}
+                onBlur={keepFocus}
+                autoComplete="off"
+                aria-label={mode === 'amount' ? (india ? 'Amount in rupees' : 'Amount in dollars') : 'Number of shares'}
+                placeholder="0"
+                value={amountText}
+                size={Math.max(amountText.length, 1)}
+                onChange={() => undefined}
+              />
+              {keypad && active === 'amount' && <span className={styles.caret} aria-hidden="true" />}
+            </label>
+            {config.toggle && validityPlace !== 'v3' && (
+              <Select size="sm" subtle icon="swap" onClick={switchMode} aria-label={switchLabel}>
+                {unitLabel}
+              </Select>
+            )}
+          </Stack>
+          {/* The part that changes with the order type (chips, prices, SL): it dissolves — drops + fades out, rises + fades
+              in (19 Nov, the user's call: only this part moves; the tabs, the amount and the dock stay put). */}
+          <Stack gap="16" align="center" className={styles.fields} ref={fields}>
+          {chips && (
+            <Tabs
+              appearance="pill"
+              size="md"
+              behavior="filter"
+              aria-label={mode === 'amount' ? 'Add amount' : config.side === 'sell' ? 'Shares to sell' : 'Add shares'}
+              items={chips.map((chip, i) => ({ value: String(i), label: typeof chip.label === 'function' ? chip.label(money) : chip.label }))}
+              value=""
+              onChange={(label) => {
+                const chip = chips[Number(label)]
+                if (chip) applyChip(chip.apply)
+              }}
+            />
+          )}
+          {/* No helper line under the amount: the order's ₹ value is in the Buy / Sell button. Only an error shows here. */}
+          {derived.error && <p className={styles.error}>{forCurrentStock(derived.error)}</p>}
+          {/* Indian pad, Delivery Market on NSE only (production: "Boost returns by 4X"; leverage is MTF, which BSE doesn't
+              have): Minted's leverage card (Enable leverage upto 2x / 3x / 4x). */}
+          {india && indian.product === 'delivery' && indian.exchange === 'NSE' && config.type === 'market' && <LeverageCard />}
+          {/* Price cards (flow option "Price cards"): one card holding every price, a line between (merged, the default),
+              or a card per price (separate, the earlier design, kept for A/B). */}
+          {priceCards === 'merged' ? (
+            (config.prices ?? []).length > 0 && <PriceFieldBox>{(config.prices ?? []).map(priceRow)}</PriceFieldBox>
+          ) : (
+            (config.prices ?? []).map((price, i) => <PriceFieldBox key={price.label}>{priceRow(price, i)}</PriceFieldBox>)
+          )}
+          {/* Every order type (Market, Limit, SL), under the prices on Limit / SL: the TP/SL card and sheet (Tpsl.tsx), one
+              design for both pads (20 Nov, the user's call); the flow option "Order pad" picks what it offers — Indian:
+              TP/SL + trailing; US: Stop loss only, none on fractional shares ($100 of NVDA = 0.64 shares: a red line under it). */}
+          <TpslControl
+            order={tpslOrder}
+            features={padVersion === 'india' ? TPSL_INDIA : TPSL_US}
+            fractional={tpslOrder.qty > 0 && !Number.isInteger(Number(tpslOrder.qty.toFixed(4)))}
+          />
+        </Stack>
+          </Stack>
+      </Stack>
+      {sheet}
+      {feesOpen && <FeeBreakdownSheet orderUsd={orderValue} onClose={() => setFeesOpen(false)} />}
+    </Phone>
+  )
+}
+```
+
 ### `src/flows/us-stocks/screens/trade/OrderProcessing.tsx`
 
 ```tsx
-// T12 · Order processing: the spinner screen, which moves on to "Buy order executed" (T14) by itself after 2 s.
+// T12 · Order processing. V2 (the default): Minted's processing screen with its loader (OrderResultV2.tsx), which times
+// itself and turns into "Buy order executed" (T14). V1: the spinner screen that moves on to T14 after 2 s.
 import { OrderResult, useAutoAdvance } from './OrderResult'
+import { OrderProcessingV2 } from './OrderResultV2'
 import { tradeIds } from './ids'
 import { orderResults } from './orderResults'
+import { useOrderPadVersion } from './version'
 
 export function OrderProcessing({ backdrop }: { backdrop?: boolean }) {
+  const config = orderResults[tradeIds.T12]
+  return useOrderPadVersion() === 'v2' ? <OrderProcessingV2 config={config} backdrop={backdrop} /> : <OrderProcessingV1 backdrop={backdrop} />
+}
+
+function OrderProcessingV1({ backdrop }: { backdrop?: boolean }) {
   useAutoAdvance(tradeIds.T14, backdrop)
   return <OrderResult config={orderResults[tradeIds.T12]} />
 }
@@ -36119,9 +40011,13 @@ export function OrderProcessing({ backdrop }: { backdrop?: boolean }) {
 /* FLAG: layout is raw display:flex + gap/padding, not L3 Stack / Section / Inset; result art is an image, not the app's result pattern. */
 
 .content {
+  /* Centred in the space above the dock (processing, success, error): no top / bottom padding. */
+  min-height: 100%;
+  box-sizing: border-box;
+  justify-content: center;
   align-items: stretch;
   gap: var(--l3-spacing-24);
-  padding: calc(var(--l3-spacing-80) + var(--l3-spacing-08)) var(--l3-spacing-16) var(--l3-spacing-24);
+  padding: 0 var(--l3-spacing-16);
   flex-direction: column;
   display: flex;
 }
@@ -36133,23 +40029,6 @@ export function OrderProcessing({ backdrop }: { backdrop?: boolean }) {
 
 .art img {
   display: block;
-}
-
-.spinner {
-  color: var(--l3-content-accent-brand-default);
-  animation: spin var(--l3-motion-duration-spin) linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion:reduce) {
-  .spinner {
-    animation: none;
-  }
 }
 
 .title {
@@ -36183,18 +40062,22 @@ export function OrderProcessing({ backdrop }: { backdrop?: boolean }) {
 
 ```tsx
 // Order result screen: processing spinner, success tick or error cross, title, order rows, optional note and actions.
-// FLAG: layout is raw display:flex + gap/padding (OrderResult.module.css), not L3 Stack / Section / Inset.
-// FLAG: result art (success / error SVGs, hand-spun loading arc) is the teammate's, not an L3 / app result pattern.
+// OrderResult switches on the flow option "Order pad" (version.ts): V1 is OrderResultV1 below, V2 is OrderResultV2.tsx
+// (Minted's layout). useAutoAdvance lives here for both: processing (T12) goes through OrderResult.
+// FLAG (V1): layout is raw display:flex + gap/padding (OrderResult.module.css), not L3 Stack / Section / Inset.
+// FLAG: result art (success / error SVGs) is the teammate's, not an L3 / app result pattern.
 import { useEffect, useRef } from 'react'
 import { Button } from '@l3/components/Button'
 import { ButtonGroup } from '@l3/components/ButtonGroup'
 import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
+import { Loader } from '@l3/components/Loader'
 import { Phone } from '../../components/Phone'
 import { InlineSvg } from '../../components/InlineSvg'
 import { useUsNav } from '../../nav'
 import { Usd } from '../../../../shared/money'
-import { MaskImage } from '../money/components/MaskImage'
 import { forCurrentStock } from './format'
+import { OrderResultV2 } from './OrderResultV2'
+import { useOrderPadVersion } from './version'
 import type { OrderResultConfig } from './types'
 import styles from './OrderResult.module.css'
 
@@ -36212,6 +40095,10 @@ export function useAutoAdvance(to: string, backdrop?: boolean) {
 }
 
 export function OrderResult({ config }: { config: OrderResultConfig }) {
+  return useOrderPadVersion() === 'v2' ? <OrderResultV2 config={config} /> : <OrderResultV1 config={config} />
+}
+
+function OrderResultV1({ config }: { config: OrderResultConfig }) {
   const { back, go } = useUsNav()
   const exit = () => back(config.back)
   const footer = config.actions?.length ? (
@@ -36228,7 +40115,8 @@ export function OrderResult({ config }: { config: OrderResultConfig }) {
       <div className={styles.content}>
         <span className={styles.art} aria-hidden="true">
           {config.art === 'loading' ? (
-            <MaskImage src="assets/trade/loading-arc.svg" w={72} className={styles.spinner} />
+            // L3 Loader Large; the heading under it (role="status") says what's happening.
+            <Loader size="lg" label={null} />
           ) : (
             <InlineSvg src={`assets/trade/${config.art}.svg`} w={72} />
           )}
@@ -36245,6 +40133,1727 @@ export function OrderResult({ config }: { config: OrderResultConfig }) {
         {config.note && <p className={styles.note}>{forCurrentStock(config.note)}</p>}
       </div>
     </Phone>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/OrderResultV2.module.css`
+
+```css
+/* V2 order processing + result: Minted's processing → "Order Placed" screens (OrderResultV2.tsx).
+   Layout is L3 Stack / Section; this file holds what they have no prop for: the status glow, text styles, the sheet's
+   corners, and Minted's entrance motion.
+   FLAG (L3 gap): the glow and every timing below are Minted's (no L3 tokens for them). */
+
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* Soft status glow (Minted's green / red halo) at the foot of the summary: it rises from behind the sheet's top edge.
+   The anchor is a zero-height point in the flow right above the sheet; the sheet paints over the glow's lower half. */
+.glowAnchor { position: relative; height: 0; }
+/* Bigger (19 Nov) and breathing: it swells and fades in and out, slowly, for as long as the screen is open. */
+.glow {
+  position: absolute;
+  left: calc(-1 * var(--l3-spacing-16));
+  right: calc(-1 * var(--l3-spacing-16));
+  bottom: calc(-1 * var(--l3-size-48));
+  height: calc(var(--l3-size-128) * 2.25);
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  background: radial-gradient(ellipse 75% 80% at 50% 100%, color-mix(in srgb, var(--glow) 34%, transparent), transparent 72%);
+  animation: glowPulse 3.2s ease-in-out infinite;
+}
+.glow[data-status='success'] { --glow: var(--l3-content-accent-success-default); }
+.glow[data-status='error'] { --glow: var(--l3-content-accent-error-default); }
+
+/* The top bar has no fill (the screen is edge to edge, the OS status bar is see-through too).
+   L3 gap: Actionbar has no transparent option. */
+.clearBar.clearBar { background: transparent; }
+
+/* ---------- text ---------- */
+.lines { position: relative; text-align: center; }
+.side { margin: 0; font: var(--l3-text-label-14); color: var(--l3-content-secondary); }
+.heading { margin: 0; font: var(--l3-text-heading-24); color: var(--l3-content-primary); }
+.line { margin: 0; font: var(--l3-text-description-12); color: var(--l3-content-secondary); }
+.step { margin: 0; font: var(--l3-text-label-14); color: var(--l3-content-accent-success-default); }
+.note { margin: 0; font: var(--l3-text-description-12); color: var(--l3-content-secondary); text-align: center; }
+
+/* The divider under the heading: a subtle hairline in L3's light border (as on cards), 19 Nov. */
+.rule {
+  display: block;
+  width: 60%;
+  height: 1px;
+  background: var(--l3-border-light);
+}
+
+/* ---------- processing ---------- */
+.centre { flex: 1; padding-inline: var(--l3-spacing-16); }
+.rule[data-hidden] { visibility: hidden; }
+/* A line swapping in (step text, or the processing lines turning into the result's). */
+.swap { animation: fadeUp .35s cubic-bezier(.2, .8, .2, 1) both; }
+
+/* ---------- result ---------- */
+.summary { position: relative; padding: var(--l3-spacing-24) var(--l3-spacing-16); }
+/* Half and half (19 Nov): the summary takes the top half of the page under the top bar, centred in it; the sheet the
+   bottom half (both grow from 0, so they split the space evenly; content taller than its half still pushes). */
+.summary { flex: 1 1 0; display: flex; flex-direction: column; justify-content: center; }
+.sheet { flex: 1 1 0; }
+.badge { width: var(--l3-size-80); height: var(--l3-size-80); }
+
+/* The details sheet: white (surface default), rounded top corners, filling the rest down to the dock; over the glow. */
+.sheet {
+  position: relative;
+  z-index: 1;
+  background: var(--l3-surface-default); /* L3 gap: Section has no surface-default fill */
+  border-radius: var(--l3-radius-24) var(--l3-radius-24) 0 0;
+}
+
+/* ---------- entrance (Minted's playOrderPlaced) ----------
+   The summary starts at the middle of the screen (--rise) and rises to its place; the sheet and the dock come up.
+   fresh: the badge pops (60 ms), the lines fade in one by one (420 ms + 120 ms each), the rise at 1.45 s.
+   loader: handed over from the glass ring with everything showing, so the rise starts at once. */
+.page[data-enter] .summary { animation: rise .65s cubic-bezier(.6, 0, .2, 1) both; }
+.page[data-enter] .sheet { animation: sheetUp .6s cubic-bezier(.2, .8, .2, 1) .15s both; }
+.page[data-enter='fresh'] .summary { animation-delay: 1.45s; }
+.page[data-enter='fresh'] .sheet { animation-delay: 1.6s; }
+.page[data-enter='fresh'] .badge { animation: badgePop .5s cubic-bezier(.2, .9, .25, 1.35) 60ms both; }
+.page[data-enter='fresh'] .in { animation: fadeUp .45s ease calc(420ms + var(--i, 0) * 120ms) both; }
+.page[data-enter='loader'] .sheet { animation-name: sheetIn; animation-delay: .1s; }
+/* The glow fades in as the sheet arrives. */
+.page[data-enter] .glowAnchor { animation: fadeIn .6s ease .4s both; }
+.page[data-enter='fresh'] .glowAnchor { animation-delay: 1.8s; }
+
+/* The dock comes up with the sheet (it sits in the phone's footer, outside .page). */
+.dock { animation: sheetUp .6s cubic-bezier(.2, .8, .2, 1) 1.7s both; }
+:global(section):has(.page[data-enter='loader']) .dock { animation-delay: .25s; }
+:global(section):has(.page:not([data-enter])) .dock { animation: none; }
+
+@keyframes rise { from { transform: translateY(var(--rise)); } to { transform: none; } }
+@keyframes sheetUp { from { opacity: 0; transform: translateY(var(--l3-spacing-64)); } to { opacity: 1; transform: none; } }
+@keyframes sheetIn { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes badgePop { 0% { opacity: 0; transform: scale(.6); } 60% { opacity: 1; } 100% { opacity: 1; transform: scale(1); } }
+@keyframes glowPulse { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .page *, .dock, .swap { animation: none !important; }
+}
+```
+
+### `src/flows/us-stocks/screens/trade/OrderResultV2.tsx`
+
+```tsx
+// Order processing + result, V2: Minted's design (~/minted prototype: the processing screen whose loader turns into
+// "Order Placed" / "Order Failed", s06 / s16), imported 19 Nov — the user's call: "import the Minted app layout &
+// design, only the content will change as per our requirements" + "it has some loader also, import those also".
+// Content stays Lemonn's (orderResults.ts).
+//
+//  · Processing (T12, OrderProcessingV2): no top bar, no back (19 Nov: the order can't be left half-placed); centred, Minted's loader (flow option "Processing animation",
+//    OrderLoader.tsx) over "Buy NVDA", "Order in progress" and "It will take less than a minute" (no progress bar since 19 Nov).
+//    With the glass ring (the default) the screen turns into the result in place: the ring gives way to the
+//    tick badge with a burst, the lines become the result's, then the result screen (T14) takes over — same page, no
+//    slide — its summary rises to the top and the details sheet comes up. The other loaders show "Processing your
+//    order" with rotating steps, then hand over like Minted's: the result screen plays its own entrance.
+//  · Result (T13–T15, H06, H07, OrderResultV2): back arrow — to the page the order started from, skipping the pad and
+//    processing; the badge (tick or alert), the side line, the heading
+//    ("Order Executed"), a fading hairline and one line under it; then a rounded white sheet (no handle, 19 Nov) holding
+//    Lemonn's order rows + note, with a soft status glow rising from behind its top edge; actions in the dock.
+//    Minted's "sell automatically" chips and "Similar Assets" aren't built: Lemonn has neither.
+// FLAG (L3 gap): the status glow, the badge and the entrance choreography are local (Minted's timings); L3 has none.
+// Edge to edge (19 Nov, the user's call): no fill on the top bar or the OS status bar. FLAG (L3 gap): Actionbar has no
+// transparent option — its fill is cleared locally (.clearBar).
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Actionbar } from '@l3/components/Actionbar'
+import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
+import { Section } from '@l3/components/Section'
+import { Stack } from '@l3/components/Stack'
+import { Phone } from '../../components/Phone'
+import { useUsNav } from '../../nav'
+import { Usd } from '../../../../shared/money'
+import { currentStock } from '../../data'
+import { forCurrentStock } from './format'
+import { tradeIds } from './ids'
+import { OrderLoader, ResultBadge, type LoaderPhase } from './OrderLoader'
+import { orderResults } from './orderResults'
+import { useProcessingAnimation } from './version'
+import type { OrderResultConfig } from './types'
+import styles from './OrderResultV2.module.css'
+
+/** "Buy NVDA" / "Sell NVDA", read from the config's label or title; undefined when the screen has no side. */
+function sideLine(config: OrderResultConfig): string | undefined {
+  const side = /\b(buy|sell)\b/i.exec(`${config.label} ${config.title}`)?.[1]
+  if (!side) return undefined
+  return `${side[0].toUpperCase()}${side.slice(1).toLowerCase()} ${currentStock().sym}`
+}
+
+/** "Yay! Buy Order Executed" → "Order Executed"; "Oops! Sell Order not Placed" → "Order not Placed" (the side is in the line above). */
+const headingOf = (title: string) => forCurrentStock(title).replace(/^(Yay!|Oops!)\s*/, '').replace(/^(Buy|Sell)\s+/i, '')
+
+/** The order's own screens (pads, processing, results) — what Back on a result skips over. */
+const orderScreens = new Set<string>(Object.entries(tradeIds).filter(([k]) => !k.startsWith('stock')).map(([, f]) => f))
+const isOrderScreen = (figma: string) => orderScreens.has(figma)
+
+/** Where processing goes: the buy order executed (T14). */
+const NEXT = tradeIds.T14
+/** The non-glass loaders' rotating step lines (Minted's). */
+const STEPS = ['Placing your order', 'Confirming with the exchange', 'Almost done']
+
+// Glass ring timeline (Minted's, ms from the start): the bar fills, the ring settles, the badge takes its place and the
+// lines turn into the result's, then the result screen takes over.
+const GLASS = { fill: 4300, settle: 4850, done: 5100, hand: 5900 }
+// The other loaders: steps every 0.9 s, the radar closes into a tick at 3.05 s, the result screen at 3.6 s.
+const OTHER = { step: 900, done: 3050, hand: 3600 }
+
+/** Set when the glass ring hands over: the result screen starts with its summary where the loader's was. */
+let fromLoader = false
+
+/** Prototype timers, cleared on unmount; nothing runs when the screen is only drawn behind another one. */
+function useTimeline(steps: [number, () => void][], active: boolean) {
+  const ref = useRef(steps)
+  ref.current = steps
+  useEffect(() => {
+    if (!active) return
+    const timers = ref.current.map(([ms], i) => setTimeout(() => ref.current[i][1](), ms))
+    return () => timers.forEach(clearTimeout)
+  }, [active])
+}
+
+export function OrderProcessingV2({ config, backdrop }: { config: OrderResultConfig; backdrop?: boolean }) {
+  const { go } = useUsNav()
+  const variant = useProcessingAnimation()
+  const glass = variant === 'glass'
+  const stock = currentStock()
+  const result = orderResults[NEXT]
+  const [phase, setPhase] = useState<LoaderPhase>('run')
+  const [step, setStep] = useState(0)
+  const side = `Buy ${stock.sym}`
+  const amount = result.rows.find(([k]) => k === 'Order Value')?.[1] ?? ''
+
+  useTimeline(glass ? [
+    [GLASS.settle, () => setPhase('settle')],
+    [GLASS.done, () => setPhase('done')],
+    [GLASS.hand, () => { fromLoader = true; go(NEXT) }],
+  ] : [
+    [OTHER.step, () => setStep(1)],
+    [OTHER.step * 2, () => setStep(2)],
+    [OTHER.done, () => { if (variant === 'radar') setPhase('done') }],
+    [OTHER.hand, () => go(NEXT)],
+  ], !backdrop)
+
+  const done = phase === 'done'
+  return (
+    <Phone
+      label={forCurrentStock(config.label)}
+      edgeToEdge
+      gesture="none"
+    >
+      <div className={styles.page}>
+        <Stack className={styles.centre} align="center" justify="center" role="status">
+          <Stack align="center" gap="16">
+            <OrderLoader variant={variant} phase={phase} outcome="success" symbol={stock.sym} side="Buy" amount={amount} />
+            {glass ? (
+              <Stack align="center" gap="08" className={styles.lines}>
+                <p className={styles.side}>{side}</p>
+                <h1 className={[styles.heading, done && styles.swap].filter(Boolean).join(' ')} key={done ? 'r' : 'p'}>
+                  {done ? headingOf(result.title) : forCurrentStock(config.title)}
+                </h1>
+                {/* No progress bar (19 Nov, the user's call): the result's hairline keeps its place, hidden until done. */}
+                <span className={[styles.rule, done && styles.swap].filter(Boolean).join(' ')} data-hidden={!done || undefined} aria-hidden="true" key={done ? 'rr' : 'pr'} />
+                <p className={[styles.line, done && styles.swap].filter(Boolean).join(' ')} key={done ? 'rl' : 'pl'}>
+                  {done ? forCurrentStock(result.description) : forCurrentStock(config.description)}
+                </p>
+              </Stack>
+            ) : (
+              <Stack align="center" gap="08" className={styles.lines}>
+                <h1 className={styles.heading}>Processing your order</h1>
+                <p className={styles.side}>{side}{amount && ` · ${amount}`}</p>
+                <p className={[styles.step, styles.swap].join(' ')} key={step}>{STEPS[step]}</p>
+              </Stack>
+            )}
+          </Stack>
+        </Stack>
+      </div>
+    </Phone>
+  )
+}
+
+export function OrderResultV2({ config }: { config: OrderResultConfig }) {
+  const { leave, go } = useUsNav()
+  // Back leaves the whole order (pad, processing, result): to the page the order was started from (the stock or ETF
+  // page), or the stock page when the result was opened straight from the list (19 Nov, the user's call).
+  const exit = () => leave(isOrderScreen, config.back)
+  const side = sideLine(config)
+  const outcome = config.art === 'error' ? 'error' : 'success'
+
+  // Entrance (Minted's "Order Placed"): the summary starts at the middle of the screen and rises to its place while the
+  // sheet and the dock come up. From the glass ring it's already showing; otherwise the badge pops in and the lines fade
+  // in first.
+  const [enter] = useState<'loader' | 'fresh'>(() => (fromLoader ? 'loader' : 'fresh'))
+  useEffect(() => { fromLoader = false }, [])
+  const [entering, setEntering] = useState(true)
+  const [rise, setRise] = useState<number | null>(null)
+  // Measured when the summary is attached (the Phone mounts its body after the screen's first commit).
+  const measure = useCallback((summary: HTMLDivElement | null) => {
+    const page = summary?.parentElement
+    const screen = page?.closest('[data-part="page"]')
+    if (!summary || !page || !screen) return
+    // The middle of the area under the top bar, where the processing screen centres its summary.
+    const target = (page.getBoundingClientRect().top + screen.getBoundingClientRect().bottom) / 2
+    const box = summary.getBoundingClientRect()
+    setRise(Math.max(0, Math.round(target - (box.top + box.height / 2))))
+  }, [])
+  useEffect(() => {
+    const timer = setTimeout(() => setEntering(false), enter === 'loader' ? 1400 : 2900)
+    return () => clearTimeout(timer)
+  }, [enter])
+
+  const footer = config.actions?.length ? (
+    <div className={styles.dock}>
+      <ButtonGroup direction="horizontal" aria-label="Order result">
+        {config.actions.map((action) => (
+          <Button key={action.label} variant={action.variant} size="lg" onClick={action.to ? () => go(action.to!) : action.exit ? exit : undefined}>
+            {action.label}
+          </Button>
+        ))}
+      </ButtonGroup>
+    </div>
+  ) : undefined
+
+  return (
+    <Phone
+      label={forCurrentStock(config.label)}
+      header={<Actionbar className={styles.clearBar} onBack={exit} />}
+      edgeToEdge
+      footer={footer}
+      gesture="none"
+    >
+      <div
+        className={styles.page}
+        data-status={outcome}
+        data-enter={entering && rise !== null ? enter : undefined}
+        style={{ '--rise': `${rise ?? 0}px` } as CSSProperties}
+      >
+        <div ref={measure} className={styles.summary}>
+          <Stack align="center" gap="16">
+            <ResultBadge outcome={outcome} className={styles.badge} />
+            <Stack align="center" gap="08" className={styles.lines}>
+              {side && <p className={[styles.side, styles.in].join(' ')} style={{ '--i': 0 } as CSSProperties}>{side}</p>}
+              <h1 className={[styles.heading, styles.in].join(' ')} style={{ '--i': 1 } as CSSProperties}>{headingOf(config.title)}</h1>
+              <span className={[styles.rule, styles.in].join(' ')} style={{ '--i': 2 } as CSSProperties} aria-hidden="true" />
+              <p className={[styles.line, styles.in].join(' ')} style={{ '--i': 3 } as CSSProperties}>{forCurrentStock(config.description)}</p>
+            </Stack>
+          </Stack>
+        </div>
+        {/* The status glow sits at the foot of the summary, half behind the sheet's top edge. */}
+        <span className={styles.glowAnchor} aria-hidden="true">
+          <span className={styles.glow} data-status={outcome} />
+        </span>
+        <Section className={styles.sheet} padding="16" gap="16">
+          <KeyValueList variant="card" size="md" aria-label="Order details">
+            {config.rows.map(([label, value]) => (
+              <KeyValueRow key={label} label={label} value={<Usd text={value} align="end" />} />
+            ))}
+          </KeyValueList>
+          {config.note && <p className={styles.note}>{forCurrentStock(config.note)}</p>}
+        </Section>
+      </div>
+    </Phone>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/PadCard.module.css`
+
+```css
+/* Pad card (PadCard.tsx): the leverage and TP/SL cards on the order pad, one look. */
+
+/* gap 0: L3 Card's own gap would leave 8 under the head while nothing shows below it. */
+.card { align-self: stretch; overflow: hidden; gap: 0; }
+/* Raised (soft) on the card: the white-fill sheen (as L3's white pills), and the card's 1px border-light kept as the
+   Raised stroke. The wrapper is display: contents so the card stays the Stack's child. */
+.raisedWrap { display: contents; }
+.card[data-raised] {
+  --raise-border: var(--l3-border-light);
+  --raise-sheen-top: var(--raise-soft-on-white-top);
+  --raise-sheen-bottom: var(--raise-soft-on-white-bottom);
+}
+/* Dark: L3's soft raise (5% white sheen and top edge) barely shows on the dark card, so it's a step stronger here — a
+   10% sheen, a 15% top edge, a 30% bottom shade (the user's call, 19 Nov). Light is unchanged.
+   L3 gap: Raised soft is too faint on dark surfaces; no level between soft and strong. */
+[data-mode='dark'] .card[data-raised] {
+  --raise-sheen-top: rgb(from var(--l3-static-white) r g b / var(--l3-opacity-10));
+  --raise-highlight: rgb(from var(--l3-static-white) r g b / var(--l3-opacity-15));
+  --raise-shade: rgb(from var(--l3-static-black) r g b / var(--l3-opacity-30));
+}
+
+/* The head row: 56 tall, 12 in from the sides, tile · title · control 12 apart. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-12);
+  height: var(--l3-size-56);
+  padding: 0 var(--l3-spacing-12);
+  cursor: pointer;
+}
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--l3-spacing-04);
+  font: var(--l3-text-label-14);
+  color: var(--l3-content-primary);
+  white-space: nowrap;
+}
+
+/* The icon on a 32 tile in its accent's light surface (Minted's tile). */
+.tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--l3-size-32);
+  height: var(--l3-size-32);
+  border-radius: var(--l3-radius-08);
+  /* A 1px white edge (surface/primary; the user's call), inside the 32. */
+  box-sizing: border-box;
+  border: 1px solid var(--l3-surface-primary);
+}
+/* The tile's fill: its accent's default surface at 20% (the user's call, 19 Nov), not the -light surface. */
+.tile[data-tone='success'] { background: rgb(from var(--l3-surface-accent-success-default) r g b / var(--l3-opacity-20)); color: var(--l3-content-accent-success-default); }
+.tile[data-tone='discover'] { background: rgb(from var(--l3-surface-accent-discover-default) r g b / var(--l3-opacity-20)); color: var(--l3-content-accent-discover-default); }
+```
+
+### `src/flows/us-stocks/screens/trade/PadCard.tsx`
+
+```tsx
+// Pad card: the order pad's toggle cards, leverage and TP/SL, in one look (19 Nov, the user's call: "use the same style
+// and layout … sync both the cards"). Minted's leverage card (Figma 8870:209735) is the model:
+//   an L3 Card, Raised soft · a 56 head row: an icon on a 32 tile, the title (Label 14), the control at the right ·
+//   then, optionally, whatever the card shows under its head.
+// FLAG: the icon tile is hand-made (PadCard.module.css); L3 has none. L3 gap: Card has no `raised` prop and passes no
+// attributes, so Raised goes on the card's element from a display: contents wrapper.
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { Card } from '@l3/components/Card'
+import { Icon, type IconProps } from '@l3/components/Icon'
+import { raised } from '@l3/components/Raised'
+import styles from './PadCard.module.css'
+
+/** The card: an L3 Card (padding none), Raised soft. */
+export function PadCard({ children, className, 'aria-label': ariaLabel }: { children: ReactNode; className?: string; 'aria-label'?: string }) {
+  const wrap = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const card = wrap.current?.firstElementChild
+    Object.entries(raised('soft')).forEach(([k, v]) => card?.setAttribute(k, v))
+  }, [])
+  return (
+    <div ref={wrap} className={styles.raisedWrap}>
+      <Card padding="none" className={[styles.card, className].filter(Boolean).join(' ')} aria-label={ariaLabel}>
+        {children}
+      </Card>
+    </div>
+  )
+}
+
+/** The icon on its 32 tile: success (leverage) or discover (TP/SL). */
+export function PadCardTile({ icon, tone }: { icon: IconProps['icon']; tone: 'success' | 'discover' }) {
+  return (
+    <span className={styles.tile} data-tone={tone} aria-hidden="true">
+      <Icon icon={icon} size={20} />
+    </span>
+  )
+}
+
+/** Class names for the head row (a div or a <label>, so the caller picks the tap target) and its title. */
+export const padCard = { head: styles.head, title: styles.title }
+```
+
+### `src/flows/us-stocks/screens/trade/PriceField.module.css`
+
+```css
+/* Price field (PriceField.tsx): one box, rows 12 padded all round, a hairline between rows. */
+
+/* L3 Card (padding none: the rows bring the 12), its own 8 gap off — the hairline separates rows. */
+.box { gap: 0; }
+/* With an error the border is red. L3 gap: Card has no error state — its border variable is set here. */
+.boxError.boxError { --card-border: inset 0 0 0 1px var(--l3-border-accent-error-default); }
+
+.row { padding: var(--l3-spacing-12); }
+.row + .row { border-top: 1px solid var(--l3-border-light); } /* 1px hairline */
+
+/* The tap target for typing: the left part of the row, out to the box's left, top and bottom edges. */
+.text { flex: 1; min-width: 0; align-self: stretch; margin: calc(-1 * var(--l3-spacing-12)) 0 calc(-1 * var(--l3-spacing-12)) calc(-1 * var(--l3-spacing-12)); padding: var(--l3-spacing-12) 0 var(--l3-spacing-12) var(--l3-spacing-12); cursor: text; }
+.label { font: var(--l3-text-description-12); color: var(--l3-content-secondary); }
+.hint { font: var(--l3-text-description-14); color: var(--l3-content-secondary); }
+.value { display: flex; align-items: center; font: var(--l3-text-heading-16); color: var(--l3-content-primary); }
+/* A raw input sized to its text; the native caret is hidden and drawn instead (it only paints while the page has
+   focus and hides in captures), as L3 TextField's Typing state. */
+.input { min-width: 0; height: var(--l3-size-24); margin: 0; padding: 0; border: 0; outline: none; background: none; font: inherit; color: inherit; field-sizing: content; caret-color: transparent; }
+.input::placeholder { color: var(--l3-content-secondary); opacity: 1; }
+.caret { width: 2px; height: var(--l3-size-20); margin-left: var(--l3-spacing-02); background: var(--l3-content-accent-discover-default); animation: caretBlink 1s steps(1) infinite; }
+.caret[data-start] { margin: 0 var(--l3-spacing-02) 0 0; }
+@keyframes caretBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+
+/* On the Stepper's grey pill, L3's light-blue Small buttons blur into it: the enabled ± are white with the blue icon.
+   L3 gap: Stepper has no on-grey button option. */
+.stepper.stepper[data-size] button:not(:disabled) { background: var(--l3-surface-primary); color: var(--l3-content-accent-discover-default); }
+```
+
+### `src/flows/us-stocks/screens/trade/PriceField.tsx`
+
+```tsx
+// Price field — the US Stocks trade screens' price card, one component for every use (19 Nov, the user's call: "make it
+// a component … same padding 12 in all cards"). Before, each screen drew its own (12 / 16 padding, filled or outlined).
+//
+// The uses it covers (audited 19 Nov):
+//  1. Order pad V2, Limit / SL order prices (OrderPadV2): label ("Limit price"), the typed $ price, a % Stepper. One box
+//     per price, or one box holding every price with a hairline between (flow option "Price cards").
+//  2. TP/SL sheet, trigger / limit rows (Tpsl LegCard): label + a unit switch (Points ⇄ Percentage) on the trigger row;
+//     empty ("Enter price" placeholder, the caret at its start, "--" in the Stepper); the box red with an error.
+//  3. Trailing TP / SL sheet (Tpsl TrailSheet): no typed price — a hint ("Trailing TP will move in") over a Medium unit
+//     switch; the Stepper is the value.
+//  4. Indian order pad, SL's second price (20 Nov): its unit switch is the label (Limit ⇄ Market); at Market the row
+//     shows a fixed "At market", with no typed price and no Stepper (`fixed`).
+//
+// Anatomy: PriceFieldBox (an L3 Card, padding none) holds one or more PriceField rows. Every row is 12 padded all round
+// and the box puts a 1px hairline between rows. The left part of a row (label + price, to the box's edges) is the tap
+// target for typing the price from the app keypad; the Stepper sits at the right.
+import type { InputHTMLAttributes, ReactNode } from 'react'
+import { Card } from '@l3/components/Card'
+import type { CardSurface } from '@l3/components/Card/Card'
+import { Select } from '@l3/components/Select'
+import { Stack } from '@l3/components/Stack'
+import { Stepper, type StepperProps } from '@l3/components/Stepper'
+import { keypadFieldProps } from '../../../../shared/ui/Keyboard'
+import { usePadSymbol } from './padMoney'
+import styles from './PriceField.module.css'
+
+/** The box round one or more PriceField rows. `error`: the border turns red (the message goes under the box).
+ *  `surface`: the card's background (L3 Card's; default surface/default). */
+export function PriceFieldBox({ error = false, surface, children, className }: { error?: boolean; surface?: CardSurface; children: ReactNode; className?: string }) {
+  return (
+    <Card padding="none" surface={surface} className={[styles.box, error && styles.boxError, className].filter(Boolean).join(' ')}>
+      {children}
+    </Card>
+  )
+}
+
+/** A unit switch on the row (Points ⇄ Percentage): an L3 Select with the swap icon. */
+export type PriceFieldUnit = { label: string; onSwitch: () => void; 'aria-label': string }
+
+/** The typed price (uses 1 and 2). */
+export type PriceFieldPrice = {
+  /** What's typed / the price, without the "$" ('' shows the placeholder). */
+  text: string
+  placeholder?: string
+  /** This is the keypad's field: the drawn caret shows (at the placeholder's start when empty, after the text when not). */
+  typing: boolean
+  'aria-label': string
+  /** The row was tapped or the input focused: make this the keypad's field. */
+  onPick: (input: HTMLInputElement) => void
+  /** Extra input handlers (e.g. the pad keeps focus on blur). */
+  inputProps?: Pick<InputHTMLAttributes<HTMLInputElement>, 'onBlur'>
+}
+
+export type PriceFieldProps = {
+  /** "Limit price", "Trigger at", or the trail's hint ("Trailing TP will move in"). */
+  label: string
+  unit?: PriceFieldUnit
+  /** Omit for a stepper-only row (use 3): the unit switch then sits under the label, at Medium. */
+  price?: PriceFieldPrice
+  /** The L3 Small Stepper at the right (its ± buttons are white on the grey pill). */
+  stepper?: Omit<StepperProps, 'size'>
+  /** A value that can't be typed ("At market", use 4): shown in place of the price; no Stepper. */
+  fixed?: string
+}
+
+export function PriceField({ label, unit, price, stepper, fixed }: PriceFieldProps) {
+  // $ on the US pad, ₹ on the Indian pad (padMoney.tsx).
+  const symbol = usePadSymbol()
+  const stepperEl = stepper && <Stepper {...stepper} size="sm" className={[styles.stepper, stepper.className].filter(Boolean).join(' ')} />
+  const labelEl = (
+    <Stack direction="horizontal" align="center" gap="04">
+      {label && <span className={styles.label}>{label}</span>}
+      {unit && <Select size="sm" icon="swap" onClick={unit.onSwitch} aria-label={unit['aria-label']}>{unit.label}</Select>}
+    </Stack>
+  )
+  if (fixed !== undefined) {
+    return (
+      <Stack gap="04" className={styles.row}>
+        {labelEl}
+        <span className={styles.value}>{fixed}</span>
+      </Stack>
+    )
+  }
+  if (!price) {
+    return (
+      <Stack direction="horizontal" justify="between" align="center" gap="12" className={styles.row}>
+        <Stack gap="04">
+          <span className={styles.hint}>{label}</span>
+          {unit && <Select size="md" icon="swap" onClick={unit.onSwitch} aria-label={unit['aria-label']}>{unit.label}</Select>}
+        </Stack>
+        {stepperEl}
+      </Stack>
+    )
+  }
+  const empty = price.text === ''
+  return (
+    <Stack direction="horizontal" justify="between" align="center" gap="08" className={styles.row} data-price-field>
+      <Stack
+        gap="04"
+        className={styles.text}
+        onPointerDown={(e) => {
+          const input = e.currentTarget.querySelector('input')
+          if (!input || (e.target as HTMLElement).closest('button')) return
+          if (e.target !== input) e.preventDefault()
+          input.focus({ preventScroll: true })
+          price.onPick(input)
+        }}
+      >
+        {labelEl}
+        {/* FLAG: a raw input (L3 has no inline price field), typed from the shared app Keyboard. */}
+        <label className={styles.value} data-empty={empty || undefined}>
+          {!empty && <span>{symbol}</span>}
+          {price.typing && empty && <span className={styles.caret} data-start aria-hidden="true" />}
+          <input
+            className={styles.input}
+            {...keypadFieldProps()}
+            autoComplete="off"
+            aria-label={price['aria-label']}
+            placeholder={price.placeholder}
+            value={price.text}
+            onFocus={(e) => price.onPick(e.currentTarget)}
+            onChange={() => undefined}
+            {...price.inputProps}
+          />
+          {price.typing && !empty && <span className={styles.caret} aria-hidden="true" />}
+        </label>
+      </Stack>
+      {stepperEl}
+    </Stack>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/Tpsl.module.css`
+
+```css
+/* TP/SL on the Market pad (Tpsl.tsx). */
+
+/* The pad card (off and set): PadCard, shared with the leverage card. Once set, the targets sit under its head. */
+.ok { color: var(--l3-content-accent-success-default); }
+.summaryBody { padding: var(--l3-spacing-12); border-top: 1px solid var(--l3-border-light); }
+.legLabel { display: inline-flex; align-items: center; gap: var(--l3-spacing-06); }
+.legValue { display: inline-flex; align-items: baseline; gap: var(--l3-spacing-04); }
+
+/* The control: the pad card + the "not on fractional shares" line under it (US). The line's 8 rides in its collapse. */
+.control { align-self: stretch; }
+.blocked { padding-top: var(--l3-spacing-08); }
+/* A tap on the card while blocked shakes the line (side to side, 4 each way, settling; L3's long duration). The first
+   time it waits for the line to finish opening (medium). L3 gap: no shake / error-attention motion. */
+.blocked[data-shake] { animation: shake var(--l3-motion-duration-long) var(--l3-motion-easing-standard); }
+.blocked[data-shake='after-open'] { animation-delay: var(--l3-motion-duration-medium); }
+@keyframes shake {
+  15% { transform: translateX(calc(-1 * var(--l3-spacing-04))); }
+  35% { transform: translateX(var(--l3-spacing-04)); }
+  55% { transform: translateX(calc(-1 * var(--l3-spacing-04))); }
+  75% { transform: translateX(calc(var(--l3-spacing-04) / 2)); }
+  90% { transform: translateX(calc(-1 * var(--l3-spacing-04) / 2)); }
+}
+@media (prefers-reduced-motion: reduce) { .blocked[data-shake] { animation: none; } }
+/* The red line's collapse clips only top and bottom, so the shake's side swing isn't cut off. */
+.collapseInner:has(> .blocked) { overflow: visible clip; }
+
+/* A leg card in the sheet. */
+.leg { gap: 0; }
+/* The card's head: name (+ MKT / LMT once on) and the switch, the card's 12 padding. Off, it's a <label> (no Stack: L3
+   Stack renders a div) so a tap anywhere on the card turns the leg on. */
+.head { padding: var(--l3-spacing-12); }
+.head[data-off] { display: flex; align-items: center; justify-content: space-between; gap: var(--l3-spacing-08); cursor: pointer; }
+.body { padding: 0 var(--l3-spacing-12) var(--l3-spacing-12); }
+.fadeIn { animation: fadeIn var(--l3-motion-duration-medium) var(--l3-motion-easing-standard); }
+@keyframes fadeIn { from { opacity: 0; } }
+
+/* Expand / collapse: the row track animates 0fr ⇄ 1fr (the content's own height), the inner box clips it. L3 gap: no
+   Collapse / Accordion part, so it's done here with L3's motion tokens. */
+.collapse { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--l3-motion-duration-medium) var(--l3-motion-easing-standard), opacity var(--l3-motion-duration-short) var(--l3-motion-easing-standard); }
+.collapse[data-open] { grid-template-rows: 1fr; opacity: 1; }
+.collapseInner { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .collapse, .fadeIn { transition: none; animation: none; } }
+
+.legName { font: var(--l3-text-label-14); color: var(--l3-content-primary); }
+
+
+.stockName { font: var(--l3-text-label-14); color: var(--l3-content-primary); }
+.stockPrice { font: var(--l3-text-label-14); color: var(--l3-content-primary); }
+
+
+/* Under each card: est. profit / loss (or the error) and Clear. Clear's ghost padding is pulled back so it lines up. */
+.estRow { min-height: var(--l3-size-24); padding: var(--l3-spacing-08) 0 0 var(--l3-spacing-04); } /* the 8 above it rides in the collapse */
+.error { margin: 0; font: var(--l3-text-label-12); color: var(--l3-content-accent-error-default); }
+
+
+.target { margin: 0; font: var(--l3-text-description-12); color: var(--l3-content-secondary); }
+.up { font: var(--l3-text-label-12); color: var(--l3-content-accent-success-default); }
+.down { font: var(--l3-text-label-12); color: var(--l3-content-accent-error-default); }
+
+/* Trailing row under a dashed line (Figma). The label is the checkbox's 48 tap target tall, pulled in 12 so its
+   invisible input stays inside the card and the sheet doesn't scroll. */
+.trailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed var(--l3-border-light);
+  margin-bottom: calc(-1 * var(--l3-spacing-12));
+}
+.check {
+  min-height: var(--l3-size-tap-target);
+  display: flex;
+  align-items: center;
+  gap: var(--l3-spacing-08);
+  font: var(--l3-text-label-14);
+  color: var(--l3-content-primary);
+  cursor: pointer;
+}
+
+
+/* The trailing sheet's checkbox row, in the dock above Save (Figma): as tall as its text, the 48 tap target kept with
+   padding pulled back by negative margins; 16 from Save. */
+.checkSnug.checkSnug {
+  justify-content: center;
+  font: var(--l3-text-label-14);
+  min-height: 0;
+  padding-block: var(--l3-spacing-12);
+  margin-block: calc(-1 * var(--l3-spacing-12)) calc(var(--l3-spacing-04) - var(--l3-spacing-12));
+}
+
+/* The trailing row's "Edit": a ghost Button in the discover blue, so it reads as a link. L3 gap: no link-style Button. */
+.edit.edit { color: var(--l3-content-accent-discover-default); }
+
+/* The leg's order-type switch (LMT ⇄ MKT, top of each card) is discover blue so it reads as tappable; the other
+   Selects stay primary (the user's call). L3 gap: Select has only primary and subtle (secondary). */
+.select.select { color: var(--l3-content-accent-discover-default); }
+
+/* A price field's label ("Trigger at", "Limit at"): Description 12, secondary (the user's call). */
+```
+
+### `src/flows/us-stocks/screens/trade/Tpsl.tsx`
+
+```tsx
+// TP/SL on the order pad — Market, Limit and SL (19 Nov, the user's call, from the Lemonn auto TP/SL designs: Figma 4292:34063 sheet,
+// 4292:33108 trailing sheet, 4292:35483 summary card).
+// - Before it's set: a full-width card, "TP/SL" and a Switch, under the leverage card (19 Nov, the user's call; the US
+//   pad's Stop loss is the same). Turning it on opens the sheet; closing without Save leaves it off.
+// - The sheet "Set TP/SL" has a card each for Take profit and Stop loss — on / off (Switch), LMT ⇄ MKT, the trigger in
+//   points ⇄ percentage (Stepper), a limit (limit orders only), and a trailing option. From the production app: the
+//   stock + qty row, prices typed from the keypad, Est. profit / loss, Clear, and its error messages (Save off till valid). Ticking
+//   "Trailing …" (or Edit) opens the second sheet, "Trailing TP / SL" (Figma 4494:29124): its own points ⇄ percentage
+//   switch over the trail on a large Stepper, typed from the keypad, with "Make trailing … your default". Save sets TP/SL; closing without Save changes nothing.
+// - Once set: the same card, "TP/SL ✓" (same title, a check), an edit button in the Switch's place (reopens the sheet),
+//   and each leg that's on with its target price and % from the last price. Turning both legs off and saving brings the
+//   off card back.
+// Differs from Figma: "Set TP/SL" for this order (Figma's "Set Auto TP/SL … all new orders" is a setting), US prices
+// in $ and points; the summary card says "TP/SL", not "Advance options", and tags each leg Limit / Market (not "Auto").
+// One design for both pads (20 Nov, the user's call: "design wise it will be same in both versions. Only we need to
+// control the content and the features"): the card and the sheet are the same; `TpslFeatures` says what a market
+// offers. Indian pad (TPSL_INDIA): take profit + stop loss + trailing SL. US pad (TPSL_US): the stop loss only, no
+// trailing, named "Stop loss", and none on fractional shares (turning it on with one shows a red line under the card
+// instead of the sheet; a set SL is cleared if the quantity turns fractional).
+// Prototype only: TP/SL doesn't change the dock or the order.
+// FLAG: copy hard-coded like the rest of the pad (no copy.ts in this flow yet). No ⓘ tooltips (Figma has them on
+// Limit and the trailing rows). The filled field box and hairlines are hand-laid (Tpsl.module.css).
+import { useEffect, useState } from 'react'
+import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Card } from '@l3/components/Card'
+import { Checkbox } from '@l3/components/Checkbox'
+import { Icon } from '@l3/components/Icon'
+import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
+import { PriceChange } from '@l3/components/PriceChange'
+import { Select } from '@l3/components/Select'
+import { Stack } from '@l3/components/Stack'
+import { Switch } from '@l3/components/Switch'
+import { Tag } from '@l3/components/Tag'
+import { msCheckCircleFill, msEdit } from '@l3/icons/material'
+import { lmAutoTpSl } from '@l3/icons/lemonnade'
+import { useSheetLayer } from '../../components/Phone'
+import { PadAmount, usePadMoney } from './padMoney'
+import { Keyboard, KeypadSlide, typeKey } from '../../../../shared/ui/Keyboard'
+import { PadCard, PadCardTile, padCard } from './PadCard'
+import { PriceField, PriceFieldBox } from './PriceField'
+import styles from './Tpsl.module.css'
+import { TpslSheetB } from './TpslSheetB'
+import { useTpslSheet } from './version'
+
+export type Side = 'tp' | 'sl'
+export type Unit = 'points' | 'percent'
+export type Field = 'trigger' | 'limitAt'
+/** One leg: take profit or stop loss. `trigger` / `limitAt` are the move from the last price in `unit` (points = $),
+ *  null = not entered yet ("Enter price"); `trail` is in its own `trailUnit`. */
+export type TpslLeg = { on: boolean; limit: boolean; unit: Unit; trigger: number | null; limitAt: number | null; trail: number | null; trailUnit: Unit }
+export type Tpsl = { tp: TpslLeg; sl: TpslLeg }
+/** The order TP/SL is for: the stock (symbol, last price, day change), its quantity in shares, and the buy price TP/SL
+ *  are checked against (`entry`: the last price on Market, the limit price on Limit / SL). */
+export type TpslOrder = { symbol: string; ltp: number; change: number; qty: number; entry: number }
+
+/** What the sheet opens with the first time (Figma's values; both legs Market — the user's call). */
+export const TPSL_START: Tpsl = {
+  tp: { on: true, limit: false, unit: 'points', trigger: 15, limitAt: 17, trail: null, trailUnit: 'points' },
+  // Trailing SL starts off (20 Nov, the user's call).
+  sl: { on: true, limit: false, unit: 'percent', trigger: 7, limitAt: 10, trail: null, trailUnit: 'percent' },
+}
+
+/** What a market's TP/SL offers: the content (names) and the features (legs, trailing, fractional shares). */
+export type TpslFeatures = {
+  /** The pad card's name. */
+  title: string
+  /** The sheet's heading. */
+  sheetTitle: string
+  /** The legs offered, in order. */
+  legs: Side[]
+  /** Trailing SL (the stop loss's trail). */
+  trailing: boolean
+  /** Whole shares only: no TP/SL on a fractional quantity. */
+  wholeShares: boolean
+}
+/** The Indian pad: take profit, stop loss and trailing SL. */
+export const TPSL_INDIA: TpslFeatures = { title: 'TP/SL', sheetTitle: 'TP SL & More', legs: ['tp', 'sl'], trailing: true, wholeShares: false }
+/** The US pad: a stop loss only — no take profit, no trailing, not on fractional shares (19 Nov, the user's call). */
+export const TPSL_US: TpslFeatures = { title: 'Stop loss', sheetTitle: 'Stop loss', legs: ['sl'], trailing: false, wholeShares: true }
+
+/** TP/SL as a market allows it: legs it doesn't offer are off, no trail without trailing. */
+export const fitTo = (tpsl: Tpsl, features: TpslFeatures): Tpsl => {
+  const fit = (side: Side): TpslLeg => {
+    const leg = features.legs.includes(side) ? tpsl[side] : { ...tpsl[side], on: false }
+    return features.trailing ? leg : { ...leg, trail: null }
+  }
+  return { tp: fit('tp'), sl: fit('sl') }
+}
+
+export const NAME: Record<Side, string> = { tp: 'Take profit', sl: 'Stop loss' }
+export const DIR: Record<Side, 1 | -1> = { tp: 1, sl: -1 }
+export const FIELD_LABEL: Record<Field, string> = { trigger: 'Trigger at', limitAt: 'Limit at' }
+
+const round2 = (v: number) => Number(v.toFixed(2))
+export const fmt = (unit: Unit, v: number) => (unit === 'points' ? v.toFixed(2) : `${round2(v)}%`)
+const fmtTrail = (unit: Unit, v: number) => (unit === 'points' ? `${v.toFixed(1)} pts` : `${v}%`)
+export const fmtQty = (q: number) => String(Number(q.toFixed(4)))
+/** A move from the last price → the price, and back (typing a price sets the move; the Stepper follows). */
+export const priceOf = (ltp: number, unit: Unit, side: Side, move: number) => (unit === 'points' ? ltp + DIR[side] * move : ltp * (1 + (DIR[side] * move) / 100))
+export const moveOf = (ltp: number, unit: Unit, side: Side, price: number) => (unit === 'points' ? DIR[side] * (price - ltp) : (DIR[side] * (price / ltp - 1)) * 100)
+/** The price the order closes at: the limit for a limit order, else the trigger. */
+export const closeAt = (leg: TpslLeg, ltp: number, side: Side) => {
+  const move = leg.limit ? leg.limitAt : leg.trigger
+  return move === null ? null : priceOf(ltp, leg.unit, side, move)
+}
+const targetPrice = (ltp: number, leg: TpslLeg, side: Side) => closeAt(leg, ltp, side) ?? ltp
+
+/** The smallest gap between the buy price and a trigger (0.25%): a trigger any closer would fire on ordinary ticks. */
+export const MIN_GAP_PCT = 0.25
+
+/**
+ * What's wrong with a leg that's on, or null (19 Nov, the user's call: "handle the error cases"; copy kept short, same
+ * day). Checked against the order's buy price (`entry`), first match wins:
+ *  1. No trigger                          → "Enter trigger price"
+ *  2. TP at or under / SL at or over the buy price → "TP should be above buy price, $X" ("SL should be below …")
+ *  3. SL at $0 or less                    → "SL should be above $0.00"
+ *  4. Closer than 0.25% to the buy price  → "TP should be 0.25%+ above buy price" ("SL should be 0.25%+ below …")
+ *  5. Limit order, no limit price         → "Enter limit price"
+ *  6. Limit on the wrong side of the trigger (TP: under it; SL: over it — it might never fill)
+ *                                         → "Limit should be at or above trigger" ("at or below" for SL)
+ *  7. SL limit at $0 or less              → "Limit should be above $0.00"
+ *  8. Trail as big as the gap to the buy price (it would move past the buy price at once)
+ *                                         → "Trail should be under $X"
+ */
+export function legError(leg: TpslLeg, ltp: number, entry: number, side: Side, usd: (n: number) => string) {
+  if (!leg.on) return null
+  const short = side.toUpperCase()
+  const above = side === 'tp'
+  const dir = above ? 'above' : 'below'
+  if (leg.trigger === null) return 'Enter trigger price'
+  const trigger = priceOf(ltp, leg.unit, side, leg.trigger)
+  if (above ? trigger <= entry : trigger >= entry) return `${short} should be ${dir} buy price, ${usd(entry)}`
+  if (!above && trigger <= 0) return `${short} should be above ${usd(0)}`
+  const edge = entry * (1 + (DIR[side] * MIN_GAP_PCT) / 100)
+  if (above ? trigger < edge : trigger > edge) return `${short} should be ${MIN_GAP_PCT}%+ ${dir} buy price`
+  if (leg.limit) {
+    if (leg.limitAt === null) return 'Enter limit price'
+    const limit = priceOf(ltp, leg.unit, side, leg.limitAt)
+    if (above ? limit < trigger : limit > trigger) return `Limit should be at or ${dir} trigger`
+    if (limit <= 0) return `Limit should be above ${usd(0)}`
+  }
+  if (leg.trail !== null) {
+    const gap = Math.abs(trigger - entry)
+    const trail = leg.trailUnit === 'points' ? leg.trail : (entry * leg.trail) / 100
+    if (trail >= gap) return `Trail should be under ${usd(gap)}`
+  }
+  return null
+}
+
+/** Points ⇄ percentage keeps the same price: 15 pts on $156 ≈ 10%. The trail follows the trigger's unit (20 Nov, the
+ *  user's call: Points → the trail in points, Percentage → in %), so it switches too, in steps of 0.5. */
+export function switchUnit(leg: TpslLeg, ltp: number): TpslLeg {
+  const toPct = (v: number | null) => (v === null ? null : Math.max(1, Math.round((v / ltp) * 100)))
+  const toPts = (v: number | null) => (v === null ? null : Math.max(0.5, Math.round(((ltp * v) / 100) * 2) / 2))
+  const conv = leg.unit === 'points' ? toPct : toPts
+  const unit: Unit = leg.unit === 'points' ? 'percent' : 'points'
+  return {
+    ...leg,
+    unit,
+    trigger: conv(leg.trigger),
+    limitAt: conv(leg.limitAt),
+    trail: leg.trail === null ? null : trailIn(leg, unit, ltp),
+    trailUnit: unit,
+  }
+}
+
+/** A leg's trail in `unit` (0.5 steps, at least 0.5): the trail is kept in the trigger's unit. */
+export const trailIn = (leg: TpslLeg, unit: Unit, ltp: number) => {
+  const trail = leg.trail ?? 1
+  if (leg.trailUnit === unit) return trail
+  return unit === 'percent' ? Math.max(0.5, Math.round((trail / ltp) * 200) / 2) : Math.max(0.5, Math.round(((ltp * trail) / 100) * 2) / 2)
+}
+
+/** The trail, points ⇄ percentage at the last price (its own switch, in the trailing sheet). */
+const convertTrail = (v: number, to: Unit, ltp: number) =>
+  to === 'percent' ? Math.max(0.5, Math.round((v / ltp) * 200) / 2) : Math.max(0.1, Math.round(((ltp * v) / 100) * 10) / 10)
+
+/** The off card (name + Switch) until TP/SL is set, then the summary card; both open the sheet. `features`: what this
+ *  market offers (TPSL_INDIA / TPSL_US); `fractional`: the order's quantity isn't whole. */
+export function TpslControl({ order, features = TPSL_INDIA, fractional = false }: { order: TpslOrder; features?: TpslFeatures; fractional?: boolean }) {
+  const ltp = order.ltp
+  const [tpsl, setTpsl] = useState<Tpsl | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [round, setRound] = useState(0) // a new key per open, so the sheet starts from the saved values
+  const sheetVersion = useTpslSheet() // A / B test (flow option "TP/SL sheet"): B is TpslSheetB.tsx, A is TpslSheet below
+  const Sheet = sheetVersion === 'b' ? TpslSheetB : TpslSheet
+  const set = tpsl && ((tpsl.tp.on && tpsl.tp.trigger !== null) || (tpsl.sl.on && tpsl.sl.trigger !== null)) ? tpsl : null
+  // Whole shares only (US): "Not on fractional shares" in red under the card (no toast, 19 Nov, the user's call) in
+  // place of the sheet, until the quantity is whole again.
+  const noFractions = features.wholeShares && fractional
+  const [blocked, setBlocked] = useState(false)
+  // Every tap on the card while blocked shakes the red line, so a repeat tap isn't lost (20 Nov, the user's call). The
+  // count is the line's key: a new key replays the shake. The first tap waits for the line to open, then shakes.
+  const [shake, setShake] = useState({ count: 0, afterOpen: false })
+  const open = () => {
+    if (noFractions) {
+      setShake((s) => ({ count: s.count + 1, afterOpen: !(blocked && noFractions) }))
+      return setBlocked(true)
+    }
+    setRound((n) => n + 1)
+    setSheetOpen(true)
+  }
+  // The quantity turned fractional with TP/SL set: it can't stay. Whole again: the line goes.
+  const hasSet = set !== null
+  useEffect(() => {
+    if (!noFractions) return setBlocked(false)
+    if (!hasSet) return
+    setTpsl(null)
+    setSheetOpen(false)
+    setBlocked(true)
+  }, [noFractions, hasSet])
+  return (
+    // gap 00: the 8 above the red line rides inside its collapse, so none shows while it's closed.
+    <Stack gap="00" className={styles.control}>
+      {set ? (
+        <TpslCard tpsl={set} ltp={ltp} title={features.title} onEdit={open} />
+      ) : (
+        // Off: the leverage card's look (PadCard, 19 Nov, the user's call: "sync both the cards"): a tile, the name and a
+        // Switch; the whole row is the tap target. Turning it on opens the sheet; closing it without Save leaves it off.
+        <PadCard>
+          <label className={padCard.head}>
+            <PadCardTile icon={lmAutoTpSl} tone="discover" />
+            <span className={padCard.title}>{features.title}</span>
+            <Switch size="sm" checked={sheetOpen} onChange={open} aria-label={features.title} />
+          </label>
+        </PadCard>
+      )}
+      {/* The red line opens and closes (0fr ⇄ 1fr), never pops in (19 Nov, the user's call: changes animate). */}
+      <div className={styles.collapse} data-open={(blocked && noFractions) || undefined}>
+        <div className={styles.collapseInner}>
+          <p
+            key={shake.count}
+            className={`${styles.error} ${styles.blocked}`}
+            role="alert"
+            data-shake={shake.count > 0 ? (shake.afterOpen ? 'after-open' : '') : undefined}
+          >{blocked && noFractions ? `${features.title} isn’t available on fractional shares` : ''}</p>
+        </div>
+      </div>
+      <Sheet
+        key={round}
+        open={sheetOpen}
+        order={order}
+        features={features}
+        start={tpsl ?? TPSL_START}
+        onClose={() => setSheetOpen(false)}
+        onSave={(next) => {
+          setTpsl(next)
+          setSheetOpen(false)
+        }}
+      />
+    </Stack>
+  )
+}
+
+/** Once set (Figma 4292:35483): "TP/SL ✓", edit, and each leg that's on with its target. */
+function TpslCard({ tpsl, ltp, title, onEdit }: { tpsl: Tpsl; ltp: number; title: string; onEdit: () => void }) {
+  return (
+    // The same pad card as when it's off (PadCard): the tile, the name ✓, and an edit button in the Switch's place.
+    <PadCard aria-label={title}>
+      <div className={padCard.head} onClick={onEdit}>
+        <PadCardTile icon={lmAutoTpSl} tone="discover" />
+        <span className={padCard.title}>
+          {title}
+          <Icon icon={msCheckCircleFill} size={16} className={styles.ok} />
+        </span>
+        <Button variant="ghost" size="md" iconLeft={<Icon icon={msEdit} size={20} />} aria-label={`Edit ${title}`} onClick={(e) => { e.stopPropagation(); onEdit() }} />
+      </div>
+      <div className={styles.summaryBody}>
+        <KeyValueList size="sm" aria-label={`${title} targets`}>
+          {(['tp', 'sl'] as const)
+            .filter((side) => tpsl[side].on && tpsl[side].trigger !== null)
+            .map((side) => {
+              const leg = tpsl[side]
+              const price = targetPrice(ltp, leg, side)
+              return (
+                <KeyValueRow
+                  key={side}
+                  label={
+                    <span className={styles.legLabel}>
+                      {NAME[side]}
+                      <Tag size="sm" color="discover" variant="secondary">{leg.limit ? 'Limit' : 'Market'}</Tag>
+                    </span>
+                  }
+                  value={
+                    <span className={styles.legValue}>
+                      <PadAmount value={price} />
+                      <PriceChange value={(price / ltp - 1) * 100} unit="percent" size="sm" />
+                    </span>
+                  }
+                />
+              )
+            })}
+        </KeyValueList>
+      </div>
+    </PadCard>
+  )
+}
+
+/** The price field the keypad is typing into, and its text while typed. */
+type Typing = { side: Side; field: Field; text: string | null; fresh: boolean }
+
+/** "Set TP/SL" (Figma 4292:34063, with the production app's content): the stock and its qty, a card per leg (prices
+ *  typed from the keypad or stepped), est. profit / loss, Clear, errors; Save once every leg that's on is valid. */
+function TpslSheet({ open, order, features, start, onClose, onSave }: { open: boolean; order: TpslOrder; features: TpslFeatures; start: Tpsl; onClose: () => void; onSave: (tpsl: Tpsl) => void }) {
+  const layer = useSheetLayer()
+  const usd = usePadMoney()
+  const { ltp, entry } = order
+  const [draft, setDraft] = useState<Tpsl>(() => fitTo(start, features))
+  const [trailing, setTrailing] = useState<Side | null>(null)
+  const [typing, setTyping] = useState<Typing | null>(null)
+  // As on the order pad: a tap anywhere in the sheet outside a price (label + price) and the keypad closes the keypad
+  // and the field lets its caret go; tapping a price opens it again on that field.
+  const typingOn = typing !== null
+  useEffect(() => {
+    if (!typingOn) return
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement
+      const sheet = document.getElementById('tpsl-title')?.closest('[role="dialog"]')
+      if (!sheet?.contains(target) || target.closest(`[data-price-field], [aria-label="Number keypad"]`)) return
+      setTyping(null)
+      ;(document.activeElement as HTMLElement | null)?.blur()
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [typingOn])
+  const setLeg = (side: Side) => (leg: TpslLeg) => setDraft((d) => ({ ...d, [side]: leg }))
+  const errors = { tp: legError(draft.tp, ltp, entry, 'tp', (n) => usd(n)), sl: legError(draft.sl, ltp, entry, 'sl', (n) => usd(n)) }
+  const canSave = (['tp', 'sl'] as const).every((side) => !errors[side])
+
+  // One key into the typed price: up to 2 decimals; the price sets the move (unrounded, so the field shows what was typed).
+  const onKey = (key: string) => {
+    if (!typing) return
+    const base = typing.fresh ? '' : (typing.text ?? '')
+    let text: string | undefined
+    if (key === '.') text = base.includes('.') ? undefined : (base || '0') + '.'
+    else if (/^\d$/.test(key) && (base.split('.')[1]?.length ?? 0) >= 2 && base.includes('.')) text = undefined
+    else text = typeKey(base, key, 8).replace(/^0+(?=\d)/, '')
+    if (text === undefined) return
+    setTyping({ ...typing, text, fresh: false })
+    const price = Number(text) || 0
+    const leg = draft[typing.side]
+    setLeg(typing.side)({ ...leg, [typing.field]: price > 0 ? moveOf(ltp, leg.unit, typing.side, price) : null })
+  }
+  const pick = (side: Side, field: Field) => {
+    if (typing?.side === side && typing.field === field) return
+    setTyping({ side, field, text: null, fresh: true })
+  }
+
+  return (
+    <>
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        container={layer}
+        aria-labelledby="tpsl-title"
+        header={
+          // The order in the header (the user's call): the qty as the description, the stock + last price + change at
+          // the right. Differs from L3: the trailing slot is meant for one icon button or a Tag.
+          <BottomSheetHeader
+            heading={features.sheetTitle}
+            headingId="tpsl-title"
+            description={`Qty ${order.qty > 0 ? fmtQty(order.qty) : '--'}`}
+            trailing={
+              <Stack gap="04" align="end">
+                <span className={styles.stockName}>{order.symbol}</span>
+                <span className={styles.legValue}>
+                  <PadAmount value={ltp} className={styles.stockPrice} />
+                  <PriceChange value={order.change} unit="percent" size="sm" />
+                </span>
+              </Stack>
+            }
+          />
+        }
+        footer={
+          <ButtonGroup aria-label={`Set ${features.title}`}>
+            <Button size="lg" fullWidth disabled={!canSave} onClick={() => onSave(draft)}>Save</Button>
+          </ButtonGroup>
+        }
+        utility={<KeypadSlide open={typing !== null}><Keyboard decimal onKey={onKey} /></KeypadSlide>}
+      >
+        <Stack gap="16">
+          {features.legs.map((side) => (
+            <LegCard
+              key={side}
+              side={side}
+              leg={draft[side]}
+              ltp={ltp}
+              entry={entry}
+              qty={order.qty}
+              error={errors[side]}
+              typing={typing?.side === side ? typing : null}
+              onPick={(field) => pick(side, field)}
+              onChange={(leg) => {
+                setLeg(side)(leg)
+                if (typing?.side === side) setTyping({ ...typing, text: null, fresh: true })
+              }}
+              trailing={features.trailing}
+              onTrail={() => setTrailing(side)}
+            />
+          ))}
+        </Stack>
+      </BottomSheet>
+      {trailing && (
+        <TrailSheet
+          side={trailing}
+          ltp={ltp}
+          startUnit={draft[trailing].trailUnit}
+          start={draft[trailing].trail ?? 1}
+          onClose={() => setTrailing(null)}
+          onDone={(trail, trailUnit) => {
+            setDraft((d) => ({ ...d, [trailing]: { ...d[trailing], trail, trailUnit } }))
+            setTrailing(null)
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+function LegCard({ side, leg, ltp, entry, qty, error, typing, trailing, onPick, onChange, onTrail }: {
+  side: Side; leg: TpslLeg; ltp: number; entry: number; qty: number; error: string | null; typing: Typing | null
+  trailing: boolean; onPick: (field: Field) => void; onChange: (leg: TpslLeg) => void; onTrail: () => void
+}) {
+  const name = NAME[side]
+  const steps = leg.unit === 'points' ? { step: 0.5, min: 0.5, max: 500 } : { step: 1, min: 1, max: 90 }
+  const close = closeAt(leg, ltp, side)
+  // From the buy price (on Limit / SL that's the limit price, not the last price).
+  const est = close === null || qty <= 0 ? null : (close - entry) * qty
+  const hasValue = leg.trigger !== null || leg.limitAt !== null || leg.trail !== null
+  // One field row (PriceField, use 2): label (+ the unit switch on the trigger) and the typed $ price at the left, the
+  // move on a Stepper at the right.
+  const row = (field: Field) => {
+    const move = leg[field]
+    const active = typing?.field === field
+    const what = field === 'trigger' ? 'trigger' : 'limit'
+    return (
+      <PriceField
+        key={field}
+        label={FIELD_LABEL[field]}
+        unit={field === 'trigger' ? { label: leg.unit === 'points' ? 'Points' : 'Percentage', onSwitch: () => onChange(switchUnit(leg, ltp)), 'aria-label': `Move in ${leg.unit}. Switch` } : undefined}
+        price={{
+          text: active && typing.text !== null ? typing.text : move === null ? '' : priceOf(ltp, leg.unit, side, move).toFixed(2),
+          placeholder: field === 'trigger' ? 'Enter price' : 'Enter limit price',
+          typing: active,
+          'aria-label': `${name} ${what} price`,
+          onPick: () => onPick(field),
+        }}
+        stepper={{
+          label: `${name} ${what} in ${leg.unit}`,
+          value: move ?? 0,
+          onChange: (v) => onChange({ ...leg, [field]: v }),
+          format: (v) => (move === null ? '--' : fmt(leg.unit, v)),
+          ...steps,
+        }}
+      />
+    )
+  }
+  return (
+    <Stack>
+      {/* One card that opens and closes (19 Nov, the user's call: "the whole card should expand and collapse"). Off: just
+          the name and the switch, and the whole head is the tap target — a <label> round the switch. MKT / LMT fades in
+          once the leg is on. The body (and the Est. row under the card) always render, in a collapse that animates its
+          height; closed, they're inert. */}
+      <Card className={styles.leg} padding="none">
+        {leg.on ? (
+          <Stack direction="horizontal" justify="between" align="center" gap="08" className={styles.head}>
+            <Stack direction="horizontal" align="center" gap="08">
+              <span className={styles.legName}>{name}</span>
+              <Select className={`${styles.select} ${styles.fadeIn}`} size="sm" icon="swap" onClick={() => onChange({ ...leg, limit: !leg.limit })} aria-label={`${name}: ${leg.limit ? 'limit' : 'market'} order. Switch`}>
+                {leg.limit ? 'LMT' : 'MKT'}
+              </Select>
+            </Stack>
+            <Switch size="sm" checked onChange={() => onChange({ ...leg, on: false })} aria-label={name} />
+          </Stack>
+        ) : (
+          <label className={styles.head} data-off>
+            <span className={styles.legName}>{name}</span>
+            <Switch size="sm" checked={false} onChange={() => onChange({ ...leg, on: true })} aria-label={name} />
+          </label>
+        )}
+        <div className={styles.collapse} data-open={leg.on || undefined} inert={!leg.on}>
+          <div className={styles.collapseInner}>
+            <Stack gap="12" className={styles.body}>
+              {/* The error sits right under the trigger box it's about (19 Nov, the user's call), not under the card. */}
+              <Stack gap="04">
+                <PriceFieldBox error={Boolean(error)}>
+                  {row('trigger')}
+                  {leg.limit && row('limitAt')}
+                </PriceFieldBox>
+                {error && <p className={styles.error} role={leg.on ? 'alert' : undefined}>{error}</p>}
+              </Stack>
+              {trailing && <div className={styles.trailRow}>
+                <label className={styles.check}>
+                  <Checkbox checked={leg.trail !== null} onChange={() => (leg.trail === null ? onTrail() : onChange({ ...leg, trail: null }))} />
+                  {leg.trail === null ? `Trailing ${name.toLowerCase()}` : `Trail ${fmtTrail(leg.trailUnit, leg.trail)}`}
+                </label>
+                {leg.trail !== null && (
+                  <Button variant="ghost" size="sm" className={styles.edit} onClick={onTrail}>Edit</Button>
+                )}
+              </div>}
+            </Stack>
+          </div>
+        </div>
+      </Card>
+      <div className={styles.collapse} data-open={leg.on || undefined} inert={!leg.on}>
+        <div className={styles.collapseInner}>
+          <Stack direction="horizontal" justify="between" align="center" gap="08" className={styles.estRow}>
+            {/* With an error the estimate is "--": a price that can't be placed has no profit / loss. */}
+            <p className={styles.target}>
+              {side === 'tp' ? 'Est. profit' : 'Est. loss'}{' '}
+              <span className={side === 'tp' ? styles.up : styles.down}>
+                {est === null || error ? '--' : <PadAmount value={est} sign />}
+              </span>
+            </p>
+            {hasValue && (
+              <Button variant="ghost" size="sm" className={styles.edit} onClick={() => onChange({ ...leg, trigger: null, limitAt: null, trail: null })}>Clear</Button>
+            )}
+          </Stack>
+        </div>
+      </div>
+    </Stack>
+  )
+}
+
+/** "Trailing TP / SL" (Figma 4494:29124): one filled box — "Trailing TP will move in / Points ⇅" at the left, a Small
+ *  Stepper on a white pill at the right, typed from the keypad; the dock: "Make trailing … your default" over Save. */
+function TrailSheet({ side, ltp, startUnit, start, onClose, onDone }: { side: Side; ltp: number; startUnit: Unit; start: number; onClose: () => void; onDone: (trail: number, unit: Unit) => void }) {
+  const layer = useSheetLayer()
+  const [unit, setUnit] = useState<Unit>(startUnit)
+  const [text, setText] = useState(String(start))
+  const [fresh, setFresh] = useState(true) // the first key replaces the prefilled value, as on the pad
+  const [asDefault, setAsDefault] = useState(true)
+  const value = Number(text) || 0
+  const short = side === 'tp' ? 'TP' : 'SL'
+  const show = (u: Unit, v: number) => String(Number(v.toFixed(1)))
+  const type = (key: string) => {
+    const base = fresh ? '' : text
+    setFresh(false)
+    if (key === 'Backspace') return setText(base.slice(0, -1))
+    if (key === '.') return setText(base.includes('.') ? base : (base || '0') + '.')
+    if (/^\d$/.test(key) && base.replace('.', '').length < 5) setText(base + key)
+  }
+  const switchTrailUnit = () => {
+    const to: Unit = unit === 'points' ? 'percent' : 'points'
+    setText(show(to, convertTrail(value || 1, to, ltp)))
+    setUnit(to)
+    setFresh(true)
+  }
+  return (
+    <BottomSheet
+      open
+      onClose={onClose}
+      container={layer}
+      aria-labelledby="trail-title"
+      header={<BottomSheetHeader heading={`Trailing ${short}`} headingId="trail-title" />}
+      footer={
+        <ButtonGroup aria-label={`Trailing ${short}`}>
+          <label className={`${styles.check} ${styles.checkSnug}`}>
+            <Checkbox checked={asDefault} onChange={(e) => setAsDefault(e.target.checked)} />
+            Make trailing {short} your default {NAME[side].toLowerCase()}
+          </label>
+          <Button size="lg" fullWidth disabled={value <= 0} onClick={() => onDone(value, unit)}>Save</Button>
+        </ButtonGroup>
+      }
+      utility={<Keyboard decimal onKey={type} />}
+    >
+      {/* PriceField, use 3: no typed price — the hint over the unit switch, the Stepper is the value. */}
+      <PriceFieldBox>
+        <PriceField
+          label={`Trailing ${short} will move in`}
+          unit={{ label: unit === 'points' ? 'Points' : 'Percentage', onSwitch: switchTrailUnit, 'aria-label': `Trail in ${unit}. Switch` }}
+          stepper={{
+            label: `Trail in ${unit}`,
+            value,
+            onChange: (v) => {
+              setText(show(unit, v))
+              setFresh(true)
+            },
+            step: unit === 'points' ? 0.1 : 0.5,
+            min: unit === 'points' ? 0.1 : 0.5,
+            max: unit === 'points' ? 100 : 50,
+            format: (v) => (unit === 'points' ? String(Number(v.toFixed(1))) : `${v}%`),
+          }}
+        />
+      </PriceFieldBox>
+    </BottomSheet>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/TpslSheetB.module.css`
+
+```css
+/* TP/SL sheet, version B (TpslSheetB.tsx): A's layout, each leg one price card — the order pad's PriceFieldBox. */
+
+.stockName { font: var(--l3-text-label-14); color: var(--l3-content-primary); }
+
+/* The leg card's 1px edge is border/intense, not L3 Card's border/light (the user's call). An error's red still wins
+   (PriceField's .boxError.boxError is more specific). */
+.card { --card-border: inset 0 0 0 1px var(--l3-border-intense); }
+.inline { display: inline-flex; align-items: baseline; gap: var(--l3-spacing-04); }
+
+/* The card's head row: the name (+ the order type once on) and the Switch, 12 all round like the price rows. Off, it's
+   a <label>, so a tap anywhere on it turns the leg on. */
+.head { display: flex; align-items: center; justify-content: space-between; gap: var(--l3-spacing-08); padding: var(--l3-spacing-12); }
+.head { position: relative; }
+/* On: the Switch's tap area is the right half of the row, full height (the user's call), laid over the row so the name
+   and order type keep their room; the order type sits above it where they meet on narrow phones. Off: the whole row
+   (the name lets taps through to it). */
+.switchArea { position: absolute; inset-block: 0; right: 0; width: 50%; display: flex; align-items: center; justify-content: flex-end; padding-right: var(--l3-spacing-12); cursor: pointer; }
+.head > :first-child { position: relative; z-index: 1; }
+.head[data-off] .switchArea { width: 100%; }
+.head[data-off] > :first-child { pointer-events: none; }
+/* The row is a 48 tap target, on and off alike (the Switch is out of the flow when on). */
+.head { min-height: calc(var(--l3-size-24) + 2 * var(--l3-spacing-12)); }
+.name { font: var(--l3-text-label-14); color: var(--l3-content-primary); }
+
+/* The order type reads as tappable (discover blue), as in A. L3 gap: Select has only primary and subtle. */
+.select.select { color: var(--l3-content-accent-discover-default); }
+.fadeIn { animation: fadeIn var(--l3-motion-duration-medium) var(--l3-motion-easing-standard); }
+@keyframes fadeIn { from { opacity: 0; } }
+
+/* Every row under the head gets the pad's 1px hairline above it. */
+.rows > * { border-top: 1px solid var(--l3-border-light); }
+/* The Limit at row's collapse: the hairline rides inside it, so none shows while it's closed. */
+.rows > .collapse { border-top: 0; }
+.line { border-top: 1px solid var(--l3-border-light); }
+
+/* Trailing: a row like the price rows (12 side padding), as tall as the Checkbox's 48 tap target. */
+.trail { display: flex; align-items: center; justify-content: space-between; gap: var(--l3-spacing-08); min-height: var(--l3-size-tap-target); padding: 0 var(--l3-spacing-12); }
+.check { display: flex; align-items: center; gap: var(--l3-spacing-08); min-height: var(--l3-size-tap-target); font: var(--l3-text-label-14); color: var(--l3-content-primary); cursor: pointer; }
+/* As on the price rows: L3's light-blue Small ± buttons blur into the Stepper's grey pill, so they're white here.
+   L3 gap: Stepper has no on-grey button option. */
+.stepper.stepper[data-size] button:not(:disabled) { background: var(--l3-surface-primary); color: var(--l3-content-accent-discover-default); }
+
+/* Under the card: Est. profit / loss or the error, and Clear (its ghost padding pulled back so it lines up). */
+.estRow { min-height: var(--l3-size-24); padding: var(--l3-spacing-08) 0 0 var(--l3-spacing-04); }
+.est { margin: 0; font: var(--l3-text-description-12); color: var(--l3-content-secondary); }
+.error { margin: 0; font: var(--l3-text-label-12); color: var(--l3-content-accent-error-default); }
+.up { font: var(--l3-text-label-12); color: var(--l3-content-accent-success-default); }
+.down { font: var(--l3-text-label-12); color: var(--l3-content-accent-error-default); }
+/* Clear: a ghost Button in the discover blue. L3 gap: no link-style Button. */
+.link.link { color: var(--l3-content-accent-discover-default); }
+
+/* Expand / collapse with the Switch (A's): the row track animates 0fr ⇄ 1fr, the inner box clips it. L3 gap: no
+   Collapse part. */
+.collapse { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--l3-motion-duration-medium) var(--l3-motion-easing-standard), opacity var(--l3-motion-duration-short) var(--l3-motion-easing-standard); }
+.collapse[data-open] { grid-template-rows: 1fr; opacity: 1; }
+.collapseInner { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .collapse, .fadeIn { transition: none; animation: none; } }
+
+/* "Trailing SL": a dotted underline says the name explains itself — a tap opens the info sheet (the user's call). It
+   reads as the row label (Label 14, primary). L3 gap: no inline info-link. */
+.infoLink { padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-decoration-color: var(--l3-content-secondary); text-underline-offset: var(--l3-spacing-04); }
+```
+
+### `src/flows/us-stocks/screens/trade/TpslSheetB.tsx`
+
+```tsx
+// TP/SL sheet, version B (19 Nov, the user's call: "boxes inside boxes … too overwhelming … keep this version intact for
+// AB testing"). Version A (Tpsl.tsx TpslSheet) stays as it was; the flow option "TP/SL sheet" picks one.
+//
+// Round 3 (same day, the user's call: "stick to the current layout and try to improve on that", and it should sit in with
+// the Limit / SL order pad): A's layout and order, item for item — the header, then per leg the name + Market ⇄ Limit +
+// Switch, the trigger (Points ⇄ Percentage, typed or stepped), the limit on Limit, trailing, Est. profit / loss and Clear
+// under the card. What changes is the boxes: A put a price box inside each leg's card; here each leg IS one price card,
+// the order pad's (PriceFieldBox + PriceField rows, a hairline between rows), so nothing is boxed twice:
+//
+//   ┌ Take profit  Market ⇅                    (Switch) ┐
+//   ├ Trigger at  Points ⇅                     − 5 +    ┤
+//   │ $161.00                                           │
+//   └───────────────────────────────────────────────────┘
+//     Est. profit +$9.61 (or the error, in red)    Clear
+//
+// The legs, the trailing row and the names come from the market's TpslFeatures (Tpsl.tsx): the Indian pad has both
+// legs and trailing; the US pad the stop loss alone, no trailing, headed "Stop loss" (20 Nov, the user's call).
+// Trailing (stop loss only) is set right in its row (a Stepper in the trigger's unit once ticked), not in a second sheet. The model, the error rules and the
+// start values are A's, so both save the same thing.
+import { useEffect, useState } from 'react'
+import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Checkbox } from '@l3/components/Checkbox'
+import { PriceChange } from '@l3/components/PriceChange'
+import { Select } from '@l3/components/Select'
+import { Stack } from '@l3/components/Stack'
+import { Stepper } from '@l3/components/Stepper'
+import { Switch } from '@l3/components/Switch'
+import { useSheetLayer } from '../../components/Phone'
+import { PadAmount, usePadMoney } from './padMoney'
+import { Keyboard, KeypadSlide, typeKey } from '../../../../shared/ui/Keyboard'
+import { PriceField, PriceFieldBox } from './PriceField'
+import { FIELD_LABEL, NAME, TPSL_START, closeAt, fitTo, trailIn, type TpslFeatures, fmt, fmtQty, legError, moveOf, priceOf, switchUnit, type Field, type Side, type Tpsl, type TpslLeg, type TpslOrder } from './Tpsl'
+import { TrailInfoSheet } from './TrailInfoSheet'
+import styles from './TpslSheetB.module.css'
+
+type Typing = { side: Side; field: Field; text: string | null; fresh: boolean }
+
+export function TpslSheetB({ open, order, features, start, onClose, onSave }: { open: boolean; order: TpslOrder; features: TpslFeatures; start: Tpsl; onClose: () => void; onSave: (tpsl: Tpsl) => void }) {
+  const layer = useSheetLayer()
+  const usd = usePadMoney()
+  const { ltp, entry } = order
+  // The first time, the first leg the market offers opens on and the rest off (20 Nov, the user's call; A opens with both
+  // on): Indian pad — Take profit on, Stop loss off; US pad — its one leg, the stop loss, on (the card's Switch already
+  // said yes). Turning a leg on brings A's start values. Once saved, the sheet opens as saved.
+  const [draft, setDraft] = useState<Tpsl>(() => {
+    const opensOn = features.legs[0]
+    const first = { tp: { ...start.tp, on: opensOn === 'tp' }, sl: { ...start.sl, on: opensOn === 'sl' } }
+    return fitTo(start === TPSL_START ? first : start, features)
+  })
+  const [typing, setTyping] = useState<Typing | null>(null)
+  const [trailInfo, setTrailInfo] = useState(false) // the "Trailing SL" info sheet, over this one
+  const setLeg = (side: Side) => (leg: TpslLeg) => setDraft((d) => ({ ...d, [side]: leg }))
+  const errors = { tp: legError(draft.tp, ltp, entry, 'tp', (n) => usd(n)), sl: legError(draft.sl, ltp, entry, 'sl', (n) => usd(n)) }
+  const canSave = !errors.tp && !errors.sl
+
+  // A tap in the sheet outside a price and the keypad closes the keypad (as on the order pad).
+  const typingOn = typing !== null
+  useEffect(() => {
+    if (!typingOn) return
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement
+      const sheet = document.getElementById('tpsl-b-title')?.closest('[role="dialog"]')
+      if (!sheet?.contains(target) || target.closest('[data-price-field], [aria-label="Number keypad"]')) return
+      setTyping(null)
+      ;(document.activeElement as HTMLElement | null)?.blur()
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [typingOn])
+
+  // One key into the typed price: up to 2 decimals; the price sets the move.
+  const onKey = (key: string) => {
+    if (!typing) return
+    const base = typing.fresh ? '' : (typing.text ?? '')
+    let text: string | undefined
+    if (key === '.') text = base.includes('.') ? undefined : (base || '0') + '.'
+    else if (/^\d$/.test(key) && (base.split('.')[1]?.length ?? 0) >= 2 && base.includes('.')) text = undefined
+    else text = typeKey(base, key, 8).replace(/^0+(?=\d)/, '')
+    if (text === undefined) return
+    setTyping({ ...typing, text, fresh: false })
+    const price = Number(text) || 0
+    const leg = draft[typing.side]
+    setLeg(typing.side)({ ...leg, [typing.field]: price > 0 ? moveOf(ltp, leg.unit, typing.side, price) : null })
+  }
+
+  const sl = draft.sl
+  return (
+    <>
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        container={layer}
+        aria-labelledby="tpsl-b-title"
+        header={
+          // A's header: the qty as the description, the stock + last price + change at the right.
+          <BottomSheetHeader
+            heading={features.sheetTitle}
+            headingId="tpsl-b-title"
+            description={`Qty ${order.qty > 0 ? fmtQty(order.qty) : '--'}`}
+            trailing={
+              <Stack gap="04" align="end">
+                <span className={styles.stockName}>{order.symbol}</span>
+                <span className={styles.inline}>
+                  <PadAmount value={ltp} className={styles.stockName} />
+                  <PriceChange value={order.change} unit="percent" size="sm" />
+                </span>
+              </Stack>
+            }
+          />
+        }
+        footer={
+          <ButtonGroup aria-label={`Set ${features.title}`}>
+            <Button size="lg" fullWidth disabled={!canSave} onClick={() => onSave(draft)}>Save</Button>
+          </ButtonGroup>
+        }
+        utility={<KeypadSlide open={typing !== null}><Keyboard decimal onKey={onKey} /></KeypadSlide>}
+      >
+        <Stack gap="16">
+          {features.legs.map((side) => (
+            <Leg
+              key={side}
+              side={side}
+              leg={draft[side]}
+              ltp={ltp}
+              entry={entry}
+              qty={order.qty}
+              error={errors[side]}
+              typing={typing?.side === side ? typing : null}
+              onPick={(field) => {
+                if (typing?.side === side && typing.field === field) return
+                setTyping({ side, field, text: null, fresh: true })
+              }}
+              onChange={(leg) => {
+                setLeg(side)(leg)
+                if (typing?.side === side) setTyping({ ...typing, text: null, fresh: true })
+              }}
+              trailing={features.trailing}
+              onTrailInfo={() => setTrailInfo(true)}
+            />
+          ))}
+        </Stack>
+      </BottomSheet>
+      <TrailInfoSheet
+        open={open && trailInfo}
+        trail={sl.trail === null ? 1 : trailIn(sl, sl.unit, ltp)}
+        unit={sl.unit}
+        onClose={() => setTrailInfo(false)}
+      />
+    </>
+  )
+}
+
+/** One leg: a single price card (the pad's), then Est. / the error and Clear under it. */
+function Leg({ side, leg, ltp, entry, qty, error, typing, trailing, onPick, onChange, onTrailInfo }: {
+  side: Side; leg: TpslLeg; ltp: number; entry: number; qty: number; error: string | null; typing: Typing | null; trailing: boolean
+  onPick: (field: Field) => void; onChange: (leg: TpslLeg) => void; onTrailInfo: () => void
+}) {
+  const name = NAME[side]
+  const steps = leg.unit === 'points' ? { step: 0.5, min: 0.5, max: 500 } : { step: 1, min: 1, max: 90 }
+  const close = closeAt(leg, ltp, side)
+  const est = close === null || qty <= 0 ? null : (close - entry) * qty
+  const hasValue = leg.trigger !== null || leg.limitAt !== null || leg.trail !== null
+  // The trail is in the trigger's unit (20 Nov, the user's call): Points → points, Percentage → %. Switching the trigger's
+  // unit converts it (switchUnit); a trail saved in the other unit (A's sheet) shows converted.
+  const trail = leg.trail === null ? 1 : trailIn(leg, leg.unit, ltp)
+  const trailSteps = { step: 0.5, min: 0.5, max: leg.unit === 'points' ? 100 : 20 }
+
+  // A price row: exactly the order pad's (label, the typed $ price, the move on a Small Stepper).
+  const row = (field: Field) => {
+    const move = leg[field]
+    const active = typing?.field === field
+    const what = field === 'trigger' ? 'trigger' : 'limit'
+    return (
+      <PriceField
+        key={field}
+        label={FIELD_LABEL[field]}
+        unit={field === 'trigger' ? { label: leg.unit === 'points' ? 'Points' : 'Percentage', onSwitch: () => onChange(switchUnit(leg, ltp)), 'aria-label': `Move in ${leg.unit}. Switch` } : undefined}
+        price={{
+          text: active && typing.text !== null ? typing.text : move === null ? '' : priceOf(ltp, leg.unit, side, move).toFixed(2),
+          placeholder: field === 'trigger' ? 'Enter price' : 'Enter limit price',
+          typing: active,
+          'aria-label': `${name} ${what} price`,
+          onPick: () => onPick(field),
+        }}
+        stepper={{
+          label: `${name} ${what} in ${leg.unit}`,
+          value: move ?? 0,
+          onChange: (v) => onChange({ ...leg, [field]: v }),
+          format: (v) => (move === null ? '--' : fmt(leg.unit, v)),
+          ...steps,
+        }}
+      />
+    )
+  }
+
+  return (
+    <Stack>
+      <PriceFieldBox error={Boolean(error)} surface="primary" className={styles.card}>{/* surface/primary, border/intense (the user's call) */}
+        {/* The head row, as A: the name (+ the order type once on) and the Switch. One Switch for on and off, so its knob
+            slides (the user's call: every change animates). Its tap area is a <label>: the right half of the row when on
+            (the user's call), the whole row when off (a tap anywhere turns the leg on). */}
+        <div className={styles.head} data-off={!leg.on || undefined}>
+          <Stack direction="horizontal" align="center" gap="08">
+            <span className={styles.name}>{name}</span>
+            {leg.on && (
+              <Select className={`${styles.select} ${styles.fadeIn}`} size="sm" icon="swap" onClick={() => onChange({ ...leg, limit: !leg.limit })} aria-label={`${name}: ${leg.limit ? 'limit' : 'market'} order. Switch`}>
+                {leg.limit ? 'Limit' : 'Market'}
+              </Select>
+            )}
+          </Stack>
+          <label className={styles.switchArea}>
+            <Switch size="sm" checked={leg.on} onChange={() => onChange({ ...leg, on: !leg.on })} aria-label={name} />
+          </label>
+        </div>
+        {/* The rows open and close with the Switch (A's collapse), each under a hairline as on the pad. */}
+        <div className={styles.collapse} data-open={leg.on || undefined} inert={!leg.on}>
+          <div className={styles.collapseInner}>
+            <div className={styles.rows}>
+              {row('trigger')}
+              {/* Limit at opens and closes with Market ⇄ Limit (the same collapse). */}
+              <div className={styles.collapse} data-open={leg.limit || undefined} inert={!leg.limit}>
+                <div className={styles.collapseInner}>
+                  <div className={styles.line}>{row('limitAt')}</div>
+                </div>
+              </div>
+              {/* Trailing is on the stop loss only (the user's call, 19 Nov: "we only have Trailing SL"). */}
+              {side === 'sl' && trailing && (
+                <div className={styles.trail}>
+                  <label className={styles.check}>
+                    <Checkbox checked={leg.trail !== null} onChange={() => onChange({ ...leg, trail: leg.trail === null ? 1 : null, trailUnit: leg.unit })} aria-label="Trailing SL" />
+                    {/* The name is a dotted-underlined button: it opens the Trailing SL info sheet (the user's call, 19 Nov);
+                        the Checkbox alone ticks it. A button inside the label doesn't toggle the Checkbox. */}
+                    <button type="button" className={styles.infoLink} onClick={onTrailInfo} aria-haspopup="dialog">Trailing SL</button>
+                  </label>
+                  {leg.trail !== null && (
+                    <Stepper
+                      size="sm"
+                      label={`Trail ${name.toLowerCase()} by`}
+                      value={trail}
+                      {...trailSteps}
+                      format={(v) => fmt(leg.unit, v)}
+                      onChange={(v) => onChange({ ...leg, trail: v, trailUnit: leg.unit })}
+                      className={`${styles.stepper} ${styles.fadeIn}`}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </PriceFieldBox>
+      {/* Under the card, as A: Est. profit / loss — or, when something's wrong, what (one line, not both) — and Clear. */}
+      <div className={styles.collapse} data-open={leg.on || undefined} inert={!leg.on}>
+        <div className={styles.collapseInner}>
+          <Stack direction="horizontal" justify="between" align="center" gap="08" className={styles.estRow}>
+            {error ? (
+              <p key="error" className={`${styles.error} ${styles.fadeIn}`} role="alert">{error}</p>
+            ) : (
+              <p key="est" className={`${styles.est} ${styles.fadeIn}`}>
+                {side === 'tp' ? 'Est. profit' : 'Est. loss'}{' '}
+                <span className={side === 'tp' ? styles.up : styles.down}>{est === null ? '--' : <PadAmount value={est} sign />}</span>
+              </p>
+            )}
+            {hasValue && (
+              <Button variant="ghost" size="sm" className={`${styles.link} ${styles.fadeIn}`} onClick={() => onChange({ ...leg, trigger: null, limitAt: null, trail: null })}>Clear</Button>
+            )}
+          </Stack>
+        </div>
+      </div>
+    </Stack>
+  )
+}
+```
+
+### `src/flows/us-stocks/screens/trade/TrailInfoSheet.module.css`
+
+```css
+/* Trailing SL info sheet (TrailInfoSheet.tsx): text as production — the definition larger, the example in the box. */
+.lead { margin: 0; font: var(--l3-text-description-16); color: var(--l3-content-primary); }
+.example { margin: 0; font: var(--l3-text-description-14); color: var(--l3-content-primary); }
+```
+
+### `src/flows/us-stocks/screens/trade/TrailInfoSheet.tsx`
+
+```tsx
+// "Trailing SL" info sheet: a tap on the dotted-underlined "Trailing SL" in the TP/SL sheet (version B) opens it over
+// that sheet. Content as the production Lemonn app's (Pixel screenshot, 19 Nov): the heading, what a trailing stop loss
+// is, then a filled box with what this order's trail does ("When the price rises by 1 point …"), and "I understand".
+// Differs from production: the L3 sheet header keeps its hairline under the heading and over the dock; the button is
+// L3 primary (production's lime is Lemonn's primary); "I understand" in sentence case.
+// FLAG: copy hard-coded like the rest of the pad (no copy.ts in this flow yet).
+import { useId } from 'react'
+import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Card } from '@l3/components/Card'
+import { Stack } from '@l3/components/Stack'
+import { useSheetLayer } from '../../components/Phone'
+import styles from './TrailInfoSheet.module.css'
+
+/** "1 point", "2.5 points" or "1%": the trail as production writes it. */
+function trailText(trail: number, unit: 'points' | 'percent') {
+  if (unit === 'percent') return `${trail}%`
+  return `${trail} ${trail === 1 ? 'point' : 'points'}`
+}
+
+export function TrailInfoSheet({ open, trail, unit, onClose }: {
+  open: boolean
+  /** The order's trail, in its own unit (1 while none is set). */
+  trail: number
+  unit: 'points' | 'percent'
+  onClose: () => void
+}) {
+  const layer = useSheetLayer()
+  const headingId = useId()
+  const by = trailText(trail, unit)
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      container={layer}
+      aria-labelledby={headingId}
+      header={<BottomSheetHeader size="sm" heading="Trailing SL" headingId={headingId} />}
+      footer={
+        <ButtonGroup>
+          <Button size="lg" onClick={onClose}>I understand</Button>
+        </ButtonGroup>
+      }
+    >
+      <Stack gap="16">
+        <p className={styles.lead}>
+          A trailing stop-loss is an automated trading order that protects profits and limits potential losses by
+          dynamically adjusting the stop-loss price.
+        </p>
+        <Card variant="filled">
+          <p className={styles.example}>
+            When the price rises by {by}, the stop loss will also trail by {by} from the original stop loss price you
+            defined, helping to lock in profits.
+          </p>
+        </Card>
+      </Stack>
+    </BottomSheet>
   )
 }
 ```
@@ -36365,6 +41974,188 @@ export const screens: UsScreenMap = {
 }
 ```
 
+### `src/flows/us-stocks/screens/trade/indianPad.ts`
+
+```ts
+// The Indian order pad (flow option "Order pad" = india; 20 Nov, the user's call): the pad screens as an Indian stock's
+// pad — RELIANCE from the app's company catalogue, in ₹ — with what the production Lemonn Indian pad has (Pixel
+// screenshots, 20 Nov): the NSE / BSE switch in the header, Delivery / Intraday / MTF tabs under it (no MTF on BSE),
+// a validity on Delivery and MTF orders (Market: Day / Instant; Limit: Day / Instant / Year; SL: Day / Year), SL's second price as a Limit or "At market", "Order will
+// be triggered at ₹…", and Intraday's margin ("Margin (5x)" in place of Req.).
+// Each US state maps over: $ ×100 ($100 → ₹10,000, the +$10 chip → +₹1,000, $520.40 → ₹52,040), shares ×10 and whole
+// (2.53 held → 25: Indian stocks trade in whole shares). The US state's own error, when it has one, says which ₹ error
+// shows (empty wallet, not enough money, more than you hold).
+// FLAG: prototype numbers — BSE is NSE + ₹0.10; Intraday margin 5x and MTF 4x (pay 25%) for every stock.
+// FLAG: copy hard-coded like the rest of the pad (no copy.ts in this flow yet).
+import { useSyncExternalStore } from 'react'
+import { getCompany } from '../../../../shared/data/companies'
+import { formatInr } from '../../../../shared/money'
+import { tradeIds as ids } from './ids'
+import { CHARGE_FACTOR, SELL_NOTE, orderPads } from './orderPads'
+import type { OrderPadConfig, PadChip, PadMoney, PadStock } from './types'
+
+// ── The pad's settings: they stay put across the Market / Limit / SL screens and the Buy / Sell pads ────────────────
+
+export type Product = 'delivery' | 'intraday' | 'mtf'
+export type Exchange = 'NSE' | 'BSE'
+export type Validity = 'day' | 'year'
+/** Market orders: for the day, or Instant (IOC: fills right away, or is cancelled). */
+export type MarketValidity = 'day' | 'instant'
+/** Limit orders: Day, Instant or Year. */
+export type LimitValidity = 'day' | 'instant' | 'year'
+export type IndianPadState = {
+  product: Product
+  exchange: Exchange
+  /** Delivery and MTF SL orders: a day, or a year (production's default). Intraday is always a day. */
+  validity: Validity
+  /** Delivery and MTF Limit orders: Day, Instant or Year (production's default). */
+  limitValidity: LimitValidity
+  /** Delivery and MTF Market orders: Day (production's default) or Instant. */
+  marketValidity: MarketValidity
+  /** SL's second price: false = a Limit price, true = at market (SL-M). */
+  slAtMarket: boolean
+}
+
+let state: IndianPadState = { product: 'delivery', exchange: 'NSE', validity: 'year', limitValidity: 'year', marketValidity: 'day', slAtMarket: false }
+const listeners = new Set<() => void>()
+
+export function setIndianPad(patch: Partial<IndianPadState>) {
+  state = { ...state, ...patch }
+  // BSE has no MTF: the pad falls back to Delivery.
+  if (state.exchange === 'BSE' && state.product === 'mtf') state = { ...state, product: 'delivery' }
+  listeners.forEach((listener) => listener())
+}
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
+}
+
+export const useIndianPad = () => useSyncExternalStore(subscribe, () => state)
+
+export const PRODUCT_LABELS: Record<Product, string> = { delivery: 'Delivery', intraday: 'Intraday', mtf: 'MTF' }
+export const productsOn = (exchange: Exchange): Product[] => (exchange === 'BSE' ? ['delivery', 'intraday'] : ['delivery', 'intraday', 'mtf'])
+
+/** Intraday: the broker lends 4 of every 5 — you put up a fifth of the order. */
+export const INTRADAY_MARGIN = 5
+/** MTF: you pay a quarter, Lemonn funds the rest. */
+const MTF_LEVERAGE = 4
+
+/** What you put up for an order of `order` (₹), charges included. */
+export const requiredFor = (order: number, product: Product) =>
+  (order * CHARGE_FACTOR) / (product === 'intraday' ? INTRADAY_MARGIN : product === 'mtf' ? MTF_LEVERAGE : 1)
+
+export const LIMIT_VALIDITY_LABELS: Record<LimitValidity, string> = { day: 'Day', instant: 'Instant', year: 'Year' }
+/** Tapping Limit's validity cycles Day → Instant → Year → Day (20 Nov, the user's call: no sheet). */
+export const NEXT_LIMIT_VALIDITY: Record<LimitValidity, LimitValidity> = { day: 'instant', instant: 'year', year: 'day' }
+
+const PREFIX: Record<LimitValidity, string> = { year: 'Valid for 1 year · ', day: 'Day order · ', instant: 'Instant order · ' }
+
+/** The text before a note: the order's validity (a Market Day order says nothing). */
+export const validityPrefix = ({ product, validity, limitValidity, marketValidity }: IndianPadState, type: 'market' | 'limit' | 'sl') =>
+  product === 'intraday'
+    ? (type === 'market' ? '' : 'Intraday · ')
+    : type === 'market'
+      ? (marketValidity === 'instant' ? PREFIX.instant : '')
+      : PREFIX[type === 'limit' ? limitValidity : validity]
+
+// ── The stock ────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+export const INDIAN_SYMBOL = 'RELIANCE'
+const market = () => getCompany(INDIAN_SYMBOL)?.market
+
+/** RELIANCE, read live from the market snapshot; on BSE a touch off NSE's price. */
+const indianStock: PadStock = {
+  symbol: INDIAN_SYMBOL,
+  get price() {
+    const nse = market()?.price ?? 1184.5
+    return state.exchange === 'BSE' ? Number((nse + 0.1).toFixed(2)) : nse
+  },
+  get change() { return market()?.changePct ?? 0 },
+  get exchange() { return state.exchange },
+}
+
+// ── The states ──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+const TO_INR = 100
+const TO_SHARES = 10
+
+const amountOf = (text: string) => Number(text.replace(/[^\d.]/g, '')) || 0
+
+/** Market notes that aren't "the market is open": closed, holiday. */
+const CLOSED_NOTES: Record<string, string> = {
+  [ids.T09]: 'NSE is closed. Your order will be placed when it opens at 9:15 AM on Monday, Nov 23, at the opening price.',
+  [ids.T10]: 'NSE is closed on Tuesday, Nov 24 for Guru Nanak Jayanti. Your order will be placed when it opens at 9:15 AM on Wednesday, Nov 25.',
+}
+
+/** Formatters for asking the US state whether it has an error at this value (its text isn't used). */
+const PLAIN: PadMoney = { usd: (n) => String(n), inr: () => undefined }
+
+function indianPad(id: string, us: OrderPadConfig): OrderPadConfig {
+  const scale = us.mode === 'amount' ? TO_INR : TO_SHARES
+  const balance = us.side === 'buy' ? amountOf(us.avail) * TO_INR : 0
+  const held = us.side === 'sell' ? Math.floor(Number(us.avail) * TO_SHARES) : 0
+  const scaleChip = (chip: PadChip): PadChip => ({
+    label: typeof chip.label === 'function' ? (fmt) => (chip.label as (f: typeof fmt) => string)((n, f) => fmt(n * TO_INR, f)) : chip.label,
+    // Shares: whole, and never more than the chip meant (25% of 25 held = 6).
+    apply: us.mode === 'amount' ? (value) => chip.apply(value / TO_INR) * TO_INR : (value) => Math.floor(chip.apply(value / TO_SHARES) * TO_SHARES),
+  })
+  const { req: _req, ...to } = us.to ?? {}
+  return {
+    ...us,
+    currency: 'inr',
+    label: us.label.replace(/\bNVDA\b|BRK\.B/g, INDIAN_SYMBOL),
+    stock: indianStock,
+    value: us.mode === 'amount' ? us.value * TO_INR : Math.max(1, Math.round(us.value * TO_SHARES)),
+    avail: us.side === 'buy' ? formatInr(balance) : String(held),
+    chips: us.chips?.map(scaleChip),
+    // The SL fee screen (T11) is in $: the pad's own Fee breakdown sheet opens instead.
+    to,
+    derive: (value, prices, mode, { usd: inr }) => {
+      const { product, exchange, slAtMarket } = state
+      const [first, second] = prices
+      const trigger = first
+      const limit = us.type === 'sl' && slAtMarket ? undefined : (second ?? first)
+      const unit = us.type === 'market' ? indianStock.price : us.type === 'sl' && slAtMarket ? trigger : prices[prices.length - 1]
+      const order = us.mode === 'amount' ? value : value * unit
+      const usDerived = us.derive(value / scale, prices, mode, PLAIN)
+      const shares = us.mode === 'shares' ? value : unit ? value / unit : 0
+
+      if (us.side === 'sell') {
+        const error = !usDerived.error ? undefined : held > 0 ? (shares > held ? `You can sell up to ${held} shares` : undefined) : usDerived.error.replace(/\bNVDA\b/g, INDIAN_SYMBOL)
+        return { req: usDerived.req === undefined ? undefined : inr(order), error, note: SELL_NOTE }
+      }
+
+      const required = requiredFor(order, product)
+      const error = !usDerived.error ? undefined : balance <= 0 ? 'Your wallet is empty. Add money to buy.' : required > balance ? 'Available amount is not enough' : undefined
+      const note =
+        us.type === 'market'
+          ? (CLOSED_NOTES[id] ?? (product === 'intraday'
+            ? `${INTRADAY_MARGIN}x margin on this stock · squared off at 3:20 PM if still open`
+            : product === 'mtf'
+              ? `MTF · you pay 25%, Lemonn funds the rest at 0.04% a day`
+              : `${exchange} is open till 3:30 PM`))
+          : us.type === 'limit'
+            ? `Buys only if ${INDIAN_SYMBOL} trades at ${inr(limit ?? unit)} or lower`
+            : limit === undefined
+              ? `Order will be triggered at ${inr(trigger)}`
+              : `Order will be triggered at ${inr(trigger)} and buys at up to ${inr(limit)}`
+      return {
+        req: inr(required),
+        reqLabel: product === 'intraday' ? `Margin (${INTRADAY_MARGIN}x)` : undefined,
+        error,
+        note,
+      }
+    },
+  }
+}
+
+const indianPads = new Map(Object.entries(orderPads).map(([id, config]) => [config, indianPad(id, config)]))
+
+/** The Indian pad for a US pad state (the same screen, as RELIANCE in ₹). */
+export const indianPadFor = (config: OrderPadConfig) => indianPads.get(config) ?? config
+```
+
 ### `src/flows/us-stocks/screens/trade/orderPads.tsx`
 
 ```tsx
@@ -36387,7 +42178,7 @@ const liveStock: PadStock = {
 const brkB: PadStock = { symbol: 'BRK.B', price: 498.3, change: 0.42, exchange: 'NYSE' }
 
 /** Order value → amount charged (0.3% on top). */
-const CHARGE_FACTOR = 1.003
+export const CHARGE_FACTOR = 1.003
 /** Shares held in the Sell screens. */
 const HELD_SHARES = 2.5307
 /** Shares that $100 buys in the Shares screen. */
@@ -36552,14 +42343,16 @@ export const orderPads: Record<string, OrderPadConfig> = {
   [ids.T08]: buy({
     label: 'Buy NVDA · SL',
     type: 'sl',
-    mode: 'shares',
-    value: 2,
+    // In $ like Market and Limit (the $ / shares switch under it), so all three types start from the same amount.
+    mode: 'amount',
+    toggle: true,
+    value: 100,
     min: 1,
     prices: [{ label: 'Trigger Price', pct: 3.5 }, { label: 'Limit', pct: 4 }],
-    derive: (value, [trigger, limit], _mode, { usd, inr }) => ({
-      left: `≈ ${usd(value * limit)} at your limit price`,
-      right: inr(value * limit),
-      req: usd(value * limit * CHARGE_FACTOR),
+    derive: (value, [trigger, limit], mode, { usd, inr }) => ({
+      left: mode === 'shares' ? `≈ ${usd(value)} at your limit price` : `≈ ${(value / limit).toFixed(4)} shares at your limit price`,
+      right: inr(value),
+      req: usd(value * CHARGE_FACTOR),
       note: `Buys at up to ${usd(limit)} once NVDA reaches ${usd(trigger)}`,
     }),
     to: { req: ids.T11, cta: ids.T12, market: ids.T01, limit: ids.T07 },
@@ -36623,13 +42416,24 @@ const orderRows: [string, string][] = [
   ['Validity', 'Day'],
 ]
 
-/** A brand button that leaves the screen (back), or goes to `to`. */
-const brandAction = (label: string, to?: string) => ({ label, variant: 'brand' as const, exit: true, to })
-/** "Order Details" (secondary, does nothing) + a brand button. */
-const detailsAndBrand = (label: string, to: string) => [{ label: 'Order Details', variant: 'secondary' as const }, brandAction(label, to)]
+/** A primary button (not brand: nothing here moves money) that leaves the screen (back), or goes to `to`. */
+const primaryAction = (label: string, to?: string) => ({ label, variant: 'primary' as const, exit: true, to })
+/** "Order Details" (secondary, opens that order's details) + a primary button. */
+const detailsAndPrimary = (detailsTo: string, label: string, to: string) => [
+  { label: 'Order Details', variant: 'secondary' as const, to: detailsTo },
+  primaryAction(label, to),
+]
+
+// Where the result buttons go (US Stocks figma ids): Portfolio · Holdings · US, Portfolio · Orders · US, and the Order
+// Details sample closest to the order just placed — an executed NVDA market buy; for a sell, the NVDA limit sell (the
+// only NVDA sell sample that has sold shares; it shows as partly filled).
+const HOLDINGS = '9001:30'
+const ORDERS = '9001:31'
+const BUY_DETAILS = '9001:46'
+const SELL_DETAILS = '9001:44'
 
 export const orderResults: Record<string, OrderResultConfig> = {
-  [ids.T12]: { label: 'Order processing', art: 'loading', title: 'We are working on it', description: 'This may take a few seconds', rows: orderRows, back: ids.T01 },
+  [ids.T12]: { label: 'Order processing', art: 'loading', title: 'Order in progress', description: 'It will take less than a minute', rows: orderRows, back: ids.T01 },
   [ids.T13]: {
     label: 'Buy order created',
     art: 'success',
@@ -36637,7 +42441,7 @@ export const orderResults: Record<string, OrderResultConfig> = {
     description: 'Your order to buy NVDA is successfully created',
     rows: orderRows,
     note: 'The US market is closed. Your order will be sent when it opens at 8:00 PM IST.',
-    actions: [brandAction('View Orders')],
+    actions: [primaryAction('View Orders', ORDERS)],
     back: ids.stockStatus,
   },
   [ids.T14]: {
@@ -36646,7 +42450,7 @@ export const orderResults: Record<string, OrderResultConfig> = {
     title: 'Yay! Buy Order Executed',
     description: 'Execution successful of an order to buy 2 qty of NVDA',
     rows: [['Order Value', '$376.84'], ['Number of Shares', '2'], ['Avg. Price', '$188.42'], ['Validity', 'Day']],
-    actions: detailsAndBrand('Holdings', ids.stockStatus),
+    actions: detailsAndPrimary(BUY_DETAILS, 'Holdings', HOLDINGS),
     back: ids.stockStatus,
   },
   [ids.T15]: {
@@ -36655,7 +42459,7 @@ export const orderResults: Record<string, OrderResultConfig> = {
     title: 'Oops! Buy Order not Placed',
     description: 'We could not place your order to buy NVDA at the exchange: Trading in this stock is temporarily halted',
     rows: orderRows,
-    actions: [brandAction('Okay')],
+    actions: [primaryAction('Okay')],
     back: ids.stockStatus,
   },
   [ids.H06]: {
@@ -36665,7 +42469,7 @@ export const orderResults: Record<string, OrderResultConfig> = {
     description: 'Execution successful of an order to sell 2 qty of NVDA',
     rows: [['Order Value', '$385.20'], ['Number of Shares', '2'], ['Avg. Price', '$192.60'], ['Validity', 'Day']],
     note: SELL_NOTE,
-    actions: detailsAndBrand('Holdings', ids.stockStatus),
+    actions: detailsAndPrimary(SELL_DETAILS, 'Holdings', HOLDINGS),
     back: ids.stockStatus,
   },
   [ids.H07]: {
@@ -36674,9 +42478,48 @@ export const orderResults: Record<string, OrderResultConfig> = {
     title: 'Oops! Sell Order not Placed',
     description: 'We could not place your order to sell NVDA at the exchange: Trading in this stock is temporarily halted',
     rows: orderRows,
-    actions: [brandAction('Okay')],
+    actions: [primaryAction('Okay')],
     back: ids.stockStatus,
   },
+}
+```
+
+### `src/flows/us-stocks/screens/trade/padMoney.tsx`
+
+```tsx
+// The order pad's currency (20 Nov, the user's call): the US pad is in $, the Indian pad (flow option "Order pad" =
+// india) is an Indian stock's pad, in ₹. Everything the pad draws — the price in the header, the amount, the chips,
+// Balance · Req., the limit / trigger prices, the TP/SL sheet, the fee and leverage sheets — formats its money through
+// here, so one switch turns the whole pad. Outside the pad (no provider) it is $, as every US Stocks screen.
+// $ amounts still go through the app's <Usd> / useUsd() (so the "₹ equivalent" setting reaches them); ₹ amounts are
+// already rupees and are written with formatInr.
+import { createContext, useContext } from 'react'
+import { Usd, formatInr, useUsd, type MoneyFormat } from '../../../../shared/money'
+
+export type PadCurrency = 'usd' | 'inr'
+
+const PadCurrencyContext = createContext<PadCurrency>('usd')
+
+/** Wrap the pad (and the sheets it opens) to set its currency. */
+export const PadCurrencyProvider = PadCurrencyContext.Provider
+
+export const usePadCurrency = () => useContext(PadCurrencyContext)
+
+/** "$" or "₹", for the prefix before a typed amount or price. */
+export const usePadSymbol = () => (usePadCurrency() === 'inr' ? '₹' : '$')
+
+/** An amount in the pad's currency as text: $188.42 (via useUsd) or ₹2,950.40. */
+export function usePadMoney(): (n: number, format?: MoneyFormat) => string {
+  const currency = usePadCurrency()
+  const usd = useUsd()
+  return currency === 'inr' ? (n, format) => formatInr(n, format) : usd
+}
+
+/** An amount in the pad's currency: <Usd> on the US pad, ₹ text on the Indian pad. `text` is a ready-made amount. */
+export function PadAmount({ value, text, className, ...format }: MoneyFormat & { value?: number; text?: string; className?: string }) {
+  const currency = usePadCurrency()
+  if (currency === 'usd') return <Usd value={value} text={text} layout="inline" className={className} {...format} />
+  return <span className={className}>{value === undefined ? text : formatInr(value, format)}</span>
 }
 ```
 
@@ -36702,6 +42545,8 @@ export type Derived = {
   right?: ReactNode
   /** "Req." / "Proceeds" value in the dock. */
   req?: string
+  /** Its label when it isn't the pad's `reqLabel` (Indian Intraday: "Margin (5x)"). */
+  reqLabel?: string
   error?: string
   note?: string
 }
@@ -36714,6 +42559,8 @@ export type OrderPadConfig = {
   /** Screen label (aria-label) — "NVDA" is swapped for the current stock. */
   label: string
   side: 'buy' | 'sell'
+  /** The pad's money: $ (US stock, the default) or ₹ (the Indian pad). */
+  currency?: 'usd' | 'inr'
   stock: PadStock
   type: OrderType
   /** Which unit `value` is in. */
@@ -36747,9 +42594,63 @@ export type OrderResultConfig = {
   description: string
   rows: [string, string][]
   note?: string
-  actions?: { label: string; variant: 'brand' | 'secondary'; to?: string; exit?: boolean }[]
+  actions?: { label: string; variant: 'primary' | 'secondary'; to?: string; exit?: boolean }[]
   /** Screen "exit" actions go back to. */
   back: string
+}
+```
+
+### `src/flows/us-stocks/screens/trade/version.ts`
+
+```ts
+// Which order pad design the US Stocks trade screens draw (the flow option "Order pad", group Trade).
+// V1 · the pad laid out like the commodity options pad (OrderPad.tsx, OrderResult.tsx).
+// V2 · the layout of Minted's order pad (~/minted, screens s05 / s13 / s14 / s06 / s16), the default since 18 Nov:
+//      big centred amount, quick chips, order type switch on top, Balance · Approx. req. and the app keypad in the dock.
+//      Same states, data and navigation as V1; only the layout differs. No Futures / leverage (US stocks are cash only).
+import { useFlowOption } from '../../../../shared/prototype'
+
+export type OrderPadVersion = 'v1' | 'v2'
+export const DEFAULT_ORDER_PAD_VERSION: OrderPadVersion = 'v2'
+
+// The "Order pad" option was archived 19 Nov (the user's call): V2 only. V1's code is kept, unused.
+export const useOrderPadVersion = (): OrderPadVersion => DEFAULT_ORDER_PAD_VERSION
+
+// The V2 pad's price cards (flow option "Price cards", group Trade): merged · every price in one card, a line between
+// (the default since 18 Nov); separate · a card per price (the earlier design, kept for A/B testing).
+export type PriceCards = 'merged' | 'separate'
+export const usePriceCards = (): PriceCards =>
+  useFlowOption('us-stocks', 'priceCards', 'merged') === 'separate' ? 'separate' : 'merged'
+
+// The V2 processing screen's loader (flow option "Processing animation", group Trade), imported from Minted 19 Nov
+// (OrderLoader.tsx): glass · the glass ring that turns into the tick (the default); radar · pulses round the logo that
+// close into a tick; orbit · US stocks circling the one bought; candles · candles rising; ticker · tapes behind an order card.
+export type ProcessingAnimation = 'glass' | 'radar' | 'orbit' | 'candles' | 'ticker'
+const PROCESSING_ANIMATIONS: ProcessingAnimation[] = ['glass', 'radar', 'orbit', 'candles', 'ticker']
+export const useProcessingAnimation = (): ProcessingAnimation => {
+  const value = useFlowOption('us-stocks', 'procAnim', 'glass') as ProcessingAnimation
+  return PROCESSING_ANIMATIONS.includes(value) ? value : 'glass'
+}
+
+// The order pad version (flow option "Order pad", group Trade, 19 Nov): us · stop loss only (Sl.tsx: no take profit, no
+// trailing, no SL on fractional shares) and no leverage card; india (the default) · as Indian stocks will have it: the
+// leverage card on Market (LeverageCard) and take profit + stop loss + trailing (Tpsl.tsx).
+export type PadVersion = 'us' | 'india'
+export const usePadVersion = (): PadVersion => (useFlowOption('us-stocks', 'padVersion', 'india') === 'us' ? 'us' : 'india')
+
+// The TP/SL sheet (flow option "TP/SL sheet", group Trade, 19 Nov — an A/B test, the user's call): b · one leg at a time,
+// no boxes (TpslSheetB.tsx, the default); a · a card per leg, the earlier design (TpslSheet in Tpsl.tsx).
+export type TpslSheetVersion = 'a' | 'b'
+export const useTpslSheet = (): TpslSheetVersion => (useFlowOption('us-stocks', 'tpslSheet', 'b') === 'a' ? 'a' : 'b')
+
+// The Indian pad's validity switch (flow option "Validity switch", group Trade, 20 Nov — an A/B test, the user's call):
+// v2 · inside the Market / Limit / SL track after a short divider; v1 · alone at the row's right edge;
+// v3 · above the amount, right of the Amount / Shares switch (which moves up there too) — the default (20 Nov, the user's call).
+export type ValidityPlace = 'v1' | 'v2' | 'v3'
+const VALIDITY_PLACES: ValidityPlace[] = ['v1', 'v2', 'v3']
+export const useValidityPlace = (): ValidityPlace => {
+  const value = useFlowOption('us-stocks', 'validityPlace', 'v3') as ValidityPlace
+  return VALIDITY_PLACES.includes(value) ? value : 'v3'
 }
 ```
 
@@ -36772,8 +42673,6 @@ export type UsScreenMap = Record<string, ComponentType<{ backdrop?: boolean }>>
 
 .hero {
   /* FLAG: hand-made balance card (not L3 Card); raw display:flex/grid + gap/padding instead of L3 Stack/Section/Inset/Grid */
-  --metal: linear-gradient(var(--l3-content-primary) 35%, var(--l3-content-secondary));
-  --metal-dim: linear-gradient(var(--l3-content-secondary) 35%, var(--l3-content-tertiary));
   --edge: var(--l3-border-light);
   gap:var(--l3-spacing-08);
   margin:0 var(--l3-spacing-16);
@@ -36809,12 +42708,10 @@ export type UsScreenMap = Record<string, ComponentType<{ backdrop?: boolean }>>
   display:flex;
 }
 
+/* The amount is flat colour — no gradient (18 Nov): sign and whole digits content/primary, decimals content/secondary. */
 .sign {
   height:var(--line);
-  background:var(--metal);
-  color:transparent;
-  -webkit-background-clip: text;
-  background-clip:text;
+  color:var(--l3-content-primary);
   display:inline-block;
   overflow:hidden;
 }
@@ -36860,15 +42757,13 @@ export type UsScreenMap = Record<string, ComponentType<{ backdrop?: boolean }>>
 
 .face {
   height:var(--line);
-  background:var(--metal);
-  color:transparent;
-  -webkit-background-clip: text;
-  background-clip:text;
+  color:var(--l3-content-primary);
   display:block;
 }
 
+/* The decimals (.40) are content/secondary. Same card on the INR and USD wallets. */
 .slot[data-dim] .face {
-  background-image:var(--metal-dim);
+  color:var(--l3-content-secondary);
 }
 
 .slot[data-dim] {
@@ -36974,11 +42869,6 @@ export type UsScreenMap = Record<string, ComponentType<{ backdrop?: boolean }>>
   border-radius:var(--l3-radius-full);
 }
 
-.hero:not([data-look=dashed]) {
-  --metal: linear-gradient(var(--l3-content-primary) 55%, var(--l3-content-secondary));
-  --metal-dim: linear-gradient(var(--l3-content-secondary), var(--l3-content-tertiary));
-}
-
 .hero:not([data-look=dashed]) .sign {
   height:auto;
   margin:var(--l3-spacing-06) var(--l3-spacing-02) 0 0;
@@ -36998,7 +42888,6 @@ export type UsScreenMap = Record<string, ComponentType<{ backdrop?: boolean }>>
 }
 
 .hero[data-look=dashed] {
-  --metal-dim: linear-gradient(var(--l3-content-secondary) 35%, var(--l3-content-tertiary));
   padding:var(--l3-spacing-28) var(--l3-spacing-16);
   border-radius:var(--l3-radius-16);
   text-align:center;
@@ -37025,10 +42914,7 @@ export type UsScreenMap = Record<string, ComponentType<{ backdrop?: boolean }>>
 }
 
 .unit .swap {
-  background:var(--metal-dim);
-  color:transparent;
-  -webkit-background-clip: text;
-  background-clip:text;
+  color:var(--l3-content-secondary);
 }
 
 .unit[data-unit=Cr] {
@@ -38058,8 +43944,9 @@ export function PendingBanner({ title, sub, action, onOpen }: PendingBannerProps
 
 ```tsx
 // The wallet screen frame all W* screens share: actionbar with an INR / USD tab switch, the balance card, the screen's own
-// content, and the Deposit / Withdraw dock. Switching tabs either goes to another Figma screen (`tabTo`) or flips the view
-// in place (the INR view below); swiping the page switches tabs too.
+// content, and the Deposit / Withdraw dock. One page with two views: every wallet screen carries its USD view (the props)
+// and the INR view (INR_VIEW below); a screen only picks the tab it opens on. Switching tabs never leaves the page — only
+// the body changes (a tap or a swipe). The USD tab always wears its NEW tag.
 // FLAG: hand-made pending banner.
 // FLAG: layout with raw display:flex + gap/padding (WalletScreen.module.css) instead of L3 Stack/Section/Inset/Grid.
 import { useState, type ReactNode } from 'react'
@@ -38072,11 +43959,11 @@ import { Tabs } from '@l3/components/Tabs'
 import { Tag } from '@l3/components/Tag'
 import { Phone } from '../../components/Phone'
 import { useUsNav } from '../../nav'
-import { useLinkedBanks } from '../../../../shared/userStatus'
+import { startAddBank, useLinkedBanks } from '../../../../shared/userStatus'
 import { msAccountBalance } from '@l3/icons/material'
 import { moneyIds } from '../money/ids'
 import { parseUsd, useInrEquivalent, useUsd } from '../../../../shared/money'
-import { BalanceCard, FLIP_KEY } from './BalanceCard'
+import { BalanceCard } from './BalanceCard'
 import { FIGMA } from './data'
 import { GrowNudge } from './GrowNudge'
 import { bigAmount, useBigAmounts } from './lib/bigAmounts'
@@ -38109,10 +43996,8 @@ export type WalletScreenProps = {
   label?: string
   /** Drawn behind another screen's sheet: static, taps do nothing. */
   backdrop?: boolean
-  /** The tab this Figma frame shows. */
-  tab: WalletTab
-  /** Where tapping the other tab goes (a Figma id); without it the tab flips in place. */
-  tabTo?: Partial<Record<WalletTab, string>>
+  /** The tab it opens on (default USD). The props describe the USD view; the INR view is INR_VIEW. */
+  tab?: WalletTab
   /** The balance as written: "$520.40" (a US wallet, shown in the currency the $ / ₹ switch picks) or "₹1,100.00". */
   total: string
   withdrawable: string
@@ -38135,7 +44020,7 @@ export type WalletScreenProps = {
   pending?: PendingBannerProps
 }
 
-/** The INR view's data — the INR frame's own screen, and what the screen shows when you flip to the INR tab in place. */
+/** The INR view's data: what every wallet screen shows on its INR tab. */
 export const INR_VIEW = {
   inr: true,
   total: '₹1,100.00',
@@ -38146,10 +44031,10 @@ export const INR_VIEW = {
 
 
 export function WalletScreen(props: WalletScreenProps) {
-  const { tab, tabTo = {}, backdrop } = props
+  const { tab = 'usd', backdrop } = props
   const [active, setActive] = useState<WalletTab>(tab)
   const { label, total, withdrawable, details, children, dock, backTo, sheet, noteFlow, inr, nudge, pending } =
-    active === tab ? props : { ...props, ...INR_VIEW, sheet: undefined, noteFlow: false, pending: undefined }
+    active === 'usd' ? props : { ...props, ...INR_VIEW, nudge: false, details: undefined, sheet: undefined, noteFlow: false, pending: undefined }
 
   const bigAmounts = useBigAmounts()
   const rawTotal = bigAmounts ? bigAmount(total, 'total') : total
@@ -38166,18 +44051,10 @@ export function WalletScreen(props: WalletScreenProps) {
   // The USD balance in rupees at the live rate, small under it — only with the "₹ below" setting (off by default);
   // none on a $0 wallet.
   const balanceInr = useInrEquivalent()(totalUsd ?? 0, { decimals: 2 })
-  const { go, back } = useUsNav()
+  const { go, open, back } = useUsNav()
 
   const switchTab = (next: WalletTab, animate = false) => {
     if (next === active || backdrop) return
-    if (tabTo[next]) {
-      try {
-        sessionStorage.setItem(FLIP_KEY, shownTotal)
-      } catch {
-        /* storage blocked */
-      }
-      return go(tabTo[next] as string)
-    }
     if (animate) swipe.entered(TABS.indexOf(next) > TABS.indexOf(active) ? 1 : -1)
     setActive(next)
   }
@@ -38203,12 +44080,13 @@ export function WalletScreen(props: WalletScreenProps) {
       }}
       total={rawTotal}
       withdrawable={rawWithdrawable}
-      onFullDetails={fullDetailsTo ? () => go(fullDetailsTo) : undefined}
+      onFullDetails={fullDetailsTo ? () => open(fullDetailsTo) : undefined}
     />
   )
 
+  // Deposit, Withdraw and Add bank open a page on top of the wallet (in from the right; back slides it out right).
   const goTo = (figma?: string) => () => {
-    if (figma && !backdrop) go(figma)
+    if (figma && !backdrop) open(figma)
   }
 
   const header = (
@@ -38234,12 +44112,11 @@ export function WalletScreen(props: WalletScreenProps) {
               {
                 value: 'usd',
                 label: 'USD Wallet',
-                badge:
-                  tab === 'inr' ? (
-                    <Tag variant="primary" color="discover" size="sm">
-                      NEW
-                    </Tag>
-                  ) : undefined,
+                badge: (
+                  <Tag variant="primary" color="discover" size="sm">
+                    NEW
+                  </Tag>
+                ),
               },
             ]}
           />
@@ -38263,7 +44140,8 @@ export function WalletScreen(props: WalletScreenProps) {
           type="discover"
           icon={<Icon icon={msAccountBalance} />}
           heading="Add a bank account to deposit or withdraw"
-          action={{ label: 'Add', onClick: goTo(ADD_BANK) }}
+          // From the USD tab the bank must be one that can send money abroad; from the INR tab any bank.
+          action={{ label: 'Add', onClick: () => { if (!backdrop) startAddBank(inr ? undefined : 'us-stocks-21', { usStocks: !inr }); goTo(ADD_BANK)() } }}
         />
       )}
       <ButtonGroup direction="horizontal" aria-label="Wallet actions" className={styles.dock}>
@@ -38329,31 +44207,28 @@ import { useState } from 'react'
 import { useUsNav } from '../../nav'
 import { Usd } from '../../../../shared/money'
 import { FIGMA, WITHDRAWAL_REQUESTS } from './data'
-import { INR_VIEW, WalletScreen, type WalletDock, type WalletScreenProps } from './WalletScreen'
+import { WalletScreen, type WalletDock, type WalletScreenProps, type WalletTab } from './WalletScreen'
 import { DepositProgressSheet } from './sheets/DepositProgressSheet'
+import { DEPOSIT_ETA, depositOnTheWay } from '../../../../shared/data/usDeposit'
 import { CancelWithdrawalSheet } from './sheets/CancelWithdrawalSheet'
 import { WithdrawalRequestsSheet } from './sheets/WithdrawalRequestsSheet'
 
-type ScreenProps = { backdrop?: boolean }
+/** `openOn`: the tab the wallet opens on (INR for W0 · Indian tab); the other tab flips in place. */
+type ScreenProps = { backdrop?: boolean; openOn?: WalletTab }
 
-const USD = { tab: 'usd' } as const
 /** Empty USD wallet: $0 and the "Grow Wealth in Dollars" nudge. */
-const EMPTY = { ...USD, total: '$0.00', withdrawable: '$0.00', nudge: true } as const
+const EMPTY = { total: '$0.00', withdrawable: '$0.00', nudge: true } as const
 /** USD wallet mid-withdrawal ("tight" is passed by the original but its component ignores it). */
-const WITH_BALANCE = { ...USD, total: '$520.40', withdrawable: '$317.03', details: true, tight: true } as const
+const WITH_BALANCE = { total: '$520.40', withdrawable: '$317.03', details: true, tight: true } as const
 const DEPOSIT_ONLY: WalletDock = { primary: 'Deposit', primaryTo: FIGMA.addMoney, withdrawDisabled: true }
 
-/** W0 · Wallet · Indian tab (USD tab goes to the activate screen). */
-export function WalletInrScreen({ backdrop }: ScreenProps) {
-  return <WalletScreen label="Wallet, INR" backdrop={backdrop} tab="inr" tabTo={{ usd: FIGMA.walletUsActivate }} {...INR_VIEW} />
-}
-
 /** W0 · Wallet · US tab · Activate US Stocks. */
-export function WalletUsActivateScreen({ backdrop }: ScreenProps) {
+export function WalletUsActivateScreen({ backdrop, openOn }: ScreenProps) {
   return (
     <WalletScreen
       label="Wallet, USD, activate US Stocks"
       backdrop={backdrop}
+      tab={openOn}
       {...EMPTY}
       dock={{ primary: 'Activate US Stocks', primaryTo: FIGMA.activate, withdraw: false }}
     />
@@ -38361,11 +44236,12 @@ export function WalletUsActivateScreen({ backdrop }: ScreenProps) {
 }
 
 /** Wallet · US tab · Lemonn KYC pending: Complete KYC (→ the KYC flow) in place of Activate. Not in Jojo's Figma. */
-export function WalletUsKycPendingScreen({ backdrop }: ScreenProps) {
+export function WalletUsKycPendingScreen({ backdrop, openOn }: ScreenProps) {
   return (
     <WalletScreen
       label="Wallet, USD, complete KYC"
       backdrop={backdrop}
+      tab={openOn}
       {...EMPTY}
       dock={{ primary: 'Complete KYC', primaryTo: 'kyc-01', withdraw: false }}
     />
@@ -38373,28 +44249,28 @@ export function WalletUsKycPendingScreen({ backdrop }: ScreenProps) {
 }
 
 /** W1 · Wallet · US tab · $0 balance. */
-export function WalletZeroBalanceScreen({ backdrop }: ScreenProps) {
-  return <WalletScreen label="Wallet, USD, zero balance" backdrop={backdrop} {...EMPTY} details dock={DEPOSIT_ONLY} />
+export function WalletZeroBalanceScreen({ backdrop, openOn }: ScreenProps) {
+  return <WalletScreen label="Wallet, USD, zero balance" backdrop={backdrop} tab={openOn} {...EMPTY} details dock={DEPOSIT_ONLY} />
 }
 
 // FLAG: the three activation-state wallet frames (under review / failed / contact support) all render the zero-balance wallet.
-export function WalletUnderReviewScreen({ backdrop }: ScreenProps) {
-  return <WalletZeroBalanceScreen backdrop={backdrop} />
+export function WalletUnderReviewScreen({ backdrop, openOn }: ScreenProps) {
+  return <WalletZeroBalanceScreen backdrop={backdrop} openOn={openOn} />
 }
-export function WalletActivationFailedScreen({ backdrop }: ScreenProps) {
-  return <WalletZeroBalanceScreen backdrop={backdrop} />
+export function WalletActivationFailedScreen({ backdrop, openOn }: ScreenProps) {
+  return <WalletZeroBalanceScreen backdrop={backdrop} openOn={openOn} />
 }
-export function WalletContactSupportScreen({ backdrop }: ScreenProps) {
-  return <WalletZeroBalanceScreen backdrop={backdrop} />
+export function WalletContactSupportScreen({ backdrop, openOn }: ScreenProps) {
+  return <WalletZeroBalanceScreen backdrop={backdrop} openOn={openOn} />
 }
 
 /** W2 · Wallet · US tab · Funded. */
-export function WalletFundedScreen({ backdrop }: ScreenProps) {
+export function WalletFundedScreen({ backdrop, openOn }: ScreenProps) {
   return (
     <WalletScreen
       label="Wallet, USD, funded"
       backdrop={backdrop}
-      {...USD}
+      tab={openOn}
       total="$520.40"
       withdrawable="$417.03"
       details={FIGMA.balanceDetails}
@@ -38403,33 +44279,44 @@ export function WalletFundedScreen({ backdrop }: ScreenProps) {
   )
 }
 
-/** Wallet · US tab · Add money transfer in progress. */
-export function WalletTransferInProgressScreen({ backdrop }: ScreenProps) {
+/**
+ * Wallet · US tab · Add money transfer in progress. `sent`: just back from the bank's page (us-stocks-93) — the sheet
+ * opens at once to say the money is on its way and when it lands; "Got it" leaves the wallet with its pending banner.
+ */
+export function WalletTransferInProgressScreen({ backdrop, openOn, sent }: ScreenProps & { sent?: boolean }) {
+  const deposit = depositOnTheWay()
   // Tapping the banner explains the wait: Paid → Sent to US → Ready, and why it takes 1–2 working days.
-  const [explaining, setExplaining] = useState(false)
+  const [explaining, setExplaining] = useState(!!sent && !backdrop)
   return (
     <WalletScreen
       label="Wallet, USD, transfer in progress"
       backdrop={backdrop}
+      tab={openOn}
       {...WITH_BALANCE}
       total="$0"
       withdrawable="$0.00"
       backTo="stocks-01"
       dock={DEPOSIT_ONLY}
-      pending={{ title: <><Usd value={1035.37} layout="inline" /> deposit in progress</>, sub: 'Arrives in your wallet by Thu 8 PM (or Fri)', onOpen: () => !backdrop && setExplaining(true) }}
-      sheet={explaining && <DepositProgressSheet amount={1035.37} eta="by Thu 8 PM" onClose={() => setExplaining(false)} />}
+      pending={{ title: <><Usd value={deposit.usd} layout="inline" /> deposit in progress</>, sub: 'Arrives in your wallet by Thu 8 PM (or Fri)', onOpen: () => !backdrop && setExplaining(true) }}
+      sheet={explaining && <DepositProgressSheet deposit={deposit} eta={DEPOSIT_ETA} onClose={() => setExplaining(false)} />}
     />
   )
 }
 
+/** Back from the bank's page: the in-progress wallet with the "money sent" sheet open (not in Figma). */
+export function WalletMoneySentScreen(props: ScreenProps) {
+  return <WalletTransferInProgressScreen {...props} sent />
+}
+
 /** W3 · Withdrawing · in progress (Cancel asks to confirm, then the banner goes). */
-export function WalletWithdrawalInProgressScreen({ backdrop }: ScreenProps) {
+export function WalletWithdrawalInProgressScreen({ backdrop, openOn }: ScreenProps) {
   const [asking, setAsking] = useState(false)
   const [cancelled, setCancelled] = useState(false)
   return (
     <WalletScreen
       label="Wallet, USD, withdrawal in progress"
       backdrop={backdrop}
+      tab={openOn}
       {...WITH_BALANCE}
       dock={DEPOSIT_ONLY}
       pending={
@@ -38458,11 +44345,12 @@ export function WalletWithdrawalInProgressScreen({ backdrop }: ScreenProps) {
 }
 
 /** W3 · Withdrawing · sent to bank. */
-export function WalletWithdrawalSentScreen({ backdrop }: ScreenProps) {
+export function WalletWithdrawalSentScreen({ backdrop, openOn }: ScreenProps) {
   return (
     <WalletScreen
       label="Wallet, USD, withdrawal sent to bank"
       backdrop={backdrop}
+      tab={openOn}
       {...WITH_BALANCE}
       dock={DEPOSIT_ONLY}
       pending={{ title: <><Usd value={100} layout="inline" /> withdrawal sent to bank</>, sub: 'Credited to HDFC Bank by Wed' }}
@@ -38471,17 +44359,18 @@ export function WalletWithdrawalSentScreen({ backdrop }: ScreenProps) {
 }
 
 /** W3 · Withdrawal credited. */
-export function WalletWithdrawalCreditedScreen({ backdrop }: ScreenProps) {
-  return <WalletScreen label="Wallet, USD, withdrawal credited" backdrop={backdrop} {...WITH_BALANCE} dock={DEPOSIT_ONLY} />
+export function WalletWithdrawalCreditedScreen({ backdrop, openOn }: ScreenProps) {
+  return <WalletScreen label="Wallet, USD, withdrawal credited" backdrop={backdrop} tab={openOn} {...WITH_BALANCE} dock={DEPOSIT_ONLY} />
 }
 
 /** W3b · 2 withdrawals pending (View opens the requests sheet). `sheet` is set by the W3c frame. */
-export function WalletTwoWithdrawalsScreen({ backdrop, sheet }: ScreenProps & { sheet?: WalletScreenProps['sheet'] }) {
+export function WalletTwoWithdrawalsScreen({ backdrop, openOn, sheet }: ScreenProps & { sheet?: WalletScreenProps['sheet'] }) {
   const { go } = useUsNav()
   return (
     <WalletScreen
       label="Wallet, USD, two withdrawals pending"
       backdrop={backdrop}
+      tab={openOn}
       {...WITH_BALANCE}
       dock={DEPOSIT_ONLY}
       sheet={sheet}
@@ -38495,16 +44384,17 @@ export function WalletTwoWithdrawalsScreen({ backdrop, sheet }: ScreenProps & { 
 }
 
 /** W3c · Withdrawal requests sheet over the two-withdrawals wallet. */
-export function WalletWithdrawalRequestsScreen({ backdrop }: ScreenProps) {
+export function WalletWithdrawalRequestsScreen({ backdrop, openOn }: ScreenProps) {
   return <WalletTwoWithdrawalsScreen backdrop={backdrop} sheet={backdrop ? undefined : <WithdrawalRequestsSheet />} />
 }
 
 /** W3d · Withdrawal taking longer. */
-export function WalletWithdrawalDelayedScreen({ backdrop }: ScreenProps) {
+export function WalletWithdrawalDelayedScreen({ backdrop, openOn }: ScreenProps) {
   return (
     <WalletScreen
       label="Wallet, USD, withdrawal taking longer"
       backdrop={backdrop}
+      tab={openOn}
       {...WITH_BALANCE}
       dock={DEPOSIT_ONLY}
       pending={{ title: <><Usd value={100} layout="inline" /> withdrawal pending</>, sub: 'Taking longer than usual, we’re on it' }}
@@ -38535,7 +44425,7 @@ export const FIGMA = {
   /** H08 · Withdraw · enter amount. */
   withdraw: '5852:100550',
   /** Activate US Stocks (activation flow). */
-  activate: '5756:71475',
+  activate: '9001:60', // Activate US Stocks: the declarations page (screens/activate)
   /** W0 · Wallet · US tab · Activate US Stocks. */
   walletUsActivate: '5852:99057',
   /** W3b · 2 withdrawals pending. */
@@ -38583,8 +44473,8 @@ import {
   WalletActivationFailedScreen,
   WalletContactSupportScreen,
   WalletFundedScreen,
-  WalletInrScreen,
   WalletTransferInProgressScreen,
+  WalletMoneySentScreen,
   WalletTwoWithdrawalsScreen,
   WalletUnderReviewScreen,
   WalletUsKycPendingScreen,
@@ -38601,7 +44491,7 @@ import {
  * The wallet's US tab in the user status picked in the prototype settings (src/shared/userStatus): not activated (or KYC
  * pending) → Activate US Stocks; under review / contact support / failed; activated → $0, money on the way, or funded.
  */
-function WalletUsForStatus(props: { backdrop?: boolean }) {
+function WalletUsForStatus(props: { backdrop?: boolean; openOn?: 'inr' | 'usd' }) {
   switch (useUsJourney()) {
     case 'kyc': return <WalletUsKycPendingScreen {...props} />
     case 'review': return <WalletUnderReviewScreen {...props} />
@@ -38617,7 +44507,8 @@ function WalletUsForStatus(props: { backdrop?: boolean }) {
 
 /** Screens of this part, by Figma node id. The US tab's "Activate" frame is the one US tab that follows the user status. */
 export const screens: UsScreenMap = {
-  '5852:99084': WalletInrScreen,
+  // W0 · Indian tab: the same wallet page, opened on INR; its USD tab is the one the user status picks.
+  '5852:99084': (props) => <WalletUsForStatus {...props} openOn="inr" />,
   '5852:99057': WalletUsForStatus,
   '5852:99028': WalletUnderReviewScreen,
   '5852:98999': WalletActivationFailedScreen,
@@ -38628,6 +44519,7 @@ export const screens: UsScreenMap = {
   '5852:98888': () => <BalanceDetails />,
   '5852:98862': () => <BalanceDetails expanded />,
   '5776:84195': WalletTransferInProgressScreen,
+  '9001:22': WalletMoneySentScreen,
   '5852:98799': WalletWithdrawalInProgressScreen,
   '5852:98736': WalletWithdrawalSentScreen,
   '5852:98677': WalletWithdrawalCreditedScreen,
@@ -38967,64 +44859,14 @@ export function CancelWithdrawalSheet({ amount, all, onNo, onYes }: { amount: nu
 ### `src/flows/us-stocks/screens/wallet/sheets/DepositProgressSheet.tsx`
 
 ```tsx
-// "Why does it take 1–2 days?" — opened from the wallet's "deposit in progress" banner. The same three steps as the Home's
-// "Money on the way" card (Paid → Sent to US → Ready), here as L3 Steps (vertical) so each can say what's happening and
-// why: money leaving India goes through the bank's forex desk under RBI's LRS and an international wire, and US banks
-// only credit on US working days.
-import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
-import { Button } from '@l3/components/Button'
-import { ButtonGroup } from '@l3/components/ButtonGroup'
-import { Icon } from '@l3/components/Icon'
-import { Stack } from '@l3/components/Stack'
-import { Steps } from '@l3/components/Steps'
-import { msShieldLockFill } from '@l3/icons/material'
+// The deposit explainer (shared/ui/DepositProgressSheet) on the wallet: drawn in US Stocks' own sheet layer.
+// Opened by the deposit-in-progress bar, and at once when the user is back from the bank's page (us-stocks-93).
 import { useSheetLayer } from '../../../components/Phone'
-import { Usd } from '../../../../../shared/money'
-import styles from './Sheets.module.css'
+import { DepositProgressSheet as SharedDepositProgressSheet } from '../../../../../shared/ui/DepositProgressSheet'
+import type { SentDeposit } from '../../../../../shared/data/usDeposit'
 
-export function DepositProgressSheet({ amount, eta, onClose }: { amount: number; eta: string; onClose: () => void }) {
-  const layer = useSheetLayer()
-  return (
-    <BottomSheet
-      open
-      onClose={onClose}
-      container={layer}
-      aria-labelledby="deposit-progress-title"
-      header={
-        <BottomSheetHeader
-          heading="Why it takes 1–2 days"
-          headingId="deposit-progress-title"
-          description="Sending money abroad goes through a few regulated hands. Here's where yours is."
-        />
-      }
-      footer={
-        <ButtonGroup aria-label="Deposit progress">
-          <Button variant="primary" size="lg" fullWidth onClick={onClose}>
-            Got it
-          </Button>
-        </ButtonGroup>
-      }
-    >
-      <Stack gap="24">
-        <Steps
-          label="Your deposit"
-          steps={[
-            { label: 'Paid', state: 'done', description: <><Usd value={amount} layout="inline" /> left your bank account. Nothing more to do.</> },
-            {
-              label: 'Sent to US · 1–2 working days',
-              state: 'loading',
-              description: 'Your bank converts it to dollars under RBI’s Liberalised Remittance Scheme and wires it to our US broker partner. International wires are checked at each bank on the way.',
-            },
-            { label: 'Ready to trade', state: 'todo', description: `Expected ${eta}. US banks credit only on US working days, so a US holiday can add a day.` },
-          ]}
-        />
-        <p className={styles.safeNote}>
-          <Icon icon={msShieldLockFill} size={16} />
-          <span>Your money is safe with Lemonn. It's held in your name at our US broker partner, and you'll be notified the moment it lands.</span>
-        </p>
-      </Stack>
-    </BottomSheet>
-  )
+export function DepositProgressSheet({ deposit, eta, onClose }: { deposit: SentDeposit; eta: string; onClose: () => void }) {
+  return <SharedDepositProgressSheet deposit={deposit} eta={eta} onClose={onClose} container={useSheetLayer()} />
 }
 ```
 
@@ -39076,38 +44918,11 @@ export function DepositProgressSheet({ amount, eta, onClose }: { amount: number;
   color:var(--l3-content-secondary);
 }
 
-.gesture {
-  /* FLAG: hand-made drag handle (the L3 sheet has no handle); raw 120px width */
-  padding:var(--l3-spacing-10) var(--l3-spacing-16);
-  background:var(--l3-surface-primary);
-  justify-content:center;
-  display:flex;
-}
 
-.gesture span {
-  width:120px;
-  height:var(--l3-size-04);
-  border-radius:var(--l3-radius-full);
-  background:var(--l3-surface-inverted);
-  opacity:.5;
-}
 
 .close[data-size=sm][data-variant=ghost] {
   /* FLAG: selector not used by any component (leftover) */
   --btn-icon-size: var(--l3-icon-size-24);
-}
-
-.breakdown {
-  gap:var(--l3-spacing-12);
-  padding-bottom:var(--l3-spacing-08);
-  flex-direction:column;
-  display:flex;
-}
-
-.rule {
-  border:0;
-  border-top:1px solid var(--l3-border-light);
-  margin:0;
 }
 
 .requests {
@@ -39169,29 +44984,12 @@ export function DepositProgressSheet({ amount, eta, onClose }: { amount: number;
   font:var(--l3-text-heading-14);
   color:var(--l3-content-primary);
 }
-
-
-/* Deposit progress sheet: "your money is safe" under the steps. */
-.safeNote {
-  display: flex;
-  gap: var(--l3-spacing-08);
-  align-items: flex-start;
-  margin: 0;
-  font: var(--l3-text-description-12);
-  color: var(--l3-content-secondary);
-}
-
-.safeNote > :first-child {
-  flex: none;
-  color: var(--l3-content-accent-success-default);
-}
 ```
 
 ### `src/flows/us-stocks/screens/wallet/sheets/WithdrawableSheet.tsx`
 
 ```tsx
 // "Withdrawable balance" sheet: how the total splits into what can go to the bank now and what is held back.
-// FLAG: hand-made drag handle in the `utility` slot (L3 BottomSheet has none).
 import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
 import { Button } from '@l3/components/Button'
 import { ButtonGroup } from '@l3/components/ButtonGroup'
@@ -39199,7 +44997,6 @@ import { KeyValueList, KeyValueRow } from '@l3/components/KeyValueList'
 import { useSheetLayer } from '../../../components/Phone'
 import { Usd, formatInr, parseUsd } from '../../../../../shared/money'
 import { BROKERAGE_CREDITS_INR, SETTLING_USD } from '../data'
-import styles from './Sheets.module.css'
 
 const amountOf = (text: string) => Number(text.replace(/[^\d.]/g, '')) || 0
 
@@ -39235,11 +45032,6 @@ export function WithdrawableSheet({
       onClose={onClose}
       container={layer}
       aria-labelledby="withdrawable-title"
-      utility={
-        <div className={styles.gesture} aria-hidden="true">
-          <span />
-        </div>
-      }
       header={<BottomSheetHeader heading="Withdrawable balance" headingId="withdrawable-title" description="What you can send to your bank right now" />}
       footer={
         <ButtonGroup aria-label="Withdrawable balance">
@@ -39254,26 +45046,25 @@ export function WithdrawableSheet({
         </ButtonGroup>
       }
     >
-      <div className={styles.breakdown}>
-        <KeyValueList aria-label="Balance breakdown">
-          <KeyValueRow label={inr ? 'INR balance' : 'USD balance'} value={money(amountOf(total))} />
-          {inr ? (
-            <>
-              <KeyValueRow label="Brokerage credits" caption="Used for brokerage only" value={money(settling, true)} />
-              {rest > 0 && <KeyValueRow label="Blocked for orders" caption="Free once they settle" value={money(rest, true)} />}
-            </>
-          ) : (
-            <>
-              <KeyValueRow label="Settling from sales" caption="Free in 1 working day" value={money(settling, true)} />
-              {rest > 0 && <KeyValueRow label="Withdrawals sent" caption="On the way to your bank" value={money(rest, true)} />}
-            </>
-          )}
-        </KeyValueList>
-        <hr className={styles.rule} />
-        <KeyValueList aria-label="Withdrawable">
-          <KeyValueRow total label="Withdrawable" value={parseUsd(withdrawable) ? <Usd text={withdrawable} align="end" /> : withdrawable} />
-        </KeyValueList>
-      </div>
+      {/* L3 money breakdown: the card KeyValueList, its `total` row (divider + Withdrawable) at the end. */}
+      <KeyValueList
+        variant="card"
+        aria-label="Balance breakdown"
+        total={{ label: 'Withdrawable', value: parseUsd(withdrawable) ? <Usd text={withdrawable} align="end" /> : withdrawable }}
+      >
+        <KeyValueRow label={inr ? 'INR balance' : 'USD balance'} value={money(amountOf(total))} />
+        {inr ? (
+          <>
+            <KeyValueRow label="Brokerage credits" caption="Used for brokerage only" value={money(settling, true)} />
+            {rest > 0 && <KeyValueRow label="Blocked for orders" caption="Free once they settle" value={money(rest, true)} />}
+          </>
+        ) : (
+          <>
+            <KeyValueRow label="Settling from sales" caption="Free in 1 working day" value={money(settling, true)} />
+            {rest > 0 && <KeyValueRow label="Withdrawals sent" caption="On the way to your bank" value={money(rest, true)} />}
+          </>
+        )}
+      </KeyValueList>
     </BottomSheet>
   )
 }
@@ -39372,134 +45163,6 @@ export function WithdrawalRequestsSheet() {
 
 ## Source — shared app parts it uses
 
-### `src/shared/assets/flags/china.svg`
-
-```tsx
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- China, round. Flag artwork keeps its own colours. -->
-  <defs><clipPath id="c"><circle cx="12" cy="12" r="12"/></clipPath></defs>
-  <g clip-path="url(#c)">
-    <rect width="24" height="24" fill="#DE2910"/>
-    <g fill="#FFDE00">
-      <polygon points="7.00,3.90 7.81,6.39 10.42,6.39 8.31,7.92 9.12,10.41 7.00,8.88 4.88,10.41 5.69,7.92 3.58,6.39 6.19,6.39"/>
-      <polygon points="12.88,2.17 12.85,2.97 13.60,3.24 12.83,3.46 12.80,4.26 12.36,3.59 11.59,3.82 12.08,3.19 11.63,2.52 12.38,2.80"/>
-      <polygon points="15.51,4.76 15.21,5.50 15.82,6.01 15.02,5.96 14.72,6.70 14.53,5.92 13.73,5.87 14.41,5.44 14.22,4.67 14.83,5.18"/>
-      <polygon points="14.99,7.72 15.10,8.51 15.89,8.65 15.17,9.00 15.28,9.79 14.73,9.21 14.01,9.56 14.38,8.86 13.83,8.28 14.62,8.42"/>
-      <polygon points="13.05,10.25 12.88,11.03 13.58,11.43 12.78,11.51 12.61,12.29 12.29,11.56 11.50,11.65 12.09,11.11 11.76,10.38 12.46,10.78"/>
-    </g>
-  </g>
-  <circle cx="12" cy="12" r="11.75" fill="none" stroke="#000000" stroke-opacity="0.12" stroke-width="0.5"/>
-</svg>
-```
-
-### `src/shared/assets/flags/europe.svg`
-
-```tsx
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- European Union, round. Flag artwork keeps its own colours. -->
-  <defs><clipPath id="c"><circle cx="12" cy="12" r="12"/></clipPath></defs>
-  <g clip-path="url(#c)">
-    <rect width="24" height="24" fill="#003399"/>
-    <g fill="#FFCC00">
-      <polygon points="12.00,3.80 12.27,4.63 13.14,4.63 12.44,5.14 12.71,5.97 12.00,5.46 11.29,5.97 11.56,5.14 10.86,4.63 11.73,4.63"/>
-      <polygon points="15.50,4.74 15.77,5.57 16.64,5.57 15.94,6.08 16.21,6.91 15.50,6.40 14.79,6.91 15.06,6.08 14.36,5.57 15.23,5.57"/>
-      <polygon points="18.06,7.30 18.33,8.13 19.20,8.13 18.50,8.64 18.77,9.47 18.06,8.96 17.36,9.47 17.63,8.64 16.92,8.13 17.79,8.13"/>
-      <polygon points="19.00,10.80 19.27,11.63 20.14,11.63 19.44,12.14 19.71,12.97 19.00,12.46 18.29,12.97 18.56,12.14 17.86,11.63 18.73,11.63"/>
-      <polygon points="18.06,14.30 18.33,15.13 19.20,15.13 18.50,15.64 18.77,16.47 18.06,15.96 17.36,16.47 17.63,15.64 16.92,15.13 17.79,15.13"/>
-      <polygon points="15.50,16.86 15.77,17.69 16.64,17.69 15.94,18.20 16.21,19.03 15.50,18.52 14.79,19.03 15.06,18.20 14.36,17.69 15.23,17.69"/>
-      <polygon points="12.00,17.80 12.27,18.63 13.14,18.63 12.44,19.14 12.71,19.97 12.00,19.46 11.29,19.97 11.56,19.14 10.86,18.63 11.73,18.63"/>
-      <polygon points="8.50,16.86 8.77,17.69 9.64,17.69 8.94,18.20 9.21,19.03 8.50,18.52 7.79,19.03 8.06,18.20 7.36,17.69 8.23,17.69"/>
-      <polygon points="5.94,14.30 6.21,15.13 7.08,15.13 6.37,15.64 6.64,16.47 5.94,15.96 5.23,16.47 5.50,15.64 4.80,15.13 5.67,15.13"/>
-      <polygon points="5.00,10.80 5.27,11.63 6.14,11.63 5.44,12.14 5.71,12.97 5.00,12.46 4.29,12.97 4.56,12.14 3.86,11.63 4.73,11.63"/>
-      <polygon points="5.94,7.30 6.21,8.13 7.08,8.13 6.37,8.64 6.64,9.47 5.94,8.96 5.23,9.47 5.50,8.64 4.80,8.13 5.67,8.13"/>
-      <polygon points="8.50,4.74 8.77,5.57 9.64,5.57 8.94,6.08 9.21,6.91 8.50,6.40 7.79,6.91 8.06,6.08 7.36,5.57 8.23,5.57"/>
-    </g>
-  </g>
-  <circle cx="12" cy="12" r="11.75" fill="none" stroke="#000000" stroke-opacity="0.12" stroke-width="0.5"/>
-</svg>
-```
-
-### `src/shared/assets/flags/india.svg`
-
-```tsx
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- India, round: saffron / white / green with the navy Ashoka Chakra. Flag artwork keeps its own colours. -->
-  <defs><clipPath id="c"><circle cx="12" cy="12" r="12"/></clipPath></defs>
-  <g clip-path="url(#c)">
-    <rect width="24" height="8" fill="#FF9933"/>
-    <rect y="8" width="24" height="8" fill="#FFFFFF"/>
-    <rect y="16" width="24" height="8" fill="#138808"/>
-    <circle cx="12" cy="12" r="3" fill="none" stroke="#000080" stroke-width="0.8"/>
-    <circle cx="12" cy="12" r="0.8" fill="#000080"/>
-    <g stroke="#000080" stroke-width="0.4">
-      <path d="M12 9v6M9 12h6M9.88 9.88l4.24 4.24M14.12 9.88l-4.24 4.24"/>
-    </g>
-  </g>
-  <circle cx="12" cy="12" r="11.75" fill="none" stroke="#000000" stroke-opacity="0.12" stroke-width="0.5"/>
-</svg>
-```
-
-### `src/shared/assets/flags/japan.svg`
-
-```tsx
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- Japan, round. Flag artwork keeps its own colours. -->
-  <defs><clipPath id="c"><circle cx="12" cy="12" r="12"/></clipPath></defs>
-  <g clip-path="url(#c)">
-    <rect width="24" height="24" fill="#FFFFFF"/>
-    <circle cx="12" cy="12" r="5.6" fill="#BC002D"/>
-  </g>
-  <circle cx="12" cy="12" r="11.75" fill="none" stroke="#000000" stroke-opacity="0.12" stroke-width="0.5"/>
-</svg>
-```
-
-### `src/shared/assets/flags/korea.svg`
-
-```tsx
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- South Korea, round. Flag artwork keeps its own colours. -->
-  <defs><clipPath id="c"><circle cx="12" cy="12" r="12"/></clipPath></defs>
-  <g clip-path="url(#c)">
-    <rect width="24" height="24" fill="#FFFFFF"/>
-    <circle cx="12" cy="12" r="5" fill="#0047A0"/>
-    <path d="M7 12a5 5 0 0 1 10 0a2.5 2.5 0 0 1-5 0a2.5 2.5 0 0 0-5 0z" fill="#CD2E3A"/>
-    <g stroke="#000000" stroke-width="0.9" stroke-linecap="butt">
-      <path d="M3.6 6.2l2.4-1.4M4.3 7.6l2.4-1.4M5 9l2.4-1.4" transform="translate(-0.4 0.2)"/>
-      <path d="M20.4 6.2l-2.4-1.4M19.7 7.6l-2.4-1.4M19 9l-2.4-1.4" transform="translate(0.4 0.2)"/>
-      <path d="M3.6 17.8l2.4 1.4M4.3 16.4l2.4 1.4M5 15l2.4 1.4" transform="translate(-0.4 -0.2)"/>
-      <path d="M20.4 17.8l-2.4 1.4M19.7 16.4l-2.4 1.4M19 15l-2.4 1.4" transform="translate(0.4 -0.2)"/>
-    </g>
-  </g>
-  <circle cx="12" cy="12" r="11.75" fill="none" stroke="#000000" stroke-opacity="0.12" stroke-width="0.5"/>
-</svg>
-```
-
-### `src/shared/assets/flags/us.svg`
-
-```tsx
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- United States, round: red and white stripes with the blue canton. Flag artwork keeps its own colours. -->
-  <defs><clipPath id="c"><circle cx="12" cy="12" r="12"/></clipPath></defs>
-  <g clip-path="url(#c)">
-    <rect width="24" height="24" fill="#FFFFFF"/>
-    <g fill="#B22234">
-      <rect y="0" width="24" height="2.4"/>
-      <rect y="4.8" width="24" height="2.4"/>
-      <rect y="9.6" width="24" height="2.4"/>
-      <rect y="14.4" width="24" height="2.4"/>
-      <rect y="19.2" width="24" height="2.4"/>
-    </g>
-    <rect width="12" height="12" fill="#3C3B6E"/>
-    <g fill="#FFFFFF">
-      <circle cx="3.5" cy="3" r="0.8"/><circle cx="7" cy="3" r="0.8"/><circle cx="10.5" cy="3" r="0.8"/>
-      <circle cx="5.25" cy="6" r="0.8"/><circle cx="8.75" cy="6" r="0.8"/>
-      <circle cx="3.5" cy="9" r="0.8"/><circle cx="7" cy="9" r="0.8"/><circle cx="10.5" cy="9" r="0.8"/>
-    </g>
-  </g>
-  <circle cx="12" cy="12" r="11.75" fill="none" stroke="#000000" stroke-opacity="0.12" stroke-width="0.5"/>
-</svg>
-```
-
 ### `src/shared/copy.ts`
 
 ```ts
@@ -39522,6 +45185,37 @@ export function makeCopy<Copy extends Record<string, string>>(flow: string, copy
     return vars ? template.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m)) : template
   }
 }
+```
+
+### `src/shared/data/assets/idfcfirstb.png`
+
+```tsx
+�PNG
+
+   IHDR   �   �   �>a�   gAMA  ���a    cHRM  z&  ��  �   ��  u0  �`  :�  p��Q<   DeXIfMM *    �i            �       �       ��       �    H�w  �iTXtXML:com.adobe.xmp     <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMP Core 6.0.0">
+   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <rdf:Description rdf:about=""
+            xmlns:exif="http://ns.adobe.com/exif/1.0/">
+         <exif:ColorSpace>1</exif:ColorSpace>
+         <exif:PixelXDimension>300</exif:PixelXDimension>
+         <exif:PixelYDimension>300</exif:PixelYDimension>
+      </rdf:Description>
+   </rdf:RDF>
+</x:xmpmeta>
+� ��  �IDATx��kU�ϼ��Ę�D���(��ܺP���BD�t���e� R[T����XӘD�RM� �{M޼�ib�:1�ܛ;�9�Hޛ̝{��|��ܹ?&939��Yf=�� �8   W���� �q���  W���� �q���  W���� �q��?���e��;��O�{0�/� KO͑5���螓M�z=}`��<������T��f���=G��L��a���9x��z�M���d 2�)pcf��}�� b����v�Z�Q�Ųt�$I��MK�۞���j� }�� `�?{��K/�F!��ZX� ������>�^�e �
+�F�{�%z����d@�m/-��ǟP��A�\�O�vnѡ��9 nG�=WP �F��T��_ �{ ����lM��J�	�� H�B�	 B); � �Pf�	ܓ�ܗ�����w����. |i%4G��`�'����]ꮵ�0T���б�_��m��3���?���GI��z
+��T�S���?|D��.x��?TM��]�QE�,�H��~���x��
+��Y@��� ��Y@���CX ,��=���5, ��R
+ �Rr�og P���� ���~;��Ŵ�G ��\��Y�/ ���'�V�Y��e�* ���s�pa�z=�N����qd����3����
+]�b�* 2d�h�җ&{%�y����� �qr����U��	�Z��� ��js @ՊGV �, U� �V<���[2.����,w�i�����s�8?`�!��:=��st��S�B��Iĭt�={�.NS�Պͼ}�'0 �ۘ��?1�8��qr����O��?�@ �DA.�b� �[���^���	ԏ�� @U~���~T-  ��� �c�j P�_�p �U ����� ��Z  T��/ ��@��� �|k>��_U5v(<V�v0�i�. �ٲ��F��������U�ž|춓��gR`ht�v��i��O�M@�κ&U �̒W�uWW�շ��:��Þ_cg��K^5��P��і �M5��jt�� mh�1L�&0����sK	�o���c�c�Υ
+��a�������x�m^i��o����2 p�X �2��3�����̗GG��z������������ ��Y��� y~ S�b�O��<8m����\ I ��  Z�GR. �$Zf  -�#) D-3����p�������I�
+ �~=�} �B��0 ����7 `.���w��0��k�%����u�o� ���?�H7�����K������o���Q����VUN��9�sn�0�ʕ�w��v.U Dz���yj�&PM�8
+ q�A�
+ �&}�8�fE؛@��-�>�<�����r�kP ��v��)����F���-G�Y�ᱱ���W0 �ډ'��乏6@����o:��8+O�Ə<��7�ܥ@��@P �ҏx��_+�V@`�c?< �=B���p���;������a~ �M���+4|��\�*T@���
+7��+����_��|�~�R�
+��̐�Xdӯ���u�C�ޣ8Q ��z<e�@�ȇe�D$�/��-l.(  
+���  lŻ�- (Hbk � � �� �V����$�6  [�.x 
+���  lŻ�- (Hbk ����E�}R�    IEND�B`�
 ```
 
 ### `src/shared/data/companies.ts`
@@ -39588,7 +45282,7 @@ export type Company = CompanyProfile & {
 
 const both: Exchange[] = ['NSE', 'BSE']
 const company = (symbol: string, name: string, initials: string, founded: number, headquarters: string, website: string, about: string): CompanyProfile => ({
-  symbol, name, initials, exchanges: both, founded, headquarters, website, about,
+  symbol, name, initials: initials.slice(0, 1), exchanges: both, founded, headquarters, website, about,
 })
 
 /** Profiles, by NSE symbol (one line each — scripts/market-snapshot.mjs reads the symbols from here). */
@@ -39714,6 +45408,31 @@ export function companiesByChange(direction: 'gainers' | 'losers'): Company[] {
 }
 ```
 
+### `src/shared/data/etfInside.ts`
+
+```ts
+// ETF cards' second line, shared by the ETF list (us-stocks) and Home's Discover ETFs (stocks): after the ticker, what
+// kind of companies are inside, with a name people know: "QQQ · Mostly big tech, like Apple" (3 Nov; was the
+// fund's legal name, which says little — it stays on the ETF page). Kept to about 28 characters so it fits one line at 360. Sample copy; the API would send it with the fund.
+export const ETF_INSIDE: Record<string, string> = {
+  SPY: 'Big US firms in every sector', QQQ: 'Mostly big tech, like Apple', VTI: 'Every US firm, big to small',
+  SMH: 'Chip makers, like NVIDIA', ITA: 'Plane, jet & weapon makers', XLE: 'Oil & gas, like ExxonMobil',
+  XLF: 'Banks, insurers & card firms', XLV: 'Drug makers & health insurers', BOTZ: 'Robot makers & AI chip firms',
+  UFO: 'Rocket, satellite & GPS firms', INDA: 'Big Indian banks, IT & energy', EPI: 'Indian firms with big profits',
+  MCHI: 'Chinese giants, like Tencent', KWEB: 'Chinese shopping & chat apps', EWJ: "Japan's giants, like Toyota",
+  VGK: "Europe's giants, like ASML", EWY: "Korea's giants, like Samsung", FXI: "China's top 50, like Alibaba",
+  CQQQ: 'Chinese tech, chips to apps', DXJ: 'Exporters, like Toyota & Honda', HEWJ: "Japan's giants, yen-protected",
+  SCJ: 'Smaller firms, like Sanrio', FEZ: "Eurozone's top 50, like SAP", EZU: 'Euro-area firms, like Siemens',
+  IEUR: '1,000+ European firms', FLKR: "Korea's giants, like SK Hynix",
+  TQQQ: 'Mostly big tech, like Apple', SQQQ: 'Mostly big tech, like Apple', SOXL: 'Chip makers, like NVIDIA',
+  SOXS: 'Chip makers, like NVIDIA', NVDL: 'One stock: NVIDIA', NVD: 'One stock: NVIDIA',
+  SPXL: 'Big US firms, like Apple', SPXS: 'Big US firms, like Apple',
+}
+
+/** What kind of companies the ETF `sym` holds, in a few words; undefined when there's no line for it. */
+export const etfInside = (sym: string): string | undefined => ETF_INSIDE[sym]
+```
+
 ### `src/shared/data/etfIssuers.ts`
 
 ```ts
@@ -39744,7 +45463,14 @@ const ISSUER_OF: Record<string, string> = {
   MCHI: 'ishares', EWJ: 'ishares', EWY: 'ishares', FXI: 'ishares', HEWJ: 'ishares', SCJ: 'ishares', EZU: 'ishares',
   IEUR: 'ishares', DXJ: 'wisdomtree', BOTZ: 'globalx', UFO: 'procure', EPI: 'wisdomtree', KWEB: 'kraneshares',
   TQQQ: 'proshares', SQQQ: 'proshares', SOXL: 'direxion', SOXS: 'direxion', SPXL: 'direxion', SPXS: 'direxion',
-  NVDL: 'graniteshares', NVD: 'graniteshares', SGOV: 'ishares', SHV: 'ishares', BIL: 'spdr',
+  // Added with the ETF list fill (every Country / Sector chip and the Boosted tab): same issuers, same logos.
+  VFH: 'vanguard', VHT: 'vanguard', VDE: 'vanguard', VIS: 'vanguard', KRE: 'spdr', XLI: 'spdr', XOP: 'spdr', GXC: 'spdr',
+  IYF: 'ishares', IBB: 'ishares', IHI: 'ishares', INDY: 'ishares', SMIN: 'ishares', JPXN: 'ishares', EWG: 'ishares', EWU: 'ishares',
+  OIH: 'vaneck', UPRO: 'proshares', SPXU: 'proshares',
+  TECL: 'direxion', TECS: 'direxion', FAS: 'direxion', FAZ: 'direxion', YINN: 'direxion', YANG: 'direxion', KORU: 'direxion', TSLL: 'direxion',
+  NVDL: 'graniteshares', NVD: 'graniteshares', NVDU: 'direxion', NVDD: 'direxion', SGOV: 'ishares', SHV: 'ishares', BIL: 'spdr',
+  AAPU: 'direxion', AAPD: 'direxion', MSFU: 'direxion', MSFD: 'direxion', AMZU: 'direxion', AMZD: 'direxion', GGLL: 'direxion', GGLS: 'direxion',
+  METU: 'direxion', METD: 'direxion', AVL: 'direxion', PLTU: 'direxion', NFXL: 'direxion', AMDL: 'graniteshares', CONL: 'graniteshares',
 }
 
 /**
@@ -54932,23 +60658,31 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
 ```json
 {
  "source": "Yahoo Finance (public chart endpoint)",
- "fetchedAt": "2026-11-03T10:12:30.415Z",
+ "fetchedAt": "2026-11-17T06:54:42.102Z",
  "symbols": [
   "AAL",
   "AAPL",
+  "ABB",
   "ABBV",
   "ABNB",
   "ADBE",
+  "ADI",
   "AEO",
+  "AMAT",
   "AMC",
   "AMD",
   "AMZN",
   "ANF",
+  "ARM",
+  "ASML",
+  "ASTS",
   "AVGO",
   "BA",
+  "BABA",
   "BAC",
   "BB",
   "BBWI",
+  "BIDU",
   "BIRK",
   "BLNK",
   "BOOT",
@@ -54964,6 +60698,7 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "CMG",
   "COIN",
   "COLM",
+  "COP",
   "COST",
   "CPRI",
   "CQQQ",
@@ -54984,10 +60719,14 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "ELF",
   "EPI",
   "ETSY",
+  "EWG",
   "EWJ",
+  "EWU",
   "EWY",
   "EZU",
   "F",
+  "FAS",
+  "FAZ",
   "FEZ",
   "FIVE",
   "FLKR",
@@ -54999,26 +60738,40 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "GOOG",
   "GOOGL",
   "GPRO",
+  "GRMN",
+  "GXC",
   "HAS",
   "HD",
   "HEWJ",
   "HOG",
   "HOOD",
+  "HXSCL",
+  "IBB",
   "IBM",
   "IEUR",
+  "IHI",
   "INDA",
+  "INDY",
   "INTC",
   "IRBT",
+  "ISRG",
   "ITA",
+  "IYF",
   "JBLU",
   "JNJ",
   "JPM",
+  "JPXN",
+  "KLAC",
   "KO",
+  "KORU",
+  "KRE",
   "KWEB",
   "LAZR",
   "LCID",
   "LEVI",
   "LLY",
+  "LMT",
+  "LRCX",
   "LULU",
   "LYFT",
   "M",
@@ -55029,17 +60782,24 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "MCHI",
   "META",
   "MRK",
+  "MRVL",
   "MSFT",
   "MU",
+  "MUFG",
   "NET",
   "NFLX",
   "NIO",
   "NKE",
+  "NOC",
   "NVD",
   "NVDA",
   "NVDL",
+  "NVO",
+  "NXPI",
+  "OIH",
   "OPEN",
   "ORCL",
+  "PDD",
   "PENN",
   "PEP",
   "PFE",
@@ -55057,6 +60817,9 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "RH",
   "RIG",
   "RIVN",
+  "RKLB",
+  "RTX",
+  "SAP",
   "SBUX",
   "SCJ",
   "SHAK",
@@ -55064,10 +60827,12 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "SIRI",
   "SLB",
   "SMH",
+  "SMIN",
   "SNAP",
   "SNBR",
   "SNOW",
   "SONO",
+  "SONY",
   "SOUN",
   "SOXL",
   "SOXS",
@@ -55075,24 +60840,38 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "SPOT",
   "SPXL",
   "SPXS",
+  "SPXU",
   "SPY",
   "SQQQ",
+  "SSNLF",
+  "TECL",
+  "TECS",
   "TGT",
   "TLRY",
+  "TM",
   "TMUS",
   "TQQQ",
   "TRIP",
   "TSLA",
+  "TSLL",
+  "TSLQ",
+  "TSM",
   "TTD",
+  "TXN",
   "U",
   "UAL",
   "UBER",
   "UFO",
   "UNH",
+  "UPRO",
   "URBN",
   "V",
+  "VDE",
   "VFC",
+  "VFH",
   "VGK",
+  "VHT",
+  "VIS",
   "VTI",
   "WEN",
   "WFC",
@@ -55101,9 +60880,13 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
   "WOOF",
   "XLE",
   "XLF",
+  "XLI",
   "XLV",
   "XOM",
+  "XOP",
+  "YANG",
   "YETI",
+  "YINN",
   "ZM"
  ],
  "quotes": {
@@ -55111,27 +60894,17 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
    "name": "American Airlines Group Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 13.08,
-   "open": 13.09,
-   "prevClose": 12.6,
-   "change": 0.48,
-   "changePct": 3.81,
-   "dayHigh": 13.4,
-   "dayLow": 12.96,
+   "price": 13.24,
+   "open": 13.12,
+   "prevClose": 13.17,
+   "change": 0.07,
+   "changePct": 0.53,
+   "dayHigh": 13.52,
+   "dayLow": 13.03,
    "high52": 18.79,
    "low52": 10.09,
-   "volume": 84185003,
+   "volume": 61857170,
    "closes": [
-    12.83,
-    13,
-    12.85,
-    12.8,
-    12.76,
-    12.62,
-    12.5,
-    11.79,
-    12.28,
-    11.88,
     11.68,
     12.11,
     12.24,
@@ -55142,34 +60915,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     12.58,
     12.78,
     12.6,
-    13.08
+    13.08,
+    12.82,
+    13.63,
+    12.93,
+    13.18,
+    14.16,
+    14.11,
+    14.1,
+    13.31,
+    13.17,
+    13.24
    ]
   },
   "AAPL": {
    "name": "Apple Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 338.32,
-   "open": 342.67,
-   "prevClose": 344.63,
-   "change": -6.31,
-   "changePct": -1.83,
-   "dayHigh": 343.78,
-   "dayLow": 335.84,
-   "high52": 351.73,
+   "price": 352.78,
+   "open": 357.13,
+   "prevClose": 356.27,
+   "change": -3.49,
+   "changePct": -0.98,
+   "dayHigh": 357.1,
+   "dayLow": 351.31,
+   "high52": 360.83,
    "low52": 243.42,
-   "volume": 64689155,
+   "volume": 45013034,
    "closes": [
-    332.89,
-    333.63,
-    336.67,
-    340.42,
-    336.64,
-    340.97,
-    341.27,
-    342.96,
-    342,
-    343.46,
     342.94,
     339.5,
     343.99,
@@ -55180,34 +60953,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     343.83,
     348.91,
     344.63,
-    338.32
+    338.32,
+    331.9,
+    349.51,
+    344.17,
+    342.37,
+    350.69,
+    348.51,
+    355.63,
+    354.88,
+    356.27,
+    352.78
    ]
   },
   "ABBV": {
    "name": "AbbVie Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 288.84,
-   "open": 290.38,
-   "prevClose": 294.89,
-   "change": -6.05,
-   "changePct": -2.05,
-   "dayHigh": 294.86,
-   "dayLow": 286.14,
-   "high52": 298.74,
+   "price": 294.55,
+   "open": 299.98,
+   "prevClose": 295.03,
+   "change": -0.48,
+   "changePct": -0.16,
+   "dayHigh": 301.18,
+   "dayLow": 293.97,
+   "high52": 302.93,
    "low52": 190.75,
-   "volume": 8850080,
+   "volume": 4707805,
    "closes": [
-    265.76,
-    266.69,
-    271.36,
-    272.42,
-    276.47,
-    281.12,
-    274.36,
-    283.48,
-    283.4,
-    285.42,
     282.68,
     289.08,
     284.8,
@@ -55218,34 +60991,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     285.99,
     290.79,
     294.89,
-    288.84
+    288.84,
+    286,
+    294.83,
+    288.24,
+    291.31,
+    293.3,
+    293.89,
+    294.98,
+    294.45,
+    295.03,
+    294.55
    ]
   },
   "ABNB": {
    "name": "Airbnb, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 171.11,
-   "open": 167.6,
-   "prevClose": 164.39,
-   "change": 6.72,
-   "changePct": 4.09,
-   "dayHigh": 173.05,
-   "dayLow": 166.51,
-   "high52": 193.45,
+   "price": 186.19,
+   "open": 184.28,
+   "prevClose": 186.78,
+   "change": -0.59,
+   "changePct": -0.32,
+   "dayHigh": 188.98,
+   "dayLow": 180.56,
+   "high52": 197.87,
    "low52": 110.81,
-   "volume": 5960555,
+   "volume": 6510359,
    "closes": [
-    164.07,
-    160.39,
-    160.63,
-    163.23,
-    165.87,
-    163.5,
-    165.58,
-    167.06,
-    174.28,
-    173.7,
     175.46,
     176.94,
     173.69,
@@ -55256,34 +61029,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     166.04,
     166.45,
     164.39,
-    171.11
+    171.11,
+    166.96,
+    176.37,
+    170.13,
+    189.99,
+    190.29,
+    186.9,
+    181.13,
+    181.13,
+    186.78,
+    186.19
    ]
   },
   "ADBE": {
    "name": "Adobe Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 251.47,
-   "open": 249.96,
-   "prevClose": 250.23,
-   "change": 1.24,
-   "changePct": 0.5,
-   "dayHigh": 255.43,
-   "dayLow": 248.62,
+   "price": 246,
+   "open": 246.1,
+   "prevClose": 243.08,
+   "change": 2.92,
+   "changePct": 1.2,
+   "dayHigh": 251.34,
+   "dayLow": 242.84,
    "high52": 362.71,
    "low52": 190.12,
-   "volume": 3882346,
+   "volume": 3807979,
    "closes": [
-    238.79,
-    238.12,
-    232.77,
-    241.05,
-    242.27,
-    238.14,
-    236.28,
-    240.68,
-    251.67,
-    245.2,
     247.09,
     256.73,
     255.06,
@@ -55294,34 +61067,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     249.76,
     248.12,
     250.23,
-    251.47
+    251.47,
+    246.14,
+    248.48,
+    246.44,
+    239.3,
+    237.32,
+    236.7,
+    237.6,
+    238.54,
+    243.08,
+    246
+   ]
+  },
+  "ADI": {
+   "name": "Analog Devices, Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 383.17,
+   "open": 387.26,
+   "prevClose": 397.97,
+   "change": -14.8,
+   "changePct": -3.72,
+   "dayHigh": 389.35,
+   "dayLow": 380.89,
+   "high52": 445.91,
+   "low52": 224.25,
+   "volume": 3955658,
+   "closes": [
+    394.35,
+    397.05,
+    405.96,
+    385.76,
+    391.07,
+    407.93,
+    425.35,
+    428.27,
+    433.28,
+    417.11,
+    412.85,
+    419.79,
+    406.24,
+    361.01,
+    363.56,
+    394.66,
+    393.3,
+    409.08,
+    409.29,
+    397.97,
+    383.17
    ]
   },
   "AEO": {
    "name": "American Eagle Outfitters, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 19.75,
-   "open": 19.62,
-   "prevClose": 19.61,
-   "change": 0.14,
-   "changePct": 0.71,
-   "dayHigh": 20.27,
-   "dayLow": 19.62,
+   "price": 21.26,
+   "open": 21.57,
+   "prevClose": 21.71,
+   "change": -0.45,
+   "changePct": -2.07,
+   "dayHigh": 21.74,
+   "dayLow": 20.64,
    "high52": 28.46,
    "low52": 14.1,
-   "volume": 5660365,
+   "volume": 3739250,
    "closes": [
-    18.11,
-    17.89,
-    17.66,
-    17.97,
-    18.17,
-    18.07,
-    17.78,
-    17.6,
-    18.05,
-    17.98,
     17.93,
     17.81,
     17.38,
@@ -55332,34 +61143,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     19.46,
     20.12,
     19.61,
-    19.75
+    19.75,
+    19.54,
+    21.36,
+    20.37,
+    19.92,
+    21.75,
+    21.48,
+    21.55,
+    21.67,
+    21.71,
+    21.26
+   ]
+  },
+  "AMAT": {
+   "name": "Applied Materials, Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 350.25,
+   "open": 348.49,
+   "prevClose": 370.5,
+   "change": -20.25,
+   "changePct": -5.47,
+   "dayHigh": 358.55,
+   "dayLow": 346.01,
+   "high52": 739.67,
+   "low52": 215.5,
+   "volume": 7027974,
+   "closes": [
+    413.11,
+    404.98,
+    408.94,
+    375.58,
+    377.24,
+    387.59,
+    395.93,
+    416,
+    421.66,
+    390.09,
+    374.53,
+    381.92,
+    369.4,
+    319.25,
+    332.72,
+    370.55,
+    372.53,
+    395.08,
+    380.95,
+    370.5,
+    350.25
    ]
   },
   "AMC": {
    "name": "AMC Entertainment Holdings, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 3.19,
-   "open": 3.1,
-   "prevClose": 3.06,
-   "change": 0.13,
-   "changePct": 4.25,
+   "price": 3.23,
+   "open": 3.17,
+   "prevClose": 3.25,
+   "change": -0.02,
+   "changePct": -0.62,
    "dayHigh": 3.26,
-   "dayLow": 3.04,
-   "high52": 3.4,
+   "dayLow": 3.12,
+   "high52": 3.77,
    "low52": 0.93,
-   "volume": 29144200,
+   "volume": 22250831,
    "closes": [
-    2.79,
-    2.95,
-    2.88,
-    2.88,
-    2.98,
-    3,
-    3.06,
-    2.89,
-    3.02,
-    2.91,
     2.98,
     3.08,
     3.04,
@@ -55370,34 +61219,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     2.99,
     3.08,
     3.06,
-    3.19
+    3.19,
+    3.28,
+    3.52,
+    3.08,
+    3.14,
+    3.4,
+    3.46,
+    3.42,
+    3.34,
+    3.25,
+    3.23
    ]
   },
   "AMD": {
    "name": "Advanced Micro Devices, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 466.84,
-   "open": 510.71,
-   "prevClose": 504.8,
-   "change": -37.96,
-   "changePct": -7.52,
-   "dayHigh": 512.82,
-   "dayLow": 466.07,
+   "price": 504.28,
+   "open": 503.45,
+   "prevClose": 534.06,
+   "change": -29.78,
+   "changePct": -5.58,
+   "dayHigh": 526.2,
+   "dayLow": 501.3,
    "high52": 658.52,
    "low52": 188.22,
-   "volume": 32129533,
+   "volume": 35785537,
    "closes": [
-    631.75,
-    649.42,
-    645.86,
-    620.68,
-    608.1,
-    594.24,
-    605.53,
-    570.82,
-    562.23,
-    528.75,
     538.05,
     534.74,
     552.72,
@@ -55408,34 +61257,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     578.44,
     566.42,
     504.8,
-    466.84
+    466.84,
+    483.9,
+    488.78,
+    404.4,
+    449.04,
+    508.58,
+    515.21,
+    552.9,
+    585.3,
+    534.06,
+    504.28
    ]
   },
   "AMZN": {
    "name": "Amazon.com, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 245.63,
-   "open": 243.01,
-   "prevClose": 240.35,
-   "change": 5.28,
-   "changePct": 2.2,
-   "dayHigh": 253.81,
-   "dayLow": 242.28,
+   "price": 257.75,
+   "open": 262.4,
+   "prevClose": 266.66,
+   "change": -8.91,
+   "changePct": -3.34,
+   "dayHigh": 262.92,
+   "dayLow": 256.68,
    "high52": 287.2,
    "low52": 196,
-   "volume": 58327853,
+   "volume": 47704999,
    "closes": [
-    251.4,
-    256.29,
-    259.92,
-    254.06,
-    262.43,
-    259.53,
-    258.58,
-    254.08,
-    254.76,
-    250,
     262.45,
     262.63,
     262.37,
@@ -55446,34 +61295,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     254.6,
     243.79,
     240.35,
-    245.63
+    245.63,
+    250.69,
+    266.03,
+    260.21,
+    259.3,
+    266.93,
+    270.87,
+    266.17,
+    267.44,
+    266.66,
+    257.75
    ]
   },
   "ANF": {
    "name": "Abercrombie & Fitch Co.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 164.17,
-   "open": 165.28,
-   "prevClose": 164.44,
-   "change": -0.27,
-   "changePct": -0.16,
-   "dayHigh": 169.24,
-   "dayLow": 163.88,
-   "high52": 169.24,
+   "price": 145.77,
+   "open": 149.93,
+   "prevClose": 148.88,
+   "change": -3.11,
+   "changePct": -2.09,
+   "dayHigh": 149.3,
+   "dayLow": 141.49,
+   "high52": 172,
    "low52": 65.45,
-   "volume": 1134181,
+   "volume": 1096202,
    "closes": [
-    141.4,
-    141.39,
-    139.44,
-    141.41,
-    142.58,
-    145.91,
-    150.88,
-    149.74,
-    151.99,
-    153.26,
     162.01,
     161.73,
     159.64,
@@ -55484,34 +61333,148 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     161.24,
     165.77,
     164.44,
-    164.17
+    164.17,
+    157.51,
+    171.09,
+    157.59,
+    149.54,
+    152.81,
+    154,
+    151.92,
+    150.49,
+    148.88,
+    145.77
+   ]
+  },
+  "ARM": {
+   "name": "Arm Holdings plc",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 175.05,
+   "open": 180.45,
+   "prevClose": 190.53,
+   "change": -15.48,
+   "changePct": -8.12,
+   "dayHigh": 181.73,
+   "dayLow": 174.64,
+   "high52": 452.7,
+   "low52": 100.02,
+   "volume": 5117569,
+   "closes": [
+    228.05,
+    221.06,
+    226.59,
+    210.1,
+    210.33,
+    223.35,
+    226.6,
+    235.9,
+    228.77,
+    205.97,
+    196.79,
+    202.49,
+    191.8,
+    166.72,
+    174.62,
+    186.3,
+    181.49,
+    203.36,
+    199.78,
+    190.53,
+    175.05
+   ]
+  },
+  "ASML": {
+   "name": "ASML Holding N.V.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 1406.79,
+   "open": 1436.64,
+   "prevClose": 1495.16,
+   "change": -88.37,
+   "changePct": -5.91,
+   "dayHigh": 1446.36,
+   "dayLow": 1404.06,
+   "high52": 1999.96,
+   "low52": 946.11,
+   "volume": 1587468,
+   "closes": [
+    1647.12,
+    1630.84,
+    1676.69,
+    1560.54,
+    1571.8,
+    1590.9,
+    1635.57,
+    1662.85,
+    1675.7,
+    1565.9,
+    1526.14,
+    1552.14,
+    1496.3,
+    1356.65,
+    1424.75,
+    1513.25,
+    1507.85,
+    1534.42,
+    1497.12,
+    1495.16,
+    1406.79
+   ]
+  },
+  "ASTS": {
+   "name": "AST SpaceMobile, Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 28.58,
+   "open": 31.61,
+   "prevClose": 32.6,
+   "change": -4.02,
+   "changePct": -12.33,
+   "dayHigh": 32.04,
+   "dayLow": 28.3,
+   "high52": 133.86,
+   "low52": 27.58,
+   "volume": 21969769,
+   "closes": [
+    41.87,
+    41.13,
+    40.9,
+    38.77,
+    39.79,
+    39.45,
+    41.96,
+    42.3,
+    43.07,
+    40.97,
+    36.33,
+    37.15,
+    35.62,
+    30.2,
+    32.33,
+    36.89,
+    33.69,
+    36.62,
+    34.5,
+    32.6,
+    28.58
    ]
   },
   "AVGO": {
    "name": "Broadcom Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 322.23,
-   "open": 328.37,
-   "prevClose": 326.08,
-   "change": -3.85,
-   "changePct": -1.18,
-   "dayHigh": 333.56,
-   "dayLow": 321.87,
+   "price": 333.4,
+   "open": 332.49,
+   "prevClose": 347.01,
+   "change": -13.61,
+   "changePct": -3.92,
+   "dayHigh": 337.74,
+   "dayLow": 327.8,
    "high52": 495,
-   "low52": 289.96,
-   "volume": 20318871,
+   "low52": 289.77,
+   "volume": 25991305,
    "closes": [
-    362.51,
-    375.81,
-    376.51,
-    360.14,
-    361.54,
-    354.73,
-    357.31,
-    346.25,
-    344.33,
-    328.75,
     334.59,
     334.37,
     337.8,
@@ -55522,34 +61485,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     351.81,
     345,
     326.08,
-    322.23
+    322.23,
+    332.13,
+    325.48,
+    291.53,
+    293.69,
+    319.48,
+    331.98,
+    345.22,
+    364.36,
+    347.01,
+    333.4
    ]
   },
   "BA": {
    "name": "The Boeing Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 175.4,
-   "open": 173.21,
-   "prevClose": 171.55,
-   "change": 3.85,
-   "changePct": 2.24,
-   "dayHigh": 177.37,
-   "dayLow": 172.8,
+   "price": 165.22,
+   "open": 170.22,
+   "prevClose": 171.5,
+   "change": -6.28,
+   "changePct": -3.66,
+   "dayHigh": 170.5,
+   "dayLow": 164.71,
    "high52": 254.35,
-   "low52": 165.01,
-   "volume": 9439858,
+   "low52": 164.71,
+   "volume": 7887498,
    "closes": [
-    192.72,
-    189.82,
-    188.32,
-    187.75,
-    190.37,
-    189.5,
-    186.49,
-    184.66,
-    188.73,
-    190.21,
     191.42,
     190.47,
     192.28,
@@ -55560,34 +61523,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     167.14,
     172.65,
     171.55,
-    175.4
+    175.4,
+    173.31,
+    177,
+    172.5,
+    173.4,
+    172.38,
+    173.38,
+    174.54,
+    171.55,
+    171.5,
+    165.22
+   ]
+  },
+  "BABA": {
+   "name": "Alibaba Group Holding Limited",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 90.62,
+   "open": 92.23,
+   "prevClose": 94.38,
+   "change": -3.76,
+   "changePct": -3.98,
+   "dayHigh": 92.6,
+   "dayLow": 90.57,
+   "high52": 181.1,
+   "low52": 90.57,
+   "volume": 12339950,
+   "closes": [
+    108.57,
+    108.61,
+    104.41,
+    101.82,
+    99.64,
+    100.25,
+    100.24,
+    100.96,
+    99.54,
+    98.04,
+    101.5,
+    100.36,
+    105.29,
+    108.07,
+    109.45,
+    105.38,
+    102.72,
+    101.52,
+    94.36,
+    94.38,
+    90.62
    ]
   },
   "BAC": {
    "name": "Bank of America Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 49.57,
-   "open": 50.45,
-   "prevClose": 50.01,
-   "change": -0.44,
-   "changePct": -0.88,
-   "dayHigh": 50.47,
-   "dayLow": 49.45,
+   "price": 50.08,
+   "open": 50.85,
+   "prevClose": 51.02,
+   "change": -0.94,
+   "changePct": -1.84,
+   "dayHigh": 50.9,
+   "dayLow": 49.63,
    "high52": 65.23,
    "low52": 46.12,
-   "volume": 48512490,
+   "volume": 30640814,
    "closes": [
-    54,
-    54.09,
-    53.52,
-    53.61,
-    54.32,
-    54.58,
-    53.96,
-    51.39,
-    51.7,
-    51.23,
     50.39,
     50.64,
     50.78,
@@ -55598,34 +61599,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     50.85,
     51.14,
     50.01,
-    49.57
+    49.57,
+    49.66,
+    51.63,
+    49.76,
+    49.42,
+    50.55,
+    50.68,
+    50.67,
+    50.51,
+    51.02,
+    50.08
    ]
   },
   "BB": {
    "name": "BlackBerry Limited",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 8.02,
-   "open": 8.45,
-   "prevClose": 8.42,
-   "change": -0.4,
-   "changePct": -4.75,
-   "dayHigh": 8.45,
-   "dayLow": 8.01,
+   "price": 8.77,
+   "open": 8.66,
+   "prevClose": 8.9,
+   "change": -0.13,
+   "changePct": -1.46,
+   "dayHigh": 8.9,
+   "dayLow": 8.55,
    "high52": 13.59,
    "low52": 3.12,
-   "volume": 12253892,
+   "volume": 8027854,
    "closes": [
-    9.08,
-    9.58,
-    8.77,
-    8.63,
-    8.91,
-    8.45,
-    8.47,
-    8.23,
-    8.7,
-    8.06,
     8.16,
     8.87,
     9.41,
@@ -55636,34 +61637,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     9.4,
     9.19,
     8.42,
-    8.02
+    8.02,
+    8.19,
+    8.76,
+    8.37,
+    8.74,
+    9.22,
+    9.14,
+    9.4,
+    9.12,
+    8.9,
+    8.77
    ]
   },
   "BBWI": {
    "name": "Bath & Body Works, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 23.19,
-   "open": 23.3,
-   "prevClose": 22.77,
-   "change": 0.42,
-   "changePct": 1.84,
-   "dayHigh": 23.66,
-   "dayLow": 22.94,
-   "high52": 25.21,
+   "price": 19.27,
+   "open": 21.2,
+   "prevClose": 21.39,
+   "change": -2.12,
+   "changePct": -9.91,
+   "dayHigh": 21.17,
+   "dayLow": 19.19,
+   "high52": 24.94,
    "low52": 14.28,
-   "volume": 7247716,
+   "volume": 9043012,
    "closes": [
-    17.46,
-    17.93,
-    17.81,
-    17.71,
-    17.34,
-    17.41,
-    18,
-    18.95,
-    20.44,
-    20.14,
     19.84,
     20.55,
     20.42,
@@ -55674,34 +61675,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     21.64,
     22.78,
     22.77,
-    23.19
+    23.19,
+    22.61,
+    23.54,
+    22.08,
+    21.36,
+    21.76,
+    21.65,
+    21.72,
+    21.08,
+    21.39,
+    19.27
+   ]
+  },
+  "BIDU": {
+   "name": "Baidu, Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 73.94,
+   "open": 77.91,
+   "prevClose": 78.14,
+   "change": -4.2,
+   "changePct": -5.37,
+   "dayHigh": 78.7,
+   "dayLow": 73.63,
+   "high52": 165.3,
+   "low52": 73.63,
+   "volume": 4120579,
+   "closes": [
+    79.78,
+    80.5,
+    78.82,
+    77.98,
+    77.2,
+    77.85,
+    78.27,
+    79.5,
+    78.65,
+    76.4,
+    76.9,
+    76.97,
+    80.43,
+    79.48,
+    81.87,
+    81.03,
+    79.71,
+    79.76,
+    77.63,
+    78.14,
+    73.94
    ]
   },
   "BIRK": {
    "name": "Birkenstock Holding plc",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 35.54,
-   "open": 33.81,
-   "prevClose": 33.43,
-   "change": 2.11,
-   "changePct": 6.31,
-   "dayHigh": 35.77,
-   "dayLow": 33.71,
+   "price": 35.61,
+   "open": 36.25,
+   "prevClose": 36.3,
+   "change": -0.69,
+   "changePct": -1.9,
+   "dayHigh": 36.41,
+   "dayLow": 35.16,
    "high52": 50.73,
    "low52": 29.93,
-   "volume": 2590203,
+   "volume": 1509859,
    "closes": [
-    33.77,
-    34,
-    33.17,
-    33.12,
-    33.65,
-    33.85,
-    34.18,
-    33.92,
-    35.89,
-    33.85,
     32.71,
     32.78,
     32.32,
@@ -55712,72 +61751,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     31.59,
     33.39,
     33.43,
-    35.54
+    35.54,
+    35.53,
+    37.27,
+    37.1,
+    37.32,
+    38.72,
+    37.27,
+    36.61,
+    35.7,
+    36.3,
+    35.61
    ]
   },
   "BLNK": {
    "name": "Blink Charging Co.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 0.43,
+   "price": 0.39,
    "open": 0.41,
-   "prevClose": 0.4,
-   "change": 0.03,
-   "changePct": 7.5,
-   "dayHigh": 0.44,
-   "dayLow": 0.4,
-   "high52": 1.7,
+   "prevClose": 0.42,
+   "change": -0.03,
+   "changePct": -7.14,
+   "dayHigh": 0.42,
+   "dayLow": 0.39,
+   "high52": 1.47,
    "low52": 0.38,
-   "volume": 2278953,
+   "volume": 1709164,
    "closes": [
-    0.55,
+    0.42,
+    0.42,
+    0.42,
+    0.4,
+    0.38,
+    0.38,
+    0.38,
+    0.41,
+    0.41,
+    0.4,
+    0.43,
+    0.43,
+    0.45,
+    0.41,
     0.51,
-    0.51,
+    0.52,
     0.48,
     0.47,
-    0.48,
-    0.48,
     0.45,
-    0.44,
     0.42,
-    0.42,
-    0.42,
-    0.42,
-    0.4,
-    0.38,
-    0.38,
-    0.38,
-    0.41,
-    0.41,
-    0.4,
-    0.43
+    0.39
    ]
   },
   "BOOT": {
    "name": "Boot Barn Holdings, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 137.32,
-   "open": 134,
-   "prevClose": 132.24,
-   "change": 5.08,
-   "changePct": 3.84,
-   "dayHigh": 139.48,
-   "dayLow": 133.23,
+   "price": 134.78,
+   "open": 138.15,
+   "prevClose": 137.61,
+   "change": -2.83,
+   "changePct": -2.06,
+   "dayHigh": 140.67,
+   "dayLow": 133.03,
    "high52": 210.25,
    "low52": 110.53,
-   "volume": 1310033,
+   "volume": 933845,
    "closes": [
-    122.88,
-    124.32,
-    122.34,
-    121.6,
-    119.96,
-    119.97,
-    117.57,
-    112.86,
-    120.62,
-    121.72,
     119.36,
     115.35,
     116.09,
@@ -55788,34 +61827,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     113.3,
     130.48,
     132.24,
-    137.32
+    137.32,
+    133.59,
+    145.56,
+    138.82,
+    130.96,
+    135.1,
+    134.42,
+    135.49,
+    133.67,
+    137.61,
+    134.78
    ]
   },
   "BOTZ": {
    "name": "Global X Robotics & Artificial Intelligence ETF",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 32.27,
-   "open": 32.58,
-   "prevClose": 32.22,
-   "change": 0.05,
-   "changePct": 0.16,
-   "dayHigh": 32.91,
-   "dayLow": 32.2,
+   "price": 30.12,
+   "open": 30.61,
+   "prevClose": 31.23,
+   "change": -1.11,
+   "changePct": -3.55,
+   "dayHigh": 30.63,
+   "dayLow": 30.08,
    "high52": 41.71,
-   "low52": 31.88,
-   "volume": 766492,
+   "low52": 30.08,
+   "volume": 815529,
    "closes": [
-    36.2,
-    36.17,
-    35.67,
-    34.83,
-    35.48,
-    34.9,
-    34.96,
-    34.11,
-    33.74,
-    33.02,
     33.35,
     33.59,
     33.59,
@@ -55826,34 +61865,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     34.03,
     33.42,
     32.22,
-    32.27
+    32.27,
+    32.32,
+    32.81,
+    30.64,
+    31.05,
+    31.88,
+    31.57,
+    32.23,
+    31.42,
+    31.23,
+    30.12
    ]
   },
   "BROS": {
    "name": "Dutch Bros Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 43.87,
-   "open": 42.6,
-   "prevClose": 42.87,
-   "change": 1,
-   "changePct": 2.33,
-   "dayHigh": 45.1,
-   "dayLow": 42.6,
+   "price": 35.66,
+   "open": 35.5,
+   "prevClose": 35.9,
+   "change": -0.24,
+   "changePct": -0.67,
+   "dayHigh": 37.45,
+   "dayLow": 35.12,
    "high52": 74.02,
-   "low52": 36.51,
-   "volume": 5833257,
+   "low52": 33.17,
+   "volume": 6068446,
    "closes": [
-    38.23,
-    39.06,
-    38.18,
-    39.78,
-    38.05,
-    37.28,
-    37.98,
-    39.17,
-    41.1,
-    41.16,
     42.86,
     43.82,
     42.26,
@@ -55864,34 +61903,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     42.93,
     43.98,
     42.87,
-    43.87
+    43.87,
+    43.58,
+    43.99,
+    34.57,
+    33.77,
+    36.01,
+    35.29,
+    35.01,
+    33.71,
+    35.9,
+    35.66
    ]
   },
   "BYND": {
    "name": "Beyond Meat, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 7.05,
-   "open": 7.01,
-   "prevClose": 6.91,
-   "change": 0.14,
-   "changePct": 2.03,
-   "dayHigh": 7.7,
-   "dayLow": 7.01,
-   "high52": 46.8,
-   "low52": 6.49,
-   "volume": 883178,
+   "price": 4.95,
+   "open": 5.25,
+   "prevClose": 5.38,
+   "change": -0.43,
+   "changePct": -7.99,
+   "dayHigh": 5.27,
+   "dayLow": 4.93,
+   "high52": 44.4,
+   "low52": 4.93,
+   "volume": 1680567,
    "closes": [
-    8.06,
-    7.99,
-    7.66,
-    7.73,
-    7.7,
-    7.31,
-    7.21,
-    6.78,
-    7.17,
-    6.85,
     6.57,
     6.81,
     6.82,
@@ -55902,34 +61941,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     7.13,
     7.38,
     6.91,
-    7.05
+    7.05,
+    7.27,
+    7.15,
+    6.06,
+    6.03,
+    6.1,
+    5.65,
+    5.92,
+    5.41,
+    5.38,
+    4.95
    ]
   },
   "CAKE": {
    "name": "The Cheesecake Factory Incorporated",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 112.96,
-   "open": 113.69,
-   "prevClose": 112.64,
-   "change": 0.32,
-   "changePct": 0.28,
-   "dayHigh": 117.96,
-   "dayLow": 112.87,
+   "price": 109.73,
+   "open": 108.69,
+   "prevClose": 109.11,
+   "change": 0.62,
+   "changePct": 0.57,
+   "dayHigh": 110.94,
+   "dayLow": 106.36,
    "high52": 118.63,
    "low52": 43.07,
-   "volume": 1478759,
+   "volume": 1696691,
    "closes": [
-    109.03,
-    108.23,
-    106.99,
-    106.91,
-    108.45,
-    109,
-    112.37,
-    112.85,
-    116.59,
-    114.92,
     116.18,
     116.43,
     114.39,
@@ -55940,34 +61979,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     105.73,
     113.12,
     112.64,
-    112.96
+    112.96,
+    110.22,
+    115.39,
+    110.71,
+    106.76,
+    110.96,
+    108.8,
+    109.67,
+    106.2,
+    109.11,
+    109.73
    ]
   },
   "CAR": {
    "name": "Avis Budget Group, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 111.52,
-   "open": 109.61,
-   "prevClose": 107.99,
-   "change": 3.53,
-   "changePct": 3.27,
-   "dayHigh": 114.36,
-   "dayLow": 108.23,
+   "price": 122.86,
+   "open": 125.53,
+   "prevClose": 125.45,
+   "change": -2.59,
+   "changePct": -2.06,
+   "dayHigh": 129.78,
+   "dayLow": 120.33,
    "high52": 847.7,
    "low52": 85.96,
-   "volume": 713639,
+   "volume": 533144,
    "closes": [
-    107.98,
-    112.65,
-    110.22,
-    110,
-    105.98,
-    105.1,
-    107.6,
-    106.72,
-    109.77,
-    102.83,
     102.38,
     102.45,
     98.39,
@@ -55978,34 +62017,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     101.74,
     108.16,
     107.99,
-    111.52
+    111.52,
+    109.34,
+    119.81,
+    120.44,
+    118.83,
+    127.65,
+    124.08,
+    127.32,
+    125.7,
+    125.45,
+    122.86
    ]
   },
   "CAVA": {
    "name": "CAVA Group, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 62.05,
-   "open": 59.53,
-   "prevClose": 58.74,
-   "change": 3.31,
-   "changePct": 5.64,
-   "dayHigh": 62.95,
-   "dayLow": 59,
+   "price": 55.15,
+   "open": 57.77,
+   "prevClose": 58.23,
+   "change": -3.08,
+   "changePct": -5.29,
+   "dayHigh": 58.18,
+   "dayLow": 54.8,
    "high52": 98.79,
    "low52": 43.41,
-   "volume": 3904409,
+   "volume": 3075723,
    "closes": [
-    54.1,
-    52.64,
-    52.07,
-    54.31,
-    53.64,
-    52.56,
-    52.98,
-    51.59,
-    55.4,
-    57.25,
     57.9,
     57.45,
     55,
@@ -56016,34 +62055,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     54.25,
     59.21,
     58.74,
-    62.05
+    62.05,
+    60.31,
+    61.98,
+    60.01,
+    59.15,
+    62.35,
+    60.39,
+    59.8,
+    57.35,
+    58.23,
+    55.15
    ]
   },
   "CHPT": {
    "name": "ChargePoint Holdings, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 9.88,
-   "open": 9.77,
-   "prevClose": 9.54,
-   "change": 0.34,
-   "changePct": 3.56,
-   "dayHigh": 10.73,
-   "dayLow": 9.73,
-   "high52": 11.26,
+   "price": 10.25,
+   "open": 11.24,
+   "prevClose": 11.67,
+   "change": -1.42,
+   "changePct": -12.17,
+   "dayHigh": 11.3,
+   "dayLow": 9.99,
+   "high52": 12.97,
    "low52": 4.44,
-   "volume": 1377462,
+   "volume": 1172278,
    "closes": [
-    8.93,
-    8.67,
-    8.22,
-    8.13,
-    7.92,
-    7.22,
-    7.22,
-    6.65,
-    7.23,
-    6.91,
     7.15,
     7.83,
     8.39,
@@ -56054,34 +62093,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     9.22,
     9.27,
     9.54,
-    9.88
+    9.88,
+    10.79,
+    11.41,
+    10.96,
+    11.59,
+    12.39,
+    12.25,
+    12.51,
+    12.05,
+    11.67,
+    10.25
    ]
   },
   "CHWY": {
    "name": "Chewy, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 22.27,
-   "open": 21.4,
-   "prevClose": 21.29,
-   "change": 0.98,
-   "changePct": 4.6,
-   "dayHigh": 22.57,
-   "dayLow": 21.15,
+   "price": 21.62,
+   "open": 22.46,
+   "prevClose": 22.52,
+   "change": -0.9,
+   "changePct": -4,
+   "dayHigh": 22.51,
+   "dayLow": 21.56,
    "high52": 37.34,
    "low52": 17.4,
-   "volume": 6610503,
+   "volume": 6124495,
    "closes": [
-    18.22,
-    18.14,
-    18.22,
-    18.91,
-    18.95,
-    19.5,
-    19.71,
-    20.83,
-    21.31,
-    20.97,
     20.53,
     21.53,
     21.33,
@@ -56092,34 +62131,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     20.64,
     20.83,
     21.29,
-    22.27
+    22.27,
+    22.05,
+    23.4,
+    23,
+    22.56,
+    23.05,
+    22.86,
+    23.15,
+    22.6,
+    22.52,
+    21.62
    ]
   },
   "CLOV": {
    "name": "Clover Health Investments, Corp.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 4.31,
-   "open": 4.53,
-   "prevClose": 4.46,
-   "change": -0.15,
-   "changePct": -3.36,
-   "dayHigh": 4.53,
-   "dayLow": 4.27,
+   "price": 4.95,
+   "open": 4.97,
+   "prevClose": 4.96,
+   "change": -0.01,
+   "changePct": -0.2,
+   "dayHigh": 5.07,
+   "dayLow": 4.87,
    "high52": 5.59,
    "low52": 1.58,
-   "volume": 5005122,
+   "volume": 4062379,
    "closes": [
-    4.68,
-    4.6,
-    4.56,
-    4.58,
-    4.79,
-    4.78,
-    4.81,
-    4.79,
-    4.68,
-    4.48,
     4.44,
     4.8,
     4.78,
@@ -56130,34 +62169,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     4.79,
     4.58,
     4.46,
-    4.31
+    4.31,
+    4.29,
+    4.69,
+    4.48,
+    4.82,
+    4.83,
+    4.93,
+    4.97,
+    4.88,
+    4.96,
+    4.95
    ]
   },
   "CMG": {
    "name": "Chipotle Mexican Grill, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 32.91,
-   "open": 31.9,
-   "prevClose": 31.89,
-   "change": 1.02,
-   "changePct": 3.2,
-   "dayHigh": 33.35,
-   "dayLow": 31.9,
+   "price": 35.94,
+   "open": 36.09,
+   "prevClose": 35.28,
+   "change": 0.66,
+   "changePct": 1.87,
+   "dayHigh": 36.36,
+   "dayLow": 35.28,
    "high52": 41.42,
    "low52": 27.31,
-   "volume": 19854563,
+   "volume": 12946834,
    "closes": [
-    30.85,
-    30.9,
-    30.77,
-    32.68,
-    31.59,
-    30.4,
-    30.35,
-    30.52,
-    30.58,
-    29.89,
     29.85,
     29.65,
     28.12,
@@ -56168,34 +62207,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     28.73,
     31.28,
     31.89,
-    32.91
+    32.91,
+    33.26,
+    35.2,
+    35.4,
+    34.43,
+    35.74,
+    35.92,
+    36.64,
+    35.17,
+    35.28,
+    35.94
    ]
   },
   "COIN": {
    "name": "Coinbase Global, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 137.83,
-   "open": 140.36,
-   "prevClose": 143.54,
-   "change": -5.71,
-   "changePct": -3.98,
-   "dayHigh": 143.77,
-   "dayLow": 135.47,
-   "high52": 342.8,
-   "low52": 135.47,
-   "volume": 10634242,
+   "price": 119.84,
+   "open": 119.31,
+   "prevClose": 127.65,
+   "change": -7.81,
+   "changePct": -6.12,
+   "dayHigh": 122.98,
+   "dayLow": 117.32,
+   "high52": 284.74,
+   "low52": 117.32,
+   "volume": 11186801,
    "closes": [
-    188.22,
-    185.74,
-    178.45,
-    172,
-    179.39,
-    180.39,
-    181.79,
-    172.89,
-    183.81,
-    173.16,
     168.45,
     170.85,
     177.08,
@@ -56206,34 +62245,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     162.32,
     160.59,
     143.54,
-    137.83
+    137.83,
+    145.45,
+    151.5,
+    136.82,
+    134.76,
+    136.1,
+    132.13,
+    136.27,
+    130.67,
+    127.65,
+    119.84
    ]
   },
   "COLM": {
    "name": "Columbia Sportswear Company",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 71.12,
-   "open": 67.49,
-   "prevClose": 67.54,
-   "change": 3.58,
-   "changePct": 5.3,
-   "dayHigh": 71.17,
-   "dayLow": 66.97,
-   "high52": 71.17,
-   "low52": 48.16,
-   "volume": 1358777,
+   "price": 75.63,
+   "open": 73.91,
+   "prevClose": 73.47,
+   "change": 2.16,
+   "changePct": 2.94,
+   "dayHigh": 75.72,
+   "dayLow": 73.45,
+   "high52": 75.72,
+   "low52": 49.57,
+   "volume": 1100504,
    "closes": [
-    56.93,
-    57.45,
-    56.53,
-    56.76,
-    57.04,
-    56.34,
-    57.06,
-    57.7,
-    60.82,
-    60.16,
     59.98,
     61.1,
     59.51,
@@ -56244,34 +62283,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     60.9,
     63.69,
     67.54,
-    71.12
+    71.12,
+    70.06,
+    70.93,
+    69.12,
+    70.43,
+    72.45,
+    72.26,
+    72.19,
+    71.64,
+    73.47,
+    75.63
+   ]
+  },
+  "COP": {
+   "name": "ConocoPhillips",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 140.52,
+   "open": 140.11,
+   "prevClose": 142.28,
+   "change": -1.76,
+   "changePct": -1.24,
+   "dayHigh": 141.24,
+   "dayLow": 138.83,
+   "high52": 154.28,
+   "low52": 85.7,
+   "volume": 9181535,
+   "closes": [
+    145.24,
+    145.95,
+    145.67,
+    145.63,
+    150.8,
+    151.37,
+    147.96,
+    149.06,
+    150.03,
+    154.03,
+    146.84,
+    144.4,
+    136.94,
+    135.46,
+    136.27,
+    134.47,
+    135.59,
+    137.86,
+    140.06,
+    142.28,
+    140.52
    ]
   },
   "COST": {
    "name": "Costco Wholesale Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 1040.55,
-   "open": 1015.87,
-   "prevClose": 1012.28,
-   "change": 28.27,
-   "changePct": 2.79,
-   "dayHigh": 1042.57,
-   "dayLow": 1014.34,
-   "high52": 1096.5,
+   "price": 1113.74,
+   "open": 1111.18,
+   "prevClose": 1106.21,
+   "change": 7.53,
+   "changePct": 0.68,
+   "dayHigh": 1117,
+   "dayLow": 1104.89,
+   "high52": 1117,
    "low52": 844.06,
-   "volume": 3114312,
+   "volume": 2931424,
    "closes": [
-    923.52,
-    935.68,
-    942.25,
-    947.92,
-    946.92,
-    959.44,
-    954.63,
-    982,
-    978.01,
-    989.11,
     995.53,
     994.61,
     998.31,
@@ -56282,34 +62359,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     982.73,
     996.08,
     1012.28,
-    1040.55
+    1040.55,
+    1019.26,
+    1046.47,
+    1065.59,
+    1053.56,
+    1066.18,
+    1066.14,
+    1087.61,
+    1092.21,
+    1106.21,
+    1113.74
    ]
   },
   "CPRI": {
    "name": "Capri Holdings Limited",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 20.05,
-   "open": 18.94,
-   "prevClose": 18.68,
-   "change": 1.37,
-   "changePct": 7.33,
-   "dayHigh": 20.57,
-   "dayLow": 19.19,
+   "price": 20.55,
+   "open": 21.29,
+   "prevClose": 21.46,
+   "change": -0.91,
+   "changePct": -4.24,
+   "dayHigh": 21.29,
+   "dayLow": 20.51,
    "high52": 28.27,
    "low52": 12.4,
-   "volume": 7449406,
+   "volume": 3073915,
    "closes": [
-    14.49,
-    14.67,
-    14.44,
-    14.68,
-    14.95,
-    15.09,
-    15.16,
-    15.02,
-    15.85,
-    15.95,
     16.15,
     16.51,
     15.7,
@@ -56320,34 +62397,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     15.29,
     16.06,
     18.68,
-    20.05
+    20.05,
+    20.06,
+    21.23,
+    21.13,
+    20.54,
+    21.38,
+    21.73,
+    20.89,
+    20.38,
+    21.46,
+    20.55
    ]
   },
   "CQQQ": {
    "name": "Invesco China Technology ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 38.5,
-   "open": 38.57,
-   "prevClose": 37.78,
-   "change": 0.72,
-   "changePct": 1.91,
-   "dayHigh": 39.06,
-   "dayLow": 38.5,
+   "price": 37.01,
+   "open": 37.56,
+   "prevClose": 38.42,
+   "change": -1.41,
+   "changePct": -3.67,
+   "dayHigh": 37.69,
+   "dayLow": 36.96,
    "high52": 58.92,
-   "low52": 37.58,
-   "volume": 1193652,
+   "low52": 36.96,
+   "volume": 1640352,
    "closes": [
-    45.05,
-    45.03,
-    44.44,
-    43.07,
-    43.88,
-    42.98,
-    43.09,
-    42,
-    41.98,
-    41.09,
     40.99,
     41.53,
     41.11,
@@ -56358,34 +62435,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     39.79,
     38.74,
     37.78,
-    38.5
+    38.5,
+    37.8,
+    40.36,
+    40.29,
+    40.19,
+    39.87,
+    39.49,
+    39.81,
+    39.12,
+    38.42,
+    37.01
    ]
   },
   "CRM": {
    "name": "Salesforce, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 226.18,
-   "open": 229.75,
-   "prevClose": 229.17,
-   "change": -2.99,
-   "changePct": -1.3,
-   "dayHigh": 232.95,
-   "dayLow": 225.15,
+   "price": 214.83,
+   "open": 217.92,
+   "prevClose": 217.84,
+   "change": -3.01,
+   "changePct": -1.38,
+   "dayHigh": 219.2,
+   "dayLow": 213.57,
    "high52": 269.11,
    "low52": 146.32,
-   "volume": 6621619,
+   "volume": 5295198,
    "closes": [
-    229.79,
-    224.99,
-    224.56,
-    227.8,
-    229.13,
-    233.92,
-    238.01,
-    235.95,
-    246.74,
-    240.7,
     242.45,
     242.43,
     241.78,
@@ -56396,34 +62473,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     242.11,
     230.9,
     229.17,
-    226.18
+    226.18,
+    222.2,
+    227.11,
+    222.41,
+    213.65,
+    214.94,
+    213.48,
+    218.01,
+    217.57,
+    217.84,
+    214.83
    ]
   },
   "CROX": {
    "name": "Crocs, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 153.13,
-   "open": 151.63,
-   "prevClose": 150.52,
-   "change": 2.61,
-   "changePct": 1.73,
-   "dayHigh": 156.71,
-   "dayLow": 150.26,
-   "high52": 156.71,
+   "price": 160.01,
+   "open": 163.72,
+   "prevClose": 163.72,
+   "change": -3.71,
+   "changePct": -2.27,
+   "dayHigh": 164.24,
+   "dayLow": 159.47,
+   "high52": 164.24,
    "low52": 73.21,
-   "volume": 1497442,
+   "volume": 1440678,
    "closes": [
-    118.19,
-    120.22,
-    115.2,
-    116.84,
-    114.98,
-    116.9,
-    117.53,
-    117.54,
-    124.77,
-    123.14,
     120.18,
     121.37,
     118.49,
@@ -56434,34 +62511,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     119.69,
     150.26,
     150.52,
-    153.13
+    153.13,
+    153.61,
+    159.84,
+    152.93,
+    151.86,
+    160.23,
+    159.66,
+    159.98,
+    156.88,
+    163.72,
+    160.01
    ]
   },
   "CRWD": {
    "name": "CrowdStrike Holdings, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 241.81,
-   "open": 253,
-   "prevClose": 250.43,
-   "change": -8.62,
-   "changePct": -3.44,
-   "dayHigh": 253.61,
-   "dayLow": 240.17,
+   "price": 223.21,
+   "open": 223.8,
+   "prevClose": 226.61,
+   "change": -3.4,
+   "changePct": -1.5,
+   "dayHigh": 224.52,
+   "dayLow": 218.42,
    "high52": 286.99,
    "low52": 85.68,
-   "volume": 9274782,
+   "volume": 6198189,
    "closes": [
-    272.67,
-    278.86,
-    265.44,
-    263.01,
-    275.04,
-    263.01,
-    261.21,
-    249.29,
-    244.57,
-    227.39,
     228.1,
     227.37,
     239.34,
@@ -56472,34 +62549,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     266.66,
     261.15,
     250.43,
-    241.81
+    241.81,
+    244.68,
+    241,
+    217.2,
+    216.9,
+    228.58,
+    225.76,
+    229.06,
+    229.87,
+    226.61,
+    223.21
    ]
   },
   "CSCO": {
    "name": "Cisco Systems, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 101.61,
-   "open": 105.42,
-   "prevClose": 104.51,
-   "change": -2.9,
-   "changePct": -2.77,
-   "dayHigh": 105.42,
-   "dayLow": 101.41,
+   "price": 94.52,
+   "open": 94.49,
+   "prevClose": 95.64,
+   "change": -1.12,
+   "changePct": -1.17,
+   "dayHigh": 96.21,
+   "dayLow": 93.9,
    "high52": 130.37,
-   "low52": 70.54,
-   "volume": 26009032,
+   "low52": 72.8,
+   "volume": 18545378,
    "closes": [
-    112.82,
-    117.94,
-    117.39,
-    114.89,
-    118.39,
-    115.34,
-    115.07,
-    113.64,
-    109.85,
-    107.39,
     106.5,
     106.71,
     107.26,
@@ -56510,34 +62587,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     110.29,
     108.59,
     104.51,
-    101.61
+    101.61,
+    102.97,
+    103.61,
+    95.72,
+    93.85,
+    98.65,
+    98.15,
+    100.76,
+    102.01,
+    95.64,
+    94.52
    ]
   },
   "CVX": {
    "name": "Chevron Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 227.77,
-   "open": 232.5,
-   "prevClose": 235.52,
-   "change": -7.75,
-   "changePct": -3.29,
-   "dayHigh": 233.25,
-   "dayLow": 227.42,
+   "price": 217.14,
+   "open": 220.03,
+   "prevClose": 219.89,
+   "change": -2.75,
+   "changePct": -1.25,
+   "dayHigh": 219.96,
+   "dayLow": 216.54,
    "high52": 236.48,
    "low52": 146.49,
-   "volume": 9170787,
+   "volume": 6118265,
    "closes": [
-    206.47,
-    207.58,
-    205.15,
-    211.55,
-    211.98,
-    215,
-    217.73,
-    222.04,
-    219.32,
-    224.99,
     224.37,
     225.71,
     226.78,
@@ -56548,34 +62625,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     229.2,
     231.46,
     235.52,
-    227.77
+    227.77,
+    225.27,
+    216.96,
+    212.93,
+    212.61,
+    210.78,
+    211.22,
+    213.28,
+    216.35,
+    219.89,
+    217.14
    ]
   },
   "CZR": {
    "name": "Caesars Entertainment, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 28.99,
-   "open": 29.05,
-   "prevClose": 29.09,
-   "change": -0.1,
-   "changePct": -0.34,
-   "dayHigh": 29.11,
-   "dayLow": 28.96,
+   "price": 29.37,
+   "open": 29.33,
+   "prevClose": 29.33,
+   "change": 0.04,
+   "changePct": 0.14,
+   "dayHigh": 29.37,
+   "dayLow": 29.28,
    "high52": 30.88,
    "low52": 17.86,
-   "volume": 7102887,
+   "volume": 1636886,
    "closes": [
-    29.65,
-    29.65,
-    29.49,
-    29.52,
-    29.5,
-    29.58,
-    29.47,
-    29.3,
-    29.25,
-    28.8,
     29.04,
     29.09,
     28.9,
@@ -56586,34 +62663,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     28.57,
     29.13,
     29.09,
-    28.99
+    28.99,
+    29.06,
+    29.36,
+    29.18,
+    29.23,
+    29.28,
+    29.3,
+    29.28,
+    29.28,
+    29.33,
+    29.37
    ]
   },
   "DAL": {
    "name": "Delta Air Lines, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 83.42,
-   "open": 83.04,
-   "prevClose": 80.15,
-   "change": 3.27,
-   "changePct": 4.08,
-   "dayHigh": 84.07,
-   "dayLow": 82.24,
+   "price": 86.6,
+   "open": 86,
+   "prevClose": 86.25,
+   "change": 0.35,
+   "changePct": 0.41,
+   "dayHigh": 88.1,
+   "dayLow": 85.62,
    "high52": 95.68,
-   "low52": 55.03,
-   "volume": 7588384,
+   "low52": 55.27,
+   "volume": 4399710,
    "closes": [
-    83.08,
-    83.66,
-    82.97,
-    82.14,
-    82.17,
-    80.11,
-    79.57,
-    76.65,
-    78.08,
-    75.37,
     74.63,
     76.66,
     77.67,
@@ -56624,34 +62701,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     80.35,
     81.64,
     80.15,
-    83.42
+    83.42,
+    83.28,
+    89.24,
+    85.36,
+    87.2,
+    91.8,
+    92.2,
+    91.32,
+    86.55,
+    86.25,
+    86.6
    ]
   },
   "DASH": {
    "name": "DoorDash, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 190.07,
-   "open": 181.17,
-   "prevClose": 178.99,
-   "change": 11.08,
-   "changePct": 6.19,
-   "dayHigh": 191.02,
-   "dayLow": 177,
-   "high52": 258,
+   "price": 169.78,
+   "open": 170.58,
+   "prevClose": 171.51,
+   "change": -1.73,
+   "changePct": -1.01,
+   "dayHigh": 171.13,
+   "dayLow": 166.74,
+   "high52": 239,
    "low52": 143.3,
-   "volume": 6211986,
+   "volume": 5242685,
    "closes": [
-    191.77,
-    193.62,
-    191.24,
-    191.71,
-    196.5,
-    194.24,
-    193.09,
-    184.01,
-    193.05,
-    189.15,
     193.53,
     191.67,
     184.45,
@@ -56662,34 +62739,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     169.49,
     179,
     178.99,
-    190.07
+    190.07,
+    183.32,
+    198.59,
+    179.92,
+    179.67,
+    180.96,
+    178.25,
+    178.26,
+    172.58,
+    171.51,
+    169.78
    ]
   },
   "DDOG": {
    "name": "Datadog, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 216.1,
-   "open": 235.51,
-   "prevClose": 235.27,
-   "change": -19.17,
-   "changePct": -8.15,
-   "dayHigh": 236.39,
-   "dayLow": 215.73,
+   "price": 172.86,
+   "open": 182.41,
+   "prevClose": 184.16,
+   "change": -11.3,
+   "changePct": -6.14,
+   "dayHigh": 182.41,
+   "dayLow": 172.39,
    "high52": 300.68,
    "low52": 98.01,
-   "volume": 4651321,
+   "volume": 3347058,
    "closes": [
-    276.42,
-    278.24,
-    271.34,
-    273.8,
-    293.26,
-    287.29,
-    283.34,
-    269.33,
-    266.25,
-    247.11,
     260.36,
     256.43,
     273.09,
@@ -56700,34 +62777,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     278.41,
     265.84,
     235.27,
-    216.1
+    216.1,
+    220.52,
+    188.72,
+    174.6,
+    179.04,
+    179.62,
+    178.4,
+    184.38,
+    184.46,
+    184.16,
+    172.86
    ]
   },
   "DELL": {
    "name": "Dell Technologies Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 392.78,
-   "open": 423,
-   "prevClose": 424.3,
-   "change": -31.52,
-   "changePct": -7.43,
-   "dayHigh": 424.13,
-   "dayLow": 391.29,
+   "price": 320.55,
+   "open": 329.58,
+   "prevClose": 344.53,
+   "change": -23.98,
+   "changePct": -6.96,
+   "dayHigh": 332.36,
+   "dayLow": 318.03,
    "high52": 595.51,
    "low52": 110.22,
-   "volume": 6608456,
+   "volume": 8349614,
    "closes": [
-    552.29,
-    574,
-    578.96,
-    574.55,
-    586.06,
-    576.76,
-    572.47,
-    507.93,
-    473.39,
-    451.71,
     455.44,
     461.56,
     485.88,
@@ -56738,34 +62815,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     493.79,
     475.51,
     424.3,
-    392.78
+    392.78,
+    408.4,
+    372.36,
+    316.91,
+    328.53,
+    346.31,
+    334.38,
+    373.68,
+    371.17,
+    344.53,
+    320.55
    ]
   },
   "DIS": {
    "name": "The Walt Disney Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 113.11,
-   "open": 111.78,
-   "prevClose": 110.94,
-   "change": 2.17,
-   "changePct": 1.96,
-   "dayHigh": 113.79,
-   "dayLow": 111.81,
-   "high52": 117.09,
+   "price": 118.7,
+   "open": 119.6,
+   "prevClose": 118.97,
+   "change": -0.27,
+   "changePct": -0.23,
+   "dayHigh": 119.54,
+   "dayLow": 117.78,
+   "high52": 120.8,
    "low52": 92.19,
-   "volume": 7437480,
+   "volume": 12332259,
    "closes": [
-    103.61,
-    104.03,
-    104.75,
-    107.02,
-    108.05,
-    108.49,
-    108.58,
-    108.99,
-    110.68,
-    110.59,
     109.59,
     111.67,
     111.83,
@@ -56776,34 +62853,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     109.04,
     110.91,
     110.94,
-    113.11
+    113.11,
+    114.18,
+    118.95,
+    117.22,
+    116.75,
+    119.12,
+    119.21,
+    119.65,
+    118.23,
+    118.97,
+    118.7
    ]
   },
   "DXJ": {
    "name": "WisdomTree Japan Hedged Equity Fund",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 58.89,
-   "open": 58.76,
-   "prevClose": 58.39,
-   "change": 0.5,
-   "changePct": 0.86,
-   "dayHigh": 59.38,
-   "dayLow": 58.73,
+   "price": 58.16,
+   "open": 58.59,
+   "prevClose": 59.44,
+   "change": -1.28,
+   "changePct": -2.15,
+   "dayHigh": 58.79,
+   "dayLow": 58.15,
    "high52": 61.55,
-   "low52": 44.75,
-   "volume": 510806,
+   "low52": 44.78,
+   "volume": 851781,
    "closes": [
-    61.16,
-    61.29,
-    60.67,
-    60.22,
-    60.71,
-    60.67,
-    60.6,
-    60.09,
-    59.83,
-    59.8,
     59.86,
     60.01,
     60,
@@ -56814,7 +62891,17 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     59.46,
     59.59,
     58.39,
-    58.89
+    58.89,
+    58.96,
+    59.72,
+    56.4,
+    56.4,
+    58.08,
+    57.89,
+    59.01,
+    59.14,
+    59.44,
+    58.16
    ]
   },
   "EB": {
@@ -56837,27 +62924,17 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
    "name": "eBay Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 120.93,
-   "open": 121.63,
-   "prevClose": 121.64,
-   "change": -0.71,
-   "changePct": -0.58,
-   "dayHigh": 123.92,
-   "dayLow": 120.31,
-   "high52": 124.59,
+   "price": 120.89,
+   "open": 120.8,
+   "prevClose": 120.92,
+   "change": -0.03,
+   "changePct": -0.02,
+   "dayHigh": 121.03,
+   "dayLow": 119.01,
+   "high52": 127.74,
    "low52": 78.03,
-   "volume": 4027217,
+   "volume": 3775895,
    "closes": [
-    107.14,
-    107.06,
-    107.6,
-    111.98,
-    112.19,
-    114.65,
-    116.41,
-    116.88,
-    122.91,
-    120.28,
     120.47,
     121.19,
     122.9,
@@ -56868,34 +62945,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     118.02,
     121.19,
     121.64,
-    120.93
+    120.93,
+    118.62,
+    125.15,
+    123.35,
+    121.96,
+    120.97,
+    123.52,
+    122.68,
+    120.14,
+    120.92,
+    120.89
    ]
   },
   "ELF": {
    "name": "e.l.f. Beauty, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 110.68,
-   "open": 114.37,
-   "prevClose": 111.69,
-   "change": -1.01,
-   "changePct": -0.9,
-   "dayHigh": 115,
-   "dayLow": 109.77,
-   "high52": 123.07,
+   "price": 115.95,
+   "open": 116.58,
+   "prevClose": 117.98,
+   "change": -2.03,
+   "changePct": -1.72,
+   "dayHigh": 118.04,
+   "dayLow": 114.05,
+   "high52": 123.13,
    "low52": 48.82,
-   "volume": 1265602,
+   "volume": 1185550,
    "closes": [
-    103.75,
-    102.79,
-    105.03,
-    105.96,
-    109.23,
-    109.94,
-    108.16,
-    108.13,
-    116.11,
-    113.54,
     113.48,
     114.74,
     113.78,
@@ -56906,34 +62983,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     115.41,
     112.95,
     111.69,
-    110.68
+    110.68,
+    111.5,
+    113.63,
+    109.85,
+    116.14,
+    119.35,
+    118.51,
+    118.46,
+    113.53,
+    117.98,
+    115.95
    ]
   },
   "EPI": {
    "name": "WisdomTree India Earnings Fund",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 41.69,
-   "open": 41.52,
-   "prevClose": 40.97,
-   "change": 0.72,
-   "changePct": 1.76,
-   "dayHigh": 41.83,
-   "dayLow": 41.53,
+   "price": 44.12,
+   "open": 44.04,
+   "prevClose": 44.13,
+   "change": -0.01,
+   "changePct": -0.02,
+   "dayHigh": 44.22,
+   "dayLow": 44.04,
    "high52": 46.83,
    "low52": 39.36,
-   "volume": 888517,
+   "volume": 381748,
    "closes": [
-    40.51,
-    40.57,
-    40.09,
-    39.56,
-    39.89,
-    40.16,
-    40.83,
-    40.8,
-    41.46,
-    41.31,
     41.1,
     41.46,
     40.99,
@@ -56944,34 +63021,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     40.33,
     40.78,
     40.97,
-    41.69
+    41.69,
+    41.66,
+    42.92,
+    42.81,
+    43.44,
+    43.99,
+    44.24,
+    44.3,
+    44.18,
+    44.13,
+    44.12
    ]
   },
   "ETSY": {
    "name": "Etsy, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 92.45,
-   "open": 90.53,
-   "prevClose": 88.96,
-   "change": 3.49,
-   "changePct": 3.92,
-   "dayHigh": 95.49,
-   "dayLow": 90.02,
-   "high52": 95.49,
+   "price": 85,
+   "open": 88.43,
+   "prevClose": 89,
+   "change": -4,
+   "changePct": -4.49,
+   "dayHigh": 88.98,
+   "dayLow": 84.95,
+   "high52": 97.85,
    "low52": 44,
-   "volume": 5003048,
+   "volume": 2155820,
    "closes": [
-    70.89,
-    71.39,
-    71.49,
-    75.14,
-    76.71,
-    76.93,
-    79.28,
-    82.93,
-    89.18,
-    85.14,
     85.26,
     87.41,
     87.23,
@@ -56982,34 +63059,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     92.35,
     91.59,
     88.96,
-    92.45
+    92.45,
+    89.86,
+    96.24,
+    91.53,
+    89.93,
+    88.44,
+    86.5,
+    88.35,
+    88.29,
+    89,
+    85
+   ]
+  },
+  "EWG": {
+   "name": "iShares MSCI Germany ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 42.32,
+   "open": 42.73,
+   "prevClose": 42.9,
+   "change": -0.58,
+   "changePct": -1.35,
+   "dayHigh": 42.82,
+   "dayLow": 42.27,
+   "high52": 44.85,
+   "low52": 37.98,
+   "volume": 812642,
+   "closes": [
+    41.04,
+    41.43,
+    41.7,
+    41.35,
+    40.94,
+    41.24,
+    41.52,
+    41.8,
+    42.41,
+    41.88,
+    42.16,
+    42.06,
+    43.5,
+    42.75,
+    41.58,
+    42.99,
+    42.95,
+    43.02,
+    42.81,
+    42.9,
+    42.32
    ]
   },
   "EWJ": {
    "name": "iShares MSCI Japan ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 92.84,
-   "open": 92.91,
-   "prevClose": 92.91,
-   "change": -0.07,
-   "changePct": -0.08,
-   "dayHigh": 93.88,
-   "dayLow": 92.75,
+   "price": 89.85,
+   "open": 90.73,
+   "prevClose": 91.76,
+   "change": -1.91,
+   "changePct": -2.08,
+   "dayHigh": 90.84,
+   "dayLow": 89.82,
    "high52": 99.98,
    "low52": 79.48,
-   "volume": 3908370,
+   "volume": 2623991,
    "closes": [
-    99.3,
-    99.32,
-    98.32,
-    97.32,
-    97.86,
-    97.32,
-    97.32,
-    95.84,
-    95.43,
-    94.88,
     94.99,
     95.43,
     95.72,
@@ -57020,34 +63135,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     94.99,
     94.94,
     92.91,
-    92.84
+    92.84,
+    92.59,
+    93.86,
+    88.26,
+    88.26,
+    91.48,
+    90.39,
+    92.12,
+    91.47,
+    91.76,
+    89.85
+   ]
+  },
+  "EWU": {
+   "name": "iShares MSCI United Kingdom ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 47.58,
+   "open": 48.14,
+   "prevClose": 47.97,
+   "change": -0.39,
+   "changePct": -0.81,
+   "dayHigh": 48.22,
+   "dayLow": 47.54,
+   "high52": 49.39,
+   "low52": 41.33,
+   "volume": 815485,
+   "closes": [
+    47.34,
+    47.76,
+    47.69,
+    47.84,
+    47.52,
+    47.61,
+    47.19,
+    47.29,
+    47.7,
+    47.83,
+    48.03,
+    47.3,
+    48.93,
+    47.89,
+    47.22,
+    48.32,
+    47.96,
+    47.82,
+    47.76,
+    47.97,
+    47.58
    ]
   },
   "EWY": {
    "name": "iShares MSCI South Korea ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 151.62,
-   "open": 158.37,
-   "prevClose": 152.89,
-   "change": -1.27,
-   "changePct": -0.83,
-   "dayHigh": 158.91,
-   "dayLow": 151.48,
+   "price": 136.55,
+   "open": 138.67,
+   "prevClose": 142.78,
+   "change": -6.23,
+   "changePct": -4.36,
+   "dayHigh": 139.56,
+   "dayLow": 136.2,
    "high52": 220.89,
    "low52": 86.9,
-   "volume": 15065157,
+   "volume": 14560195,
    "closes": [
-    191.46,
-    186.4,
-    183.69,
-    176.29,
-    177.24,
-    170.11,
-    166.56,
-    159.83,
-    156.22,
-    150.44,
     156.58,
     153.99,
     156.88,
@@ -57058,34 +63211,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     165.91,
     161.83,
     152.89,
-    151.62
+    151.62,
+    155.06,
+    152.12,
+    131.65,
+    137.01,
+    142.1,
+    139.18,
+    147.81,
+    145.38,
+    142.78,
+    136.55
    ]
   },
   "EZU": {
    "name": "iShares MSCI Eurozone ETF",
    "exchange": "Cboe US",
    "type": "ETF",
-   "price": 65.71,
-   "open": 65.45,
-   "prevClose": 65.16,
-   "change": 0.55,
-   "changePct": 0.84,
-   "dayHigh": 66.26,
-   "dayLow": 65.45,
+   "price": 66.24,
+   "open": 67.41,
+   "prevClose": 67.29,
+   "change": -1.05,
+   "changePct": -1.56,
+   "dayHigh": 67.41,
+   "dayLow": 66.22,
    "high52": 72.2,
    "low52": 59.92,
-   "volume": 1588642,
+   "volume": 807900,
    "closes": [
-    66.79,
-    67,
-    65.9,
-    65.63,
-    65.88,
-    65.61,
-    65.88,
-    65.33,
-    66.02,
-    65.82,
     65.13,
     65.62,
     66.08,
@@ -57096,34 +63249,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     65.72,
     66.23,
     65.16,
-    65.71
+    65.71,
+    65.6,
+    67.54,
+    66.16,
+    65.43,
+    67.82,
+    67.81,
+    67.83,
+    67.23,
+    67.29,
+    66.24
    ]
   },
   "F": {
    "name": "Ford Motor Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 12.6,
-   "open": 12.4,
-   "prevClose": 12.25,
-   "change": 0.35,
-   "changePct": 2.86,
-   "dayHigh": 12.65,
-   "dayLow": 12.38,
+   "price": 11.57,
+   "open": 11.89,
+   "prevClose": 11.91,
+   "change": -0.34,
+   "changePct": -2.85,
+   "dayHigh": 11.92,
+   "dayLow": 11.48,
    "high52": 17.78,
    "low52": 11.11,
-   "volume": 53362018,
+   "volume": 42638451,
    "closes": [
-    12.15,
-    12.28,
-    12.12,
-    12.25,
-    12.17,
-    12,
-    12.1,
-    12.05,
-    12.31,
-    12.43,
     12.18,
     12.15,
     11.9,
@@ -57134,34 +63287,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     11.95,
     12.36,
     12.25,
-    12.6
+    12.6,
+    12.31,
+    12.67,
+    12.53,
+    12.44,
+    12.52,
+    12.28,
+    12.25,
+    11.9,
+    11.91,
+    11.57
+   ]
+  },
+  "FAS": {
+   "name": "Direxion Daily Financial Bull 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 177.07,
+   "open": 182.24,
+   "prevClose": 181.54,
+   "change": -4.47,
+   "changePct": -2.46,
+   "dayHigh": 182.97,
+   "dayLow": 174.49,
+   "high52": 195.77,
+   "low52": 106.91,
+   "volume": 259998,
+   "closes": [
+    153.12,
+    158.21,
+    160.9,
+    166.19,
+    159.63,
+    160.58,
+    159.24,
+    161.15,
+    168.21,
+    164.8,
+    173.22,
+    169.9,
+    187.4,
+    171.89,
+    168.67,
+    175.62,
+    178.5,
+    181.49,
+    177.66,
+    181.54,
+    177.07
+   ]
+  },
+  "FAZ": {
+   "name": "Direxion Daily Financial Bear 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 30.45,
+   "open": 29.57,
+   "prevClose": 29.66,
+   "change": 0.79,
+   "changePct": 2.66,
+   "dayHigh": 30.86,
+   "dayLow": 29.44,
+   "high52": 56.37,
+   "low52": 27.75,
+   "volume": 1483664,
+   "closes": [
+    36.25,
+    34.97,
+    34.4,
+    33.3,
+    34.58,
+    34.38,
+    34.69,
+    34.29,
+    32.78,
+    33.49,
+    31.74,
+    32.34,
+    29.09,
+    31.41,
+    32.05,
+    30.68,
+    30.21,
+    29.69,
+    30.33,
+    29.66,
+    30.45
    ]
   },
   "FEZ": {
    "name": "State Street SPDR EURO STOXX 50 ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 65.39,
-   "open": 65.54,
-   "prevClose": 65.03,
-   "change": 0.36,
-   "changePct": 0.55,
-   "dayHigh": 65.94,
-   "dayLow": 65.34,
+   "price": 66.05,
+   "open": 66.79,
+   "prevClose": 67.17,
+   "change": -1.12,
+   "changePct": -1.67,
+   "dayHigh": 66.9,
+   "dayLow": 66.03,
    "high52": 72.36,
    "low52": 59.57,
-   "volume": 1431505,
+   "volume": 864475,
    "closes": [
-    66.74,
-    66.79,
-    65.8,
-    65.57,
-    65.92,
-    65.59,
-    65.77,
-    65.37,
-    66.05,
-    65.85,
     65.11,
     65.61,
     66.12,
@@ -57172,34 +63401,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     65.5,
     66.05,
     65.03,
-    65.39
+    65.39,
+    65.22,
+    67.38,
+    65.91,
+    65.03,
+    67.39,
+    67.46,
+    67.5,
+    67.08,
+    67.17,
+    66.05
    ]
   },
   "FIVE": {
    "name": "Five Below, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 238.97,
-   "open": 241.42,
-   "prevClose": 240.96,
-   "change": -1.99,
-   "changePct": -0.83,
-   "dayHigh": 245.61,
-   "dayLow": 238.77,
+   "price": 241.56,
+   "open": 250.69,
+   "prevClose": 246.68,
+   "change": -5.12,
+   "changePct": -2.08,
+   "dayHigh": 250.69,
+   "dayLow": 239.46,
    "high52": 263.88,
-   "low52": 143.02,
-   "volume": 892351,
+   "low52": 144.19,
+   "volume": 551963,
    "closes": [
-    215.93,
-    209.92,
-    204.24,
-    209.73,
-    214.73,
-    213.58,
-    213.35,
-    218.95,
-    223.23,
-    222.72,
     225.61,
     223.8,
     224.1,
@@ -57210,34 +63439,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     234.47,
     245.5,
     240.96,
-    238.97
+    238.97,
+    236.19,
+    252.01,
+    241.26,
+    240.3,
+    253.76,
+    253.51,
+    250.74,
+    247.16,
+    246.68,
+    241.56
    ]
   },
   "FLKR": {
    "name": "Franklin FTSE South Korea ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 49.99,
-   "open": 52.15,
-   "prevClose": 50.42,
-   "change": -0.43,
-   "changePct": -0.85,
-   "dayHigh": 52.27,
-   "dayLow": 49.99,
+   "price": 45.38,
+   "open": 46.05,
+   "prevClose": 47.36,
+   "change": -1.98,
+   "changePct": -4.18,
+   "dayHigh": 46.29,
+   "dayLow": 45.28,
    "high52": 72.49,
    "low52": 29.06,
-   "volume": 644083,
+   "volume": 362227,
    "closes": [
-    62.68,
-    61.26,
-    60.37,
-    57.99,
-    58.36,
-    56.03,
-    54.89,
-    52.81,
-    51.61,
-    49.94,
     51.94,
     51.16,
     51.77,
@@ -57248,34 +63477,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     54.59,
     53.18,
     50.42,
-    49.99
+    49.99,
+    51.12,
+    50.3,
+    44.04,
+    45.47,
+    47.18,
+    46.13,
+    48.75,
+    48.07,
+    47.36,
+    45.38
    ]
   },
   "FUBO": {
    "name": "FuboTV Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 7.61,
-   "open": 7.67,
-   "prevClose": 7.62,
-   "change": -0.01,
-   "changePct": -0.13,
-   "dayHigh": 7.92,
-   "dayLow": 7.55,
-   "high52": 50.4,
-   "low52": 7.48,
-   "volume": 766984,
+   "price": 7.39,
+   "open": 7.52,
+   "prevClose": 7.57,
+   "change": -0.18,
+   "changePct": -2.38,
+   "dayHigh": 7.68,
+   "dayLow": 7.26,
+   "high52": 43.68,
+   "low52": 7.26,
+   "volume": 2015007,
    "closes": [
-    8.62,
-    8.83,
-    9.25,
-    9.35,
-    8.84,
-    8.74,
-    8.19,
-    8.26,
-    8.42,
-    8,
     8.05,
     8.22,
     8.12,
@@ -57286,34 +63515,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     7.98,
     7.96,
     7.62,
-    7.61
+    7.61,
+    7.64,
+    8.23,
+    7.69,
+    7.6,
+    8.04,
+    7.85,
+    7.87,
+    7.67,
+    7.57,
+    7.39
    ]
   },
   "FXI": {
    "name": "iShares China Large-Cap ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 33.21,
-   "open": 33.1,
-   "prevClose": 33.08,
-   "change": 0.13,
-   "changePct": 0.39,
-   "dayHigh": 33.42,
-   "dayLow": 33.09,
-   "high52": 41.22,
+   "price": 33.32,
+   "open": 33.56,
+   "prevClose": 33.48,
+   "change": -0.16,
+   "changePct": -0.48,
+   "dayHigh": 33.66,
+   "dayLow": 33.3,
+   "high52": 41.17,
    "low52": 31.19,
-   "volume": 20630515,
+   "volume": 20286050,
    "closes": [
-    33.85,
-    33.77,
-    33.42,
-    33.45,
-    34.24,
-    34.14,
-    34.17,
-    33.86,
-    34.26,
-    33.84,
     33.53,
     33.51,
     32.94,
@@ -57324,34 +63553,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     32.46,
     32.69,
     33.08,
-    33.21
+    33.21,
+    33.19,
+    34.59,
+    34.94,
+    34.95,
+    34.66,
+    34.41,
+    33.92,
+    33.48,
+    33.48,
+    33.32
    ]
   },
   "GAP": {
    "name": "The Gap, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 22.22,
-   "open": 22.5,
-   "prevClose": 22.32,
-   "change": -0.1,
-   "changePct": -0.45,
-   "dayHigh": 22.74,
-   "dayLow": 22.05,
+   "price": 19.76,
+   "open": 21.11,
+   "prevClose": 21.07,
+   "change": -1.31,
+   "changePct": -6.22,
+   "dayHigh": 21.12,
+   "dayLow": 19.7,
    "high52": 29.36,
    "low52": 18.11,
-   "volume": 6257925,
+   "volume": 9687089,
    "closes": [
-    23.3,
-    23.79,
-    23.61,
-    23.36,
-    23.23,
-    22.78,
-    22.83,
-    22.67,
-    23.46,
-    23.12,
     23.54,
     23.47,
     22.69,
@@ -57362,34 +63591,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     22,
     22.89,
     22.32,
-    22.22
+    22.22,
+    21.99,
+    23.75,
+    22.41,
+    21.48,
+    22.23,
+    21.97,
+    21.53,
+    21.25,
+    21.07,
+    19.76
    ]
   },
   "GE": {
    "name": "GE Aerospace",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 315.78,
-   "open": 309.2,
-   "prevClose": 301.8,
-   "change": 13.98,
-   "changePct": 4.63,
-   "dayHigh": 316.79,
-   "dayLow": 308.17,
+   "price": 325.18,
+   "open": 331.21,
+   "prevClose": 331.81,
+   "change": -6.63,
+   "changePct": -2,
+   "dayHigh": 333.48,
+   "dayLow": 323.89,
    "high52": 388.84,
    "low52": 268.91,
-   "volume": 4829940,
+   "volume": 3554019,
    "closes": [
-    306.34,
-    309.39,
-    303.62,
-    305.62,
-    308.2,
-    308.64,
-    307.63,
-    307.02,
-    312,
-    313.83,
     311.28,
     299.87,
     295.88,
@@ -57400,34 +63629,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     301.13,
     313.05,
     301.8,
-    315.78
+    315.78,
+    320.67,
+    329.45,
+    314.73,
+    323.24,
+    335.54,
+    337.91,
+    342.75,
+    330.86,
+    331.81,
+    325.18
    ]
   },
   "GM": {
    "name": "General Motors Company",
-   "exchange": "NYSE",
+   "exchange": "Nasdaq",
    "type": "EQUITY",
-   "price": 89.94,
-   "open": 88.5,
-   "prevClose": 87.4,
-   "change": 2.54,
-   "changePct": 2.91,
-   "dayHigh": 90.03,
-   "dayLow": 87.92,
-   "high52": 91.85,
-   "low52": 66.75,
-   "volume": 8429526,
+   "price": 83.67,
+   "open": 86,
+   "prevClose": 86,
+   "change": -2.33,
+   "changePct": -2.71,
+   "dayHigh": 86.22,
+   "dayLow": 83.08,
+   "high52": 93.7,
+   "low52": 67.06,
+   "volume": 5347528,
    "closes": [
-    80.23,
-    82.01,
-    80.99,
-    82.25,
-    82.73,
-    82.37,
-    84,
-    83.05,
-    83.66,
-    83.96,
     82.75,
     77.09,
     76.11,
@@ -57438,34 +63667,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     82.48,
     85.72,
     87.4,
-    89.94
+    89.94,
+    88.34,
+    92.43,
+    89.33,
+    86.16,
+    89.65,
+    88.69,
+    88.9,
+    86.25,
+    86,
+    83.67
    ]
   },
   "GOOG": {
    "name": "Alphabet Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 278.04,
-   "open": 280.58,
-   "prevClose": 278.22,
-   "change": -0.18,
-   "changePct": -0.06,
-   "dayHigh": 285.21,
-   "dayLow": 277.78,
+   "price": 281.26,
+   "open": 290.55,
+   "prevClose": 292.52,
+   "change": -11.26,
+   "changePct": -3.85,
+   "dayHigh": 290.75,
+   "dayLow": 280.48,
    "high52": 404.47,
-   "low52": 271.41,
-   "volume": 29219125,
+   "low52": 271.54,
+   "volume": 21086145,
    "closes": [
-    343.83,
-    344.59,
-    347.37,
-    344.86,
-    347.86,
-    348.97,
-    349.52,
-    343.65,
-    344.91,
-    336.91,
     340.16,
     336.4,
     330.95,
@@ -57476,34 +63705,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     321.89,
     282.32,
     278.22,
-    278.04
+    278.04,
+    278.27,
+    287.3,
+    281.74,
+    283.93,
+    286.01,
+    284.92,
+    290.63,
+    295.35,
+    292.52,
+    281.26
    ]
   },
   "GOOGL": {
    "name": "Alphabet Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 278.99,
-   "open": 282.46,
-   "prevClose": 279.84,
-   "change": -0.85,
-   "changePct": -0.3,
-   "dayHigh": 287,
-   "dayLow": 278.87,
+   "price": 283.72,
+   "open": 293.81,
+   "prevClose": 295.77,
+   "change": -12.05,
+   "changePct": -4.07,
+   "dayHigh": 294.13,
+   "dayLow": 282.96,
    "high52": 408.61,
-   "low52": 270.7,
-   "volume": 48504345,
+   "low52": 272.11,
+   "volume": 34077805,
    "closes": [
-    346.47,
-    347.68,
-    350.5,
-    348.29,
-    351.66,
-    352.72,
-    353.78,
-    347.64,
-    349.22,
-    340.59,
     344.18,
     340.28,
     334.76,
@@ -57514,34 +63743,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     324.89,
     283.82,
     279.84,
-    278.99
+    278.99,
+    280.03,
+    288.93,
+    282.57,
+    284.78,
+    288.15,
+    287.38,
+    293.45,
+    298.7,
+    295.77,
+    283.72
    ]
   },
   "GPRO": {
    "name": "GoPro, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 0.96,
-   "open": 0.95,
-   "prevClose": 0.93,
-   "change": 0.03,
-   "changePct": 3.23,
-   "dayHigh": 0.98,
-   "dayLow": 0.93,
+   "price": 0.61,
+   "open": 0.63,
+   "prevClose": 0.63,
+   "change": -0.02,
+   "changePct": -3.17,
+   "dayHigh": 0.65,
+   "dayLow": 0.61,
    "high52": 2.05,
    "low52": 0.57,
-   "volume": 9811781,
+   "volume": 7748637,
    "closes": [
-    1.36,
-    1.32,
-    1.22,
-    1.18,
-    1.19,
-    1.19,
-    1.18,
-    1.16,
-    1.15,
-    1.05,
     1.04,
     1.1,
     1.07,
@@ -57552,34 +63781,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     1.03,
     1,
     0.93,
-    0.95
+    0.95,
+    0.96,
+    0.94,
+    0.86,
+    0.9,
+    0.88,
+    0.84,
+    0.69,
+    0.67,
+    0.63,
+    0.61
+   ]
+  },
+  "GRMN": {
+   "name": "Garmin Ltd.",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 279.67,
+   "open": 282.11,
+   "prevClose": 283.03,
+   "change": -3.36,
+   "changePct": -1.19,
+   "dayHigh": 286.29,
+   "dayLow": 278.15,
+   "high52": 314.28,
+   "low52": 186.67,
+   "volume": 658344,
+   "closes": [
+    286.16,
+    290.35,
+    291.13,
+    295.4,
+    293.74,
+    292.92,
+    289.34,
+    272.51,
+    279.94,
+    272.67,
+    274.29,
+    271.44,
+    289.15,
+    286.4,
+    285.57,
+    291.8,
+    288.66,
+    293.93,
+    286.18,
+    283.03,
+    279.67
+   ]
+  },
+  "GXC": {
+   "name": "State Street SPDR S&P China ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 80.19,
+   "open": 80.94,
+   "prevClose": 81.11,
+   "change": -0.92,
+   "changePct": -1.13,
+   "dayHigh": 80.9,
+   "dayLow": 80.18,
+   "high52": 105,
+   "low52": 80.18,
+   "volume": 27916,
+   "closes": [
+    83.81,
+    84.12,
+    82.99,
+    81.14,
+    81.21,
+    81.44,
+    81.13,
+    81.11,
+    80.82,
+    80.79,
+    81.41,
+    81.26,
+    84.64,
+    84.71,
+    84.87,
+    84.46,
+    83.47,
+    82.91,
+    81.63,
+    81.11,
+    80.19
    ]
   },
   "HAS": {
    "name": "Hasbro, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 118.36,
-   "open": 119.4,
-   "prevClose": 119.09,
-   "change": -0.73,
-   "changePct": -0.61,
-   "dayHigh": 120.15,
-   "dayLow": 118.18,
-   "high52": 121.04,
+   "price": 121.02,
+   "open": 121.15,
+   "prevClose": 120.55,
+   "change": 0.47,
+   "changePct": 0.39,
+   "dayHigh": 121.67,
+   "dayLow": 119.8,
+   "high52": 124.62,
    "low52": 74.78,
-   "volume": 1967698,
+   "volume": 1395583,
    "closes": [
-    92.38,
-    91.03,
-    90.75,
-    92.5,
-    93.32,
-    94.73,
-    95.94,
-    95.46,
-    98.41,
-    98.76,
     98.49,
     109.52,
     114,
@@ -57590,34 +63895,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     118.68,
     119.57,
     119.09,
-    118.36
+    118.36,
+    117.97,
+    121.58,
+    119.54,
+    118.91,
+    120.92,
+    121.82,
+    124.02,
+    121.48,
+    120.55,
+    121.02
    ]
   },
   "HD": {
    "name": "The Home Depot, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 341.15,
-   "open": 334.08,
-   "prevClose": 329.2,
-   "change": 11.95,
-   "changePct": 3.63,
-   "dayHigh": 341.54,
-   "dayLow": 333,
+   "price": 347.51,
+   "open": 348.52,
+   "prevClose": 348.69,
+   "change": -1.18,
+   "changePct": -0.34,
+   "dayHigh": 349.73,
+   "dayLow": 346.13,
    "high52": 397.63,
    "low52": 277.15,
-   "volume": 4778206,
+   "volume": 5681155,
    "closes": [
-    281.15,
-    286.69,
-    285.77,
-    295.47,
-    290.74,
-    290.62,
-    293.92,
-    295.51,
-    308.24,
-    309.63,
     309.88,
     315.11,
     314.14,
@@ -57628,34 +63933,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     317.56,
     328.98,
     329.2,
-    341.15
+    341.15,
+    333.66,
+    355.44,
+    349.94,
+    343.47,
+    353.42,
+    351,
+    351.31,
+    348.26,
+    348.69,
+    347.51
    ]
   },
   "HEWJ": {
    "name": "iShares Currency Hedged MSCI Japan ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 62.54,
-   "open": 62.68,
-   "prevClose": 62.44,
-   "change": 0.1,
-   "changePct": 0.16,
-   "dayHigh": 63.16,
-   "dayLow": 62.54,
+   "price": 61.16,
+   "open": 61.94,
+   "prevClose": 62.7,
+   "change": -1.54,
+   "changePct": -2.46,
+   "dayHigh": 61.92,
+   "dayLow": 61.16,
    "high52": 67.27,
    "low52": 51.98,
-   "volume": 66242,
+   "volume": 62740,
    "closes": [
-    66.78,
-    66.82,
-    66.15,
-    65.58,
-    66.09,
-    65.87,
-    65.59,
-    64.61,
-    64.35,
-    63.91,
     64.27,
     64.42,
     64.61,
@@ -57666,34 +63971,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     64.01,
     63.98,
     62.44,
-    62.54
+    62.54,
+    62.67,
+    63.53,
+    59.4,
+    59.71,
+    61.67,
+    61.33,
+    62.93,
+    62.57,
+    62.7,
+    61.16
    ]
   },
   "HOG": {
    "name": "Harley-Davidson, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 33.07,
-   "open": 31.6,
-   "prevClose": 31.22,
-   "change": 1.85,
-   "changePct": 5.93,
-   "dayHigh": 33.38,
-   "dayLow": 31.6,
-   "high52": 33.38,
+   "price": 33.22,
+   "open": 32.38,
+   "prevClose": 32.38,
+   "change": 0.84,
+   "changePct": 2.59,
+   "dayHigh": 33.32,
+   "dayLow": 32.25,
+   "high52": 34.84,
    "low52": 17.09,
-   "volume": 4682265,
+   "volume": 1781870,
    "closes": [
-    26.19,
-    26.94,
-    26.95,
-    26.75,
-    26.9,
-    27.37,
-    27.47,
-    26.96,
-    27.59,
-    26.76,
     26.73,
     27.19,
     27.34,
@@ -57704,34 +64009,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     29.52,
     30.33,
     31.22,
-    33.07
+    33.07,
+    33.32,
+    34.59,
+    32.58,
+    32.66,
+    34.2,
+    34.22,
+    33.96,
+    32.44,
+    32.38,
+    33.22
    ]
   },
   "HOOD": {
    "name": "Robinhood Markets, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 83.84,
-   "open": 85.56,
-   "prevClose": 84.99,
-   "change": -1.15,
-   "changePct": -1.35,
-   "dayHigh": 87.37,
-   "dayLow": 83.35,
-   "high52": 149.41,
+   "price": 72.06,
+   "open": 73.94,
+   "prevClose": 77.86,
+   "change": -5.8,
+   "changePct": -7.45,
+   "dayHigh": 75.55,
+   "dayLow": 70.83,
+   "high52": 139.75,
    "low52": 63.52,
-   "volume": 19525136,
+   "volume": 27699364,
    "closes": [
-    114.11,
-    112,
-    109.51,
-    107.01,
-    109.02,
-    109.22,
-    110.52,
-    101.08,
-    103.99,
-    98.87,
     96.52,
     98.21,
     101.93,
@@ -57742,34 +64047,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     91.43,
     91.59,
     84.99,
-    83.84
+    83.84,
+    85.68,
+    87.41,
+    78.39,
+    80.91,
+    83.32,
+    81.33,
+    84.58,
+    81.35,
+    77.86,
+    72.06
+   ]
+  },
+  "IBB": {
+   "name": "iShares Biotechnology ETF",
+   "exchange": "NASDAQ",
+   "type": "ETF",
+   "price": 207.98,
+   "open": 213,
+   "prevClose": 212.5,
+   "change": -4.52,
+   "changePct": -2.13,
+   "dayHigh": 214.06,
+   "dayLow": 207.62,
+   "high52": 222.29,
+   "low52": 159.68,
+   "volume": 2289292,
+   "closes": [
+    204.06,
+    210.5,
+    211.55,
+    209.54,
+    207.74,
+    208.69,
+    212.2,
+    216.35,
+    217.86,
+    217.61,
+    213.79,
+    215.47,
+    221.13,
+    209.99,
+    213.63,
+    219.57,
+    217.18,
+    218.14,
+    213.43,
+    212.5,
+    207.98
    ]
   },
   "IBM": {
    "name": "International Business Machines Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 252.51,
-   "open": 258.12,
-   "prevClose": 257.81,
-   "change": -5.3,
-   "changePct": -2.06,
-   "dayHigh": 259.87,
-   "dayLow": 252.36,
+   "price": 242.51,
+   "open": 246.95,
+   "prevClose": 247.13,
+   "change": -4.62,
+   "changePct": -1.87,
+   "dayHigh": 247.01,
+   "dayLow": 241.37,
    "high52": 332.46,
    "low52": 199.19,
-   "volume": 5592757,
+   "volume": 5055102,
    "closes": [
-    221.58,
-    221.29,
-    220.51,
-    226.61,
-    227.13,
-    227.02,
-    230.78,
-    227.88,
-    234.12,
-    232.14,
     236.39,
     241.92,
     251.46,
@@ -57780,34 +64123,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     253.22,
     258.28,
     257.81,
-    252.51
+    252.51,
+    250.04,
+    254.32,
+    247.11,
+    245,
+    246.11,
+    244.53,
+    248.22,
+    244.67,
+    247.13,
+    242.51
    ]
   },
   "IEUR": {
    "name": "iShares Core MSCI Europe ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 74.79,
-   "open": 74.71,
-   "prevClose": 74.4,
-   "change": 0.39,
-   "changePct": 0.52,
-   "dayHigh": 75.16,
-   "dayLow": 74.72,
+   "price": 74.73,
+   "open": 75.52,
+   "prevClose": 75.63,
+   "change": -0.9,
+   "changePct": -1.19,
+   "dayHigh": 75.63,
+   "dayLow": 74.71,
    "high52": 78.9,
    "low52": 66.45,
-   "volume": 772780,
+   "volume": 507071,
    "closes": [
-    73.31,
-    73.58,
-    72.7,
-    72.58,
-    73.1,
-    72.84,
-    73.3,
-    73.05,
-    74.05,
-    74.09,
     73.36,
     74.01,
     74.3,
@@ -57818,34 +64161,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     74.1,
     74.85,
     74.4,
-    74.79
+    74.79,
+    74.34,
+    76.57,
+    74.98,
+    74.16,
+    76.38,
+    76.13,
+    76,
+    75.49,
+    75.63,
+    74.73
+   ]
+  },
+  "IHI": {
+   "name": "iShares U.S. Medical Devices ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 57.55,
+   "open": 58.26,
+   "prevClose": 58.02,
+   "change": -0.47,
+   "changePct": -0.81,
+   "dayHigh": 58.54,
+   "dayLow": 57.47,
+   "high52": 64.71,
+   "low52": 47.37,
+   "volume": 1901778,
+   "closes": [
+    53.76,
+    54.27,
+    53.42,
+    54.87,
+    54.92,
+    55.04,
+    54.53,
+    54.64,
+    55.69,
+    54.59,
+    56.51,
+    56.43,
+    60.22,
+    59.03,
+    57.59,
+    58.57,
+    58.07,
+    58.17,
+    57.46,
+    58.02,
+    57.55
    ]
   },
   "INDA": {
    "name": "iShares MSCI India ETF",
    "exchange": "Cboe US",
    "type": "ETF",
-   "price": 48.45,
-   "open": 48.24,
-   "prevClose": 47.72,
-   "change": 0.73,
-   "changePct": 1.53,
-   "dayHigh": 48.54,
-   "dayLow": 48.16,
+   "price": 51.56,
+   "open": 51.51,
+   "prevClose": 51.45,
+   "change": 0.11,
+   "changePct": 0.21,
+   "dayHigh": 51.66,
+   "dayLow": 51.51,
    "high52": 55.1,
    "low52": 45.21,
-   "volume": 9860116,
+   "volume": 5822150,
    "closes": [
-    46.57,
-    46.73,
-    46.11,
-    45.56,
-    46.03,
-    46.36,
-    47.24,
-    47.04,
-    47.95,
-    47.66,
     47.4,
     47.78,
     47.27,
@@ -57856,34 +64237,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     46.79,
     47.41,
     47.72,
-    48.45
+    48.45,
+    48.7,
+    50.03,
+    50.02,
+    50.89,
+    51.41,
+    51.72,
+    51.59,
+    51.55,
+    51.45,
+    51.56
+   ]
+  },
+  "INDY": {
+   "name": "iShares India 50 ETF",
+   "exchange": "NASDAQ",
+   "type": "ETF",
+   "price": 46.06,
+   "open": 46.01,
+   "prevClose": 45.79,
+   "change": 0.27,
+   "changePct": 0.59,
+   "dayHigh": 46.16,
+   "dayLow": 46.01,
+   "high52": 54.13,
+   "low52": 39.9,
+   "volume": 84634,
+   "closes": [
+    41.85,
+    42.15,
+    41.88,
+    42.08,
+    41.41,
+    41.47,
+    41.44,
+    41.47,
+    41.97,
+    42.53,
+    43.17,
+    43.34,
+    44.61,
+    44.6,
+    45.69,
+    45.99,
+    46.21,
+    46.05,
+    45.96,
+    45.79,
+    46.06
    ]
   },
   "INTC": {
    "name": "Intel Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 59.97,
-   "open": 65.4,
-   "prevClose": 65.76,
-   "change": -5.79,
-   "changePct": -8.8,
-   "dayHigh": 65.72,
-   "dayLow": 59.4,
+   "price": 55.47,
+   "open": 56.71,
+   "prevClose": 59.66,
+   "change": -4.19,
+   "changePct": -7.02,
+   "dayHigh": 57.2,
+   "dayLow": 54.9,
    "high52": 142.35,
    "low52": 32.89,
-   "volume": 230485372,
+   "volume": 100803088,
    "closes": [
-    116.19,
-    112.5,
-    113.12,
-    107.08,
-    104.7,
-    101.35,
-    102.81,
-    98.12,
-    95.37,
-    89.85,
     92.03,
     91.69,
     92.96,
@@ -57894,7 +64313,17 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     95.53,
     92.07,
     65.76,
-    59.97
+    59.97,
+    60.55,
+    58.27,
+    52.25,
+    56.28,
+    59.37,
+    58.13,
+    62.5,
+    61.2,
+    59.66,
+    55.47
    ]
   },
   "IRBT": {
@@ -57913,69 +64342,135 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
    "volume": null,
    "closes": []
   },
+  "ISRG": {
+   "name": "Intuitive Surgical, Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 437.75,
+   "open": 444.38,
+   "prevClose": 443.59,
+   "change": -5.84,
+   "changePct": -1.32,
+   "dayHigh": 446.2,
+   "dayLow": 436.72,
+   "high52": 603.88,
+   "low52": 328.57,
+   "volume": 1819286,
+   "closes": [
+    433.18,
+    438,
+    428.12,
+    443.85,
+    452.29,
+    451.63,
+    445.88,
+    444.18,
+    448.76,
+    432.01,
+    436.87,
+    440.75,
+    482.1,
+    468.52,
+    452.8,
+    460.56,
+    450.04,
+    449.53,
+    439.89,
+    443.59,
+    437.75
+   ]
+  },
   "ITA": {
    "name": "iShares U.S. Aerospace & Defense ETF",
    "exchange": "Cboe US",
    "type": "ETF",
-   "price": 214.68,
-   "open": 212.07,
-   "prevClose": 209.74,
-   "change": 4.94,
-   "changePct": 2.36,
-   "dayHigh": 215.69,
-   "dayLow": 211.87,
-   "high52": 256.6,
-   "low52": 195.71,
-   "volume": 1072347,
+   "price": 69.75,
+   "open": 70.84,
+   "prevClose": 71.51,
+   "change": -1.76,
+   "changePct": -2.46,
+   "dayHigh": 71.42,
+   "dayLow": 69.45,
+   "high52": 85.53,
+   "low52": 65.24,
+   "volume": 2013300,
    "closes": [
-    206.98,
-    208.26,
-    203.6,
-    204.88,
-    206.65,
-    206.03,
-    204,
-    204.24,
-    206.92,
-    209.07,
-    207.76,
-    206.15,
-    205.79,
-    204.48,
-    202.23,
-    207.16,
-    206.22,
-    207.74,
-    214.3,
-    209.74,
-    214.68
+    69.25,
+    68.72,
+    68.6,
+    68.16,
+    67.41,
+    69.05,
+    68.74,
+    69.25,
+    71.43,
+    69.91,
+    71.56,
+    72.06,
+    70.95,
+    68.11,
+    68.98,
+    71.67,
+    72.35,
+    73.24,
+    71.73,
+    71.51,
+    69.75
+   ]
+  },
+  "IYF": {
+   "name": "iShares U.S. Financials ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 134.5,
+   "open": 135.87,
+   "prevClose": 135.85,
+   "change": -1.35,
+   "changePct": -0.99,
+   "dayHigh": 135.97,
+   "dayLow": 133.85,
+   "high52": 139.09,
+   "low52": 113.62,
+   "volume": 109224,
+   "closes": [
+    127.84,
+    129.52,
+    130.28,
+    131.71,
+    130.23,
+    130.43,
+    130.25,
+    130.71,
+    132.22,
+    130.94,
+    132.97,
+    132.31,
+    136.71,
+    132.85,
+    131.99,
+    134.31,
+    135.08,
+    135.78,
+    134.93,
+    135.85,
+    134.5
    ]
   },
   "JBLU": {
    "name": "JetBlue Airways Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 3.17,
-   "open": 2.99,
-   "prevClose": 2.85,
-   "change": 0.32,
-   "changePct": 11.23,
-   "dayHigh": 3.23,
-   "dayLow": 2.97,
+   "price": 3.72,
+   "open": 3.62,
+   "prevClose": 3.76,
+   "change": -0.04,
+   "changePct": -1.06,
+   "dayHigh": 3.77,
+   "dayLow": 3.58,
    "high52": 6.62,
    "low52": 2.16,
-   "volume": 32585866,
+   "volume": 22728863,
    "closes": [
-    4.06,
-    4.03,
-    3.97,
-    3.92,
-    3.84,
-    3.62,
-    3.35,
-    3.01,
-    3.15,
-    2.93,
     2.91,
     2.91,
     2.93,
@@ -57986,34 +64481,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     2.85,
     3.05,
     2.85,
-    3.17
+    3.17,
+    3.18,
+    3.56,
+    3.49,
+    3.67,
+    3.94,
+    4,
+    4.02,
+    3.81,
+    3.76,
+    3.72
    ]
   },
   "JNJ": {
    "name": "Johnson & Johnson",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 270.56,
-   "open": 272.06,
-   "prevClose": 273.2,
-   "change": -2.64,
-   "changePct": -0.97,
-   "dayHigh": 273.01,
-   "dayLow": 267.44,
-   "high52": 282.02,
-   "low52": 185.12,
-   "volume": 8262644,
+   "price": 282.55,
+   "open": 288.99,
+   "prevClose": 285.75,
+   "change": -3.2,
+   "changePct": -1.12,
+   "dayHigh": 290.25,
+   "dayLow": 282.33,
+   "high52": 290.25,
+   "low52": 195.9,
+   "volume": 7941138,
    "closes": [
-    252.93,
-    254.78,
-    258.45,
-    256.48,
-    261.44,
-    263.73,
-    248.61,
-    253.91,
-    253.28,
-    255.56,
     253.79,
     259.36,
     257.78,
@@ -58024,34 +64519,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     271.04,
     275.2,
     273.2,
-    270.56
+    270.56,
+    266.17,
+    276.32,
+    272.32,
+    276.22,
+    282.11,
+    280.78,
+    280.41,
+    283.52,
+    285.75,
+    282.55
    ]
   },
   "JPM": {
    "name": "JPMorgan Chase & Co.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 340.58,
-   "open": 340.94,
-   "prevClose": 337.04,
-   "change": 3.54,
-   "changePct": 1.05,
-   "dayHigh": 342.4,
-   "dayLow": 339.92,
+   "price": 338.21,
+   "open": 345.57,
+   "prevClose": 346.19,
+   "change": -7.98,
+   "changePct": -2.31,
+   "dayHigh": 346.51,
+   "dayLow": 336.67,
    "high52": 366.5,
    "low52": 279.1,
-   "volume": 6014579,
+   "volume": 7219618,
    "closes": [
-    332.38,
-    331.28,
-    329.58,
-    331.42,
-    332.99,
-    334.3,
-    331.43,
-    335.28,
-    335.53,
-    339.72,
     333.53,
     335.26,
     335.19,
@@ -58062,34 +64557,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     339.3,
     343.58,
     337.04,
-    340.58
+    340.58,
+    337.98,
+    352.11,
+    337.34,
+    334.49,
+    342.08,
+    342.07,
+    343.39,
+    342.82,
+    346.19,
+    338.21
+   ]
+  },
+  "JPXN": {
+   "name": "iShares JPX-Nikkei 400 ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 98.11,
+   "open": 98.97,
+   "prevClose": 99.89,
+   "change": -1.78,
+   "changePct": -1.78,
+   "dayHigh": 98.96,
+   "dayLow": 98.11,
+   "high52": 105.69,
+   "low52": 83.87,
+   "volume": 1758,
+   "closes": [
+    102.43,
+    102.98,
+    103.11,
+    102.44,
+    101.93,
+    102.2,
+    102.89,
+    102.13,
+    101.85,
+    100.31,
+    100.58,
+    100.36,
+    101.68,
+    96.46,
+    95.86,
+    99.59,
+    98.31,
+    99.61,
+    99.39,
+    99.89,
+    98.11
+   ]
+  },
+  "KLAC": {
+   "name": "KLA Corporation",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 143.96,
+   "open": 144.41,
+   "prevClose": 152.32,
+   "change": -8.36,
+   "changePct": -5.49,
+   "dayHigh": 147.78,
+   "dayLow": 142.21,
+   "high52": 307.37,
+   "low52": 107.2,
+   "volume": 10332249,
+   "closes": [
+    166.4,
+    161.74,
+    163.43,
+    147.83,
+    145.61,
+    149.21,
+    153.66,
+    158.77,
+    167.43,
+    157.91,
+    153.11,
+    156.2,
+    149.79,
+    129.8,
+    138.49,
+    151.38,
+    152.99,
+    161.01,
+    157.3,
+    152.32,
+    143.96
    ]
   },
   "KO": {
    "name": "The Coca-Cola Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 95.83,
-   "open": 94.28,
-   "prevClose": 94.08,
-   "change": 1.75,
-   "changePct": 1.86,
-   "dayHigh": 96.26,
-   "dayLow": 94.28,
-   "high52": 96.26,
+   "price": 99.48,
+   "open": 100.01,
+   "prevClose": 99.25,
+   "change": 0.23,
+   "changePct": 0.23,
+   "dayHigh": 100.56,
+   "dayLow": 99.08,
+   "high52": 100.56,
    "low52": 67.27,
-   "volume": 22706151,
+   "volume": 18570029,
    "closes": [
-    86.51,
-    86.17,
-    85.82,
-    87.77,
-    88.05,
-    89.79,
-    90.11,
-    91.78,
-    92,
-    93.9,
     93.42,
     93.49,
     92.68,
@@ -58100,34 +64671,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     91.73,
     92.82,
     94.08,
-    95.83
+    95.83,
+    94.8,
+    95.8,
+    95.73,
+    95.67,
+    96.03,
+    96.91,
+    97.57,
+    97.44,
+    99.25,
+    99.48
+   ]
+  },
+  "KORU": {
+   "name": "Direxion Daily South Korea Bull 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 6.67,
+   "open": 7,
+   "prevClose": 7.68,
+   "change": -1.01,
+   "changePct": -13.15,
+   "dayHigh": 7.15,
+   "dayLow": 6.61,
+   "high52": 63.99,
+   "low52": 6.28,
+   "volume": 35815588,
+   "closes": [
+    11.92,
+    11.34,
+    11.94,
+    10.19,
+    10.58,
+    10.89,
+    11.86,
+    13.78,
+    12.73,
+    10.63,
+    10.37,
+    11.01,
+    10.43,
+    6.53,
+    6.91,
+    7.69,
+    7.21,
+    8.54,
+    8.12,
+    7.68,
+    6.67
+   ]
+  },
+  "KRE": {
+   "name": "State Street SPDR S&P Regional Banking ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 72.19,
+   "open": 72.83,
+   "prevClose": 72.74,
+   "change": -0.55,
+   "changePct": -0.76,
+   "dayHigh": 73.01,
+   "dayLow": 71.7,
+   "high52": 78.35,
+   "low52": 58.2,
+   "volume": 16143006,
+   "closes": [
+    69.26,
+    70.62,
+    70.62,
+    72.41,
+    72.46,
+    72.73,
+    72.58,
+    72.11,
+    72.86,
+    72.01,
+    73.73,
+    72.88,
+    74.13,
+    72.31,
+    72.2,
+    73.45,
+    73.09,
+    72.95,
+    72.52,
+    72.74,
+    72.19
    ]
   },
   "KWEB": {
    "name": "KraneShares CSI China Internet ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 23.35,
-   "open": 23.19,
-   "prevClose": 22.74,
-   "change": 0.61,
-   "changePct": 2.68,
-   "dayHigh": 23.65,
-   "dayLow": 23.18,
-   "high52": 40.1,
+   "price": 22.56,
+   "open": 22.8,
+   "prevClose": 22.93,
+   "change": -0.37,
+   "changePct": -1.61,
+   "dayHigh": 23.01,
+   "dayLow": 22.56,
+   "high52": 38.45,
    "low52": 22.54,
-   "volume": 30354294,
+   "volume": 19274728,
    "closes": [
-    24.56,
-    24.54,
-    24.33,
-    24.02,
-    24.93,
-    24.75,
-    24.72,
-    24.51,
-    24.61,
-    24.41,
     24.28,
     24.35,
     23.74,
@@ -58138,34 +64785,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     22.99,
     22.79,
     22.74,
-    23.35
+    23.35,
+    23.28,
+    24.32,
+    24.76,
+    24.88,
+    24.31,
+    24.06,
+    23.67,
+    22.91,
+    22.93,
+    22.56
    ]
   },
   "LAZR": {
    "name": "Tema Photonics & Optical ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 32.02,
-   "open": 34.58,
-   "prevClose": 34.09,
-   "change": -2.07,
-   "changePct": -6.07,
-   "dayHigh": 34.15,
-   "dayLow": 31.96,
+   "price": 27.03,
+   "open": 27.55,
+   "prevClose": 29.25,
+   "change": -2.22,
+   "changePct": -7.59,
+   "dayHigh": 27.5,
+   "dayLow": 26.77,
    "high52": 50.82,
-   "low52": 31.96,
-   "volume": 176470,
+   "low52": 25.78,
+   "volume": 322394,
    "closes": [
-    48.35,
-    48.63,
-    47.78,
-    44.5,
-    45.02,
-    42.31,
-    42.11,
-    39.62,
-    37.99,
-    36.41,
     37.17,
     36.76,
     37.54,
@@ -58176,34 +64823,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     37.91,
     37.1,
     34.09,
-    32.02
+    32.02,
+    32.07,
+    30.44,
+    25.87,
+    26.75,
+    29.11,
+    28.81,
+    31.73,
+    30.66,
+    29.25,
+    27.03
    ]
   },
   "LCID": {
    "name": "Lucid Group, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 3,
-   "open": 3.09,
-   "prevClose": 3.02,
-   "change": -0.02,
-   "changePct": -0.66,
-   "dayHigh": 3.3,
-   "dayLow": 2.99,
-   "high52": 18.1,
+   "price": 2.8,
+   "open": 2.86,
+   "prevClose": 2.95,
+   "change": -0.15,
+   "changePct": -5.08,
+   "dayHigh": 2.9,
+   "dayLow": 2.65,
+   "high52": 14.26,
    "low52": 2.37,
-   "volume": 12709565,
+   "volume": 14682753,
    "closes": [
-    4.17,
-    4.16,
-    3.89,
-    3.82,
-    3.79,
-    3.43,
-    3.36,
-    3.29,
-    3.5,
-    3.13,
     3.1,
     3.27,
     3.21,
@@ -58214,34 +64861,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     3.41,
     3.2,
     3.02,
-    3
+    3,
+    3.02,
+    3.37,
+    2.98,
+    3.29,
+    3.6,
+    3.77,
+    3.67,
+    3.26,
+    2.95,
+    2.8
    ]
   },
   "LEVI": {
    "name": "Levi Strauss & Co.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 23.03,
-   "open": 22.72,
-   "prevClose": 22.5,
-   "change": 0.53,
-   "changePct": 2.36,
-   "dayHigh": 23.19,
-   "dayLow": 22.72,
+   "price": 24.37,
+   "open": 24.3,
+   "prevClose": 24.29,
+   "change": 0.08,
+   "changePct": 0.33,
+   "dayHigh": 24.44,
+   "dayLow": 23.94,
    "high52": 25.7,
    "low52": 17.72,
-   "volume": 2963945,
+   "volume": 3232974,
    "closes": [
-    20.27,
-    20.53,
-    19.51,
-    19.05,
-    18.7,
-    19.24,
-    19.48,
-    19.57,
-    20.65,
-    20.44,
     20.63,
     20.85,
     20.93,
@@ -58252,34 +64899,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     21.63,
     22.61,
     22.5,
-    23.03
+    23.03,
+    22.87,
+    23.8,
+    23.1,
+    22.87,
+    24.1,
+    24.39,
+    24.09,
+    24.04,
+    24.29,
+    24.37
    ]
   },
   "LLY": {
    "name": "Eli Lilly and Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 1410.99,
-   "open": 1393.15,
-   "prevClose": 1417.54,
-   "change": -6.55,
-   "changePct": -0.46,
-   "dayHigh": 1421.99,
-   "dayLow": 1387.1,
-   "high52": 1449.68,
+   "price": 1431.67,
+   "open": 1453.75,
+   "prevClose": 1443.5,
+   "change": -11.83,
+   "changePct": -0.82,
+   "dayHigh": 1475.25,
+   "dayLow": 1427.66,
+   "high52": 1475.25,
    "low52": 850.51,
-   "volume": 3737111,
+   "volume": 3074386,
    "closes": [
-    1143.12,
-    1157.49,
-    1188.72,
-    1169.6,
-    1179.27,
-    1182.62,
-    1166.51,
-    1208.74,
-    1251.61,
-    1257.03,
     1240.34,
     1283.66,
     1270.75,
@@ -58290,34 +64937,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     1288.3,
     1373.7,
     1417.54,
-    1410.99
+    1410.99,
+    1409.38,
+    1417.99,
+    1364.73,
+    1354,
+    1411.95,
+    1432.29,
+    1437.29,
+    1427.28,
+    1443.5,
+    1431.67
+   ]
+  },
+  "LMT": {
+   "name": "Lockheed Martin Corporation",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 585.21,
+   "open": 599.92,
+   "prevClose": 596.04,
+   "change": -10.83,
+   "changePct": -1.82,
+   "dayHigh": 598.69,
+   "dayLow": 581.22,
+   "high52": 692,
+   "low52": 437.25,
+   "volume": 1115610,
+   "closes": [
+    548.23,
+    548.71,
+    551.51,
+    589.91,
+    604.18,
+    635.2,
+    622.99,
+    629.75,
+    643.59,
+    636.95,
+    643.15,
+    639,
+    595.04,
+    576.16,
+    567.08,
+    588.19,
+    603.12,
+    610.05,
+    604.09,
+    596.04,
+    585.21
+   ]
+  },
+  "LRCX": {
+   "name": "Lam Research Corporation",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 210.83,
+   "open": 214.33,
+   "prevClose": 225.92,
+   "change": -15.09,
+   "changePct": -6.68,
+   "dayHigh": 216.83,
+   "dayLow": 209.89,
+   "high52": 438.5,
+   "low52": 135.5,
+   "volume": 12162081,
+   "closes": [
+    272.2,
+    263.45,
+    260.81,
+    230.15,
+    230.1,
+    237.5,
+    240.85,
+    253.82,
+    254.39,
+    239.11,
+    227.56,
+    230.72,
+    221.43,
+    185.2,
+    200.44,
+    221.31,
+    222.39,
+    235.88,
+    233.78,
+    225.92,
+    210.83
    ]
   },
   "LULU": {
    "name": "lululemon athletica inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 107.83,
-   "open": 107.48,
-   "prevClose": 107.24,
-   "change": 0.59,
-   "changePct": 0.55,
-   "dayHigh": 110.19,
-   "dayLow": 107.27,
+   "price": 105.46,
+   "open": 106.5,
+   "prevClose": 105.65,
+   "change": -0.19,
+   "changePct": -0.18,
+   "dayHigh": 107.59,
+   "dayLow": 104.48,
    "high52": 225.98,
    "low52": 90.38,
-   "volume": 2621947,
+   "volume": 2522643,
    "closes": [
-    93.14,
-    93.61,
-    91.88,
-    92.68,
-    94.5,
-    94.66,
-    94.34,
-    94.09,
-    99.09,
-    97.1,
     97.76,
     99.94,
     96.53,
@@ -58328,34 +65051,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     105.22,
     109.82,
     107.24,
-    107.83
+    107.83,
+    106.95,
+    112.06,
+    111.77,
+    110.79,
+    112.53,
+    110.37,
+    107.45,
+    104.46,
+    105.65,
+    105.46
    ]
   },
   "LYFT": {
    "name": "Lyft, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 16.62,
-   "open": 16.35,
-   "prevClose": 16.16,
-   "change": 0.46,
-   "changePct": 2.85,
-   "dayHigh": 16.99,
-   "dayLow": 16.23,
-   "high52": 25.54,
+   "price": 16.84,
+   "open": 17.11,
+   "prevClose": 16.98,
+   "change": -0.14,
+   "changePct": -0.82,
+   "dayHigh": 17.65,
+   "dayLow": 16.82,
+   "high52": 23.33,
    "low52": 12.46,
-   "volume": 10646286,
+   "volume": 11249224,
    "closes": [
-    15.73,
-    15.76,
-    15.6,
-    16.13,
-    16.22,
-    16.11,
-    16.38,
-    16.48,
-    17.16,
-    16.82,
     16.99,
     17.25,
     16.79,
@@ -58366,34 +65089,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     16.34,
     16.41,
     16.16,
-    16.62
+    16.62,
+    16.67,
+    18.74,
+    17.84,
+    17.09,
+    16.76,
+    17.02,
+    17.29,
+    16.61,
+    16.98,
+    16.84
    ]
   },
   "M": {
    "name": "Macy's, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 24.33,
-   "open": 24.48,
-   "prevClose": 24.11,
-   "change": 0.22,
-   "changePct": 0.91,
-   "dayHigh": 24.69,
-   "dayLow": 24.02,
+   "price": 23.89,
+   "open": 24.56,
+   "prevClose": 24.7,
+   "change": -0.81,
+   "changePct": -3.28,
+   "dayHigh": 24.61,
+   "dayLow": 23.56,
    "high52": 26.59,
    "low52": 16.69,
-   "volume": 5731290,
+   "volume": 5562494,
    "closes": [
-    22.51,
-    22.46,
-    22.79,
-    22.79,
-    22.67,
-    22.99,
-    22.74,
-    22.68,
-    24.22,
-    24,
     23.6,
     23.41,
     23.43,
@@ -58404,34 +65127,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     23.74,
     24.72,
     24.11,
-    24.33
+    24.33,
+    23.88,
+    25.7,
+    24.19,
+    23.08,
+    24.95,
+    25.08,
+    24.85,
+    24.33,
+    24.7,
+    23.89
    ]
   },
   "MA": {
    "name": "Mastercard Incorporated",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 658.1,
-   "open": 638.32,
-   "prevClose": 638.01,
-   "change": 20.09,
-   "changePct": 3.15,
-   "dayHigh": 661.34,
-   "dayLow": 638.25,
-   "high52": 661.34,
+   "price": 661.71,
+   "open": 667,
+   "prevClose": 661.19,
+   "change": 0.52,
+   "changePct": 0.08,
+   "dayHigh": 668.1,
+   "dayLow": 659.48,
+   "high52": 681.99,
    "low52": 464.52,
-   "volume": 3977345,
+   "volume": 2349251,
    "closes": [
-    564.59,
-    566.58,
-    570.06,
-    574.76,
-    589.14,
-    595.09,
-    604.8,
-    603.24,
-    616.32,
-    617.42,
     616.4,
     620.42,
     622.62,
@@ -58442,34 +65165,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     610.31,
     635.7,
     638.01,
-    658.1
+    658.1,
+    647.18,
+    672.68,
+    655.92,
+    652.7,
+    655.81,
+    658.84,
+    660.73,
+    652.6,
+    661.19,
+    661.71
    ]
   },
   "MAR": {
    "name": "Marriott International, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 416.3,
-   "open": 425,
-   "prevClose": 399.3,
-   "change": 17,
-   "changePct": 4.26,
-   "dayHigh": 433.3,
-   "dayLow": 411.8,
+   "price": 425.7,
+   "open": 426.15,
+   "prevClose": 423.16,
+   "change": 2.54,
+   "changePct": 0.6,
+   "dayHigh": 430.6,
+   "dayLow": 424.25,
    "high52": 433.3,
-   "low52": 258.99,
-   "volume": 2590311,
+   "low52": 280.99,
+   "volume": 1594906,
    "closes": [
-    355.89,
-    361.28,
-    356.5,
-    361.08,
-    365.88,
-    369.3,
-    371.5,
-    371.82,
-    385.71,
-    388.05,
     390.7,
     397.31,
     404,
@@ -58480,34 +65203,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     394.4,
     399.65,
     399.3,
-    416.3
+    416.3,
+    416.38,
+    424.87,
+    417.28,
+    416.47,
+    417.16,
+    428.26,
+    429.18,
+    424.66,
+    423.16,
+    425.7
    ]
   },
   "MAT": {
    "name": "Mattel, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 15.53,
-   "open": 15.51,
-   "prevClose": 15.42,
+   "price": 15.23,
+   "open": 15.17,
+   "prevClose": 15.12,
    "change": 0.11,
-   "changePct": 0.71,
-   "dayHigh": 15.85,
-   "dayLow": 15.45,
+   "changePct": 0.73,
+   "dayHigh": 15.37,
+   "dayLow": 14.95,
    "high52": 22.48,
    "low52": 12.4,
-   "volume": 4511429,
+   "volume": 3923708,
    "closes": [
-    16.05,
-    15.93,
-    16.37,
-    16.58,
-    16.69,
-    16.76,
-    16.8,
-    16.65,
-    17.32,
-    17.2,
     16.88,
     16.99,
     16.95,
@@ -58518,34 +65241,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     15.28,
     15.48,
     15.42,
-    15.53
+    15.53,
+    15.29,
+    15.57,
+    14.97,
+    15.35,
+    15.59,
+    16,
+    16.08,
+    15.53,
+    15.12,
+    15.23
    ]
   },
   "MCD": {
    "name": "McDonald's Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 265.64,
-   "open": 260.02,
-   "prevClose": 258.12,
-   "change": 7.52,
-   "changePct": 2.91,
-   "dayHigh": 265.64,
-   "dayLow": 259.75,
+   "price": 274.67,
+   "open": 277,
+   "prevClose": 271.97,
+   "change": 2.7,
+   "changePct": 0.99,
+   "dayHigh": 277.95,
+   "dayLow": 274.34,
    "high52": 341.75,
    "low52": 229.2,
-   "volume": 6480042,
+   "volume": 5723717,
    "closes": [
-    233.04,
-    232.45,
-    230.88,
-    236.9,
-    235.23,
-    235.65,
-    235.81,
-    238.31,
-    242.5,
-    242.97,
     242.67,
     246.52,
     246.25,
@@ -58556,34 +65279,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     250.5,
     257.38,
     258.12,
-    265.64
+    265.64,
+    263.04,
+    280.22,
+    278.04,
+    276.52,
+    281.44,
+    282.17,
+    274.8,
+    273.63,
+    271.97,
+    274.67
    ]
   },
   "MCHI": {
    "name": "iShares MSCI China ETF",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 49.59,
-   "open": 49.45,
-   "prevClose": 49.07,
-   "change": 0.52,
-   "changePct": 1.06,
-   "dayHigh": 49.95,
-   "dayLow": 49.45,
-   "high52": 65.37,
+   "price": 49.05,
+   "open": 49.4,
+   "prevClose": 49.57,
+   "change": -0.52,
+   "changePct": -1.05,
+   "dayHigh": 49.55,
+   "dayLow": 49.01,
+   "high52": 64.91,
    "low52": 48.65,
-   "volume": 2188252,
+   "volume": 2075235,
    "closes": [
-    52.28,
-    52.22,
-    51.64,
-    51.36,
-    52.55,
-    52.15,
-    52.14,
-    51.44,
-    51.69,
-    51.2,
     50.87,
     50.96,
     50.05,
@@ -58594,34 +65317,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     49.04,
     48.96,
     49.07,
-    49.59
+    49.59,
+    49.4,
+    51.56,
+    52.04,
+    51.89,
+    51.52,
+    51.1,
+    50.69,
+    49.75,
+    49.57,
+    49.05
    ]
   },
   "META": {
    "name": "Meta Platforms, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 606.73,
-   "open": 614.44,
-   "prevClose": 614.99,
-   "change": -8.26,
-   "changePct": -1.34,
-   "dayHigh": 621.69,
-   "dayLow": 606.41,
+   "price": 626.41,
+   "open": 640,
+   "prevClose": 641.69,
+   "change": -15.28,
+   "changePct": -2.38,
+   "dayHigh": 640.7,
+   "dayLow": 620.14,
    "high52": 779.82,
    "low52": 520.26,
-   "volume": 19494137,
+   "volume": 11508404,
    "closes": [
-    741.9,
-    738.88,
-    721.31,
-    720.89,
-    718.67,
-    742.96,
-    762.5,
-    737.54,
-    736.72,
-    709.33,
     705.44,
     694.25,
     697.52,
@@ -58632,34 +65355,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     612.49,
     624.52,
     614.99,
-    606.73
+    606.73,
+    621.03,
+    630,
+    605.08,
+    610.15,
+    641.37,
+    641.39,
+    628.77,
+    623.61,
+    641.69,
+    626.41
    ]
   },
   "MRK": {
    "name": "Merck & Co., Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 148.36,
-   "open": 148.82,
-   "prevClose": 149.52,
-   "change": -1.16,
-   "changePct": -0.78,
-   "dayHigh": 150.25,
-   "dayLow": 147.12,
+   "price": 144.46,
+   "open": 147.9,
+   "prevClose": 147.76,
+   "change": -3.3,
+   "changePct": -2.23,
+   "dayHigh": 149.23,
+   "dayLow": 144.25,
    "high52": 156.92,
-   "low52": 82.01,
-   "volume": 9095330,
+   "low52": 92.11,
+   "volume": 8604372,
    "closes": [
-    139.54,
-    141.94,
-    142.79,
-    142.38,
-    145.6,
-    145.45,
-    141.98,
-    147.37,
-    145.19,
-    145.95,
     143.63,
     148.3,
     149.88,
@@ -58670,34 +65393,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     140.93,
     146.33,
     149.52,
-    148.36
+    148.36,
+    144.67,
+    150.36,
+    146.94,
+    146.73,
+    148.76,
+    148.05,
+    147.18,
+    146.95,
+    147.76,
+    144.46
+   ]
+  },
+  "MRVL": {
+   "name": "Marvell Technology, Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 145.36,
+   "open": 147.56,
+   "prevClose": 156.76,
+   "change": -11.4,
+   "changePct": -7.27,
+   "dayHigh": 149.17,
+   "dayLow": 144.04,
+   "high52": 329.88,
+   "low52": 70.69,
+   "volume": 21280267,
+   "closes": [
+    237.09,
+    240.42,
+    244.76,
+    223.47,
+    228.51,
+    233.78,
+    243.57,
+    251.65,
+    218.34,
+    196.4,
+    171.41,
+    171.97,
+    159.8,
+    133.55,
+    141.2,
+    154.6,
+    154.39,
+    168.8,
+    164.45,
+    156.76,
+    145.36
    ]
   },
   "MSFT": {
    "name": "Microsoft Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 507.12,
-   "open": 524.02,
-   "prevClose": 521.91,
-   "change": -14.79,
-   "changePct": -2.83,
-   "dayHigh": 529.63,
-   "dayLow": 504.96,
-   "high52": 551.15,
+   "price": 517.99,
+   "open": 525.09,
+   "prevClose": 523.88,
+   "change": -5.89,
+   "changePct": -1.12,
+   "dayHigh": 527.95,
+   "dayLow": 516.83,
+   "high52": 559.15,
    "low52": 349.2,
-   "volume": 34738903,
+   "volume": 29564193,
    "closes": [
-    525.18,
-    529.3,
-    529.76,
-    522.61,
-    535.07,
-    541.15,
-    543.45,
-    533.69,
-    539.44,
-    529.05,
     533.52,
     531.87,
     532.95,
@@ -58708,34 +65469,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     531.01,
     530.14,
     521.91,
-    507.12
+    507.12,
+    520.99,
+    555.8,
+    535.93,
+    530.61,
+    545.18,
+    533.16,
+    521.13,
+    523,
+    523.88,
+    517.99
    ]
   },
   "MU": {
    "name": "Micron Technology, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 833.59,
-   "open": 890.54,
-   "prevClose": 884.74,
-   "change": -51.15,
-   "changePct": -5.78,
-   "dayHigh": 892.08,
-   "dayLow": 829.24,
+   "price": 719.02,
+   "open": 734.16,
+   "prevClose": 778.31,
+   "change": -59.29,
+   "changePct": -7.62,
+   "dayHigh": 739.12,
+   "dayLow": 716.38,
    "high52": 1255,
    "low52": 192.59,
-   "volume": 29868539,
+   "volume": 26594903,
    "closes": [
-    1063.96,
-    1045.56,
-    1088,
-    1035.84,
-    1029,
-    989.04,
-    953.19,
-    914.13,
-    931.24,
-    878.84,
     904.9,
     896.07,
     913.67,
@@ -58746,34 +65507,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     983.23,
     934.27,
     884.74,
-    833.59
+    833.59,
+    855.1,
+    795.23,
+    656.39,
+    690,
+    733.15,
+    725.11,
+    811.3,
+    798.44,
+    778.31,
+    719.02
+   ]
+  },
+  "MUFG": {
+   "name": "Mitsubishi UFJ Financial Group, Inc.",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 21.2,
+   "open": 21.48,
+   "prevClose": 21.83,
+   "change": -0.63,
+   "changePct": -2.89,
+   "dayHigh": 21.61,
+   "dayLow": 21.14,
+   "high52": 24.26,
+   "low52": 14.88,
+   "volume": 2963264,
+   "closes": [
+    21.66,
+    21.46,
+    21.77,
+    21.41,
+    21.07,
+    21.09,
+    21.48,
+    21.46,
+    21.94,
+    21.56,
+    21.45,
+    21.27,
+    21.97,
+    21.14,
+    20.97,
+    21.7,
+    21.65,
+    21.94,
+    21.75,
+    21.83,
+    21.2
    ]
   },
   "NET": {
    "name": "Cloudflare, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 265.17,
-   "open": 282.27,
-   "prevClose": 280.7,
-   "change": -15.53,
-   "changePct": -5.53,
-   "dayHigh": 282,
-   "dayLow": 263.86,
+   "price": 293.59,
+   "open": 298.41,
+   "prevClose": 305.81,
+   "change": -12.22,
+   "changePct": -4,
+   "dayHigh": 301.07,
+   "dayLow": 290.36,
    "high52": 370.35,
    "low52": 158.83,
-   "volume": 4126436,
+   "volume": 3291918,
    "closes": [
-    359.49,
-    355.01,
-    342.97,
-    341.89,
-    360.93,
-    350.87,
-    347.7,
-    324.33,
-    316.32,
-    296.3,
     297.58,
     291.69,
     307.22,
@@ -58784,34 +65583,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     318.72,
     310.3,
     280.7,
-    265.17
+    265.17,
+    273.62,
+    266.58,
+    244.51,
+    268.75,
+    293.75,
+    305.8,
+    315,
+    318.5,
+    305.81,
+    293.59
    ]
   },
   "NFLX": {
    "name": "Netflix, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 62.34,
-   "open": 62.2,
-   "prevClose": 62.08,
-   "change": 0.26,
-   "changePct": 0.42,
-   "dayHigh": 62.89,
-   "dayLow": 61.72,
-   "high52": 116.73,
-   "low52": 61.39,
-   "volume": 40911045,
+   "price": 60.75,
+   "open": 62.89,
+   "prevClose": 62.15,
+   "change": -1.4,
+   "changePct": -2.25,
+   "dayHigh": 62.98,
+   "dayLow": 60.48,
+   "high52": 115.25,
+   "low52": 60.48,
+   "volume": 35762374,
    "closes": [
-    67.5,
-    68.69,
-    69.7,
-    71.57,
-    70.3,
-    70.61,
-    70.46,
-    70.57,
-    72.61,
-    70.53,
     69.85,
     68.69,
     65.04,
@@ -58822,34 +65621,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     61.99,
     62.05,
     62.08,
-    62.34
+    62.34,
+    63.42,
+    66.39,
+    65.56,
+    63.41,
+    63.95,
+    63.26,
+    64.54,
+    62.69,
+    62.15,
+    60.75
    ]
   },
   "NIO": {
    "name": "NIO Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 3.19,
-   "open": 3.23,
-   "prevClose": 3.21,
-   "change": -0.02,
-   "changePct": -0.62,
-   "dayHigh": 3.28,
-   "dayLow": 3.18,
-   "high52": 7.54,
-   "low52": 3.16,
-   "volume": 31405621,
+   "price": 2.72,
+   "open": 2.86,
+   "prevClose": 2.9,
+   "change": -0.18,
+   "changePct": -6.21,
+   "dayHigh": 2.87,
+   "dayLow": 2.71,
+   "high52": 7,
+   "low52": 2.71,
+   "volume": 82860082,
    "closes": [
-    3.42,
-    3.48,
-    3.54,
-    3.41,
-    3.58,
-    3.47,
-    3.56,
-    3.41,
-    3.5,
-    3.43,
     3.39,
     3.43,
     3.36,
@@ -58860,34 +65659,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     3.32,
     3.32,
     3.21,
-    3.19
+    3.19,
+    3.19,
+    3.3,
+    3.2,
+    3.39,
+    3.41,
+    3.28,
+    3.24,
+    3.05,
+    2.9,
+    2.72
    ]
   },
   "NKE": {
    "name": "NIKE, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 39.12,
-   "open": 39,
-   "prevClose": 38.67,
-   "change": 0.45,
-   "changePct": 1.16,
-   "dayHigh": 39.57,
-   "dayLow": 38.95,
+   "price": 38.26,
+   "open": 38.34,
+   "prevClose": 37.99,
+   "change": 0.27,
+   "changePct": 0.71,
+   "dayHigh": 38.71,
+   "dayLow": 37.79,
    "high52": 69.14,
    "low52": 31.97,
-   "volume": 22959016,
+   "volume": 18840349,
    "closes": [
-    33.96,
-    34.61,
-    34.36,
-    34.74,
-    34.71,
-    35.35,
-    35.33,
-    35.3,
-    37.14,
-    37.13,
     37.21,
     37.88,
     37.53,
@@ -58898,34 +65697,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     37.15,
     38.42,
     38.67,
-    39.12
+    39.12,
+    38.48,
+    40.49,
+    39.56,
+    38.59,
+    39.88,
+    38.67,
+    38.32,
+    37.76,
+    37.99,
+    38.26
+   ]
+  },
+  "NOC": {
+   "name": "Northrop Grumman Corporation",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 545.65,
+   "open": 553.98,
+   "prevClose": 550.43,
+   "change": -4.78,
+   "changePct": -0.87,
+   "dayHigh": 554.96,
+   "dayLow": 542.96,
+   "high52": 774,
+   "low52": 470.06,
+   "volume": 830853,
+   "closes": [
+    510.65,
+    534,
+    539.31,
+    552.35,
+    551.44,
+    565.41,
+    551.23,
+    552.77,
+    562.36,
+    557.54,
+    555.32,
+    550.3,
+    525.35,
+    525.25,
+    525.01,
+    539.07,
+    548.61,
+    550.96,
+    549.13,
+    550.43,
+    545.65
    ]
   },
   "NVD": {
    "name": "Graniteshares 2x Short NVDA Daily ETF",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 4.54,
-   "open": 4.3,
-   "prevClose": 4.43,
-   "change": 0.11,
-   "changePct": 2.48,
-   "dayHigh": 4.56,
-   "dayLow": 4.2,
+   "price": 7.2,
+   "open": 6.98,
+   "prevClose": 6.65,
+   "change": 0.55,
+   "changePct": 8.27,
+   "dayHigh": 7.3,
+   "dayLow": 6.68,
    "high52": 9.76,
    "low52": 3.19,
-   "volume": 190470563,
+   "volume": 80553866,
    "closes": [
-    3.31,
-    3.3,
-    3.35,
-    3.55,
-    3.58,
-    3.67,
-    3.61,
-    3.83,
-    3.98,
-    4.11,
     3.98,
     4.02,
     3.82,
@@ -58936,34 +65773,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     4.01,
     4.09,
     4.43,
-    4.54
+    4.54,
+    4.33,
+    4.61,
+    5.47,
+    5.17,
+    5.62,
+    6.23,
+    5.87,
+    6.4,
+    6.65,
+    7.2
    ]
   },
   "NVDA": {
    "name": "NVIDIA Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 202.06,
-   "open": 207.53,
-   "prevClose": 204.64,
-   "change": -2.58,
-   "changePct": -1.26,
-   "dayHigh": 209.98,
-   "dayLow": 201.66,
+   "price": 156.14,
+   "open": 159.02,
+   "prevClose": 162.85,
+   "change": -6.71,
+   "changePct": -4.12,
+   "dayHigh": 163,
+   "dayLow": 155.01,
    "high52": 243.37,
-   "low52": 164.27,
-   "volume": 119222246,
+   "low52": 148.8,
+   "volume": 329959344,
    "closes": [
-    238.9,
-    239.24,
-    237.47,
-    230.48,
-    229.28,
-    226.32,
-    228.52,
-    221.3,
-    217.23,
-    214.13,
     217.09,
     216.47,
     221.97,
@@ -58974,34 +65811,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     215.38,
     213.66,
     204.64,
-    202.06
+    202.06,
+    206.69,
+    200.13,
+    181.6,
+    186.64,
+    178.67,
+    168.89,
+    173.73,
+    166.19,
+    162.85,
+    156.14
    ]
   },
   "NVDL": {
    "name": "GraniteShares 2x Long NVDA Daily ETF",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 28.24,
-   "open": 29.75,
-   "prevClose": 28.97,
-   "change": -0.73,
-   "changePct": -2.52,
-   "dayHigh": 30.43,
-   "dayLow": 28.09,
+   "price": 16.35,
+   "open": 16.97,
+   "prevClose": 17.83,
+   "change": -1.48,
+   "changePct": -8.3,
+   "dayHigh": 17.76,
+   "dayLow": 16.11,
    "high52": 43.27,
-   "low52": 21.54,
-   "volume": 7509179,
+   "low52": 14.54,
+   "volume": 42032806,
    "closes": [
-    40.17,
-    40.17,
-    39.57,
-    37.28,
-    36.86,
-    35.93,
-    36.58,
-    34.32,
-    32.98,
-    31.98,
     32.87,
     32.66,
     34.3,
@@ -59012,34 +65849,148 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     32.15,
     31.6,
     28.97,
-    28.24
+    28.24,
+    29.43,
+    27.64,
+    22.5,
+    23.71,
+    21.64,
+    19.28,
+    20.4,
+    18.57,
+    17.83,
+    16.35
+   ]
+  },
+  "NVO": {
+   "name": "Novo Nordisk A/S",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 41.6,
+   "open": 42.05,
+   "prevClose": 41.63,
+   "change": -0.03,
+   "changePct": -0.07,
+   "dayHigh": 42.3,
+   "dayLow": 41.44,
+   "high52": 64.16,
+   "low52": 35.12,
+   "volume": 15989016,
+   "closes": [
+    38.42,
+    39.35,
+    39.06,
+    39.43,
+    39.05,
+    39.13,
+    38.67,
+    38.29,
+    39.14,
+    40,
+    40.45,
+    40.19,
+    42.18,
+    40.3,
+    40.31,
+    41.38,
+    40.7,
+    41.09,
+    40.65,
+    41.63,
+    41.6
+   ]
+  },
+  "NXPI": {
+   "name": "NXP Semiconductors N.V.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 254.19,
+   "open": 261.47,
+   "prevClose": 265.09,
+   "change": -10.9,
+   "changePct": -4.11,
+   "dayHigh": 262.12,
+   "dayLow": 253.51,
+   "high52": 339.95,
+   "low52": 183,
+   "volume": 4707255,
+   "closes": [
+    230.19,
+    237.6,
+    242.36,
+    237.79,
+    234.92,
+    245.83,
+    253.5,
+    251.69,
+    266,
+    259.61,
+    257.24,
+    262.79,
+    265.01,
+    244.43,
+    248.29,
+    256.42,
+    261.56,
+    269.51,
+    267.29,
+    265.09,
+    254.19
+   ]
+  },
+  "OIH": {
+   "name": "VanEck Oil Services ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 361.14,
+   "open": 369.46,
+   "prevClose": 375.55,
+   "change": -14.41,
+   "changePct": -3.84,
+   "dayHigh": 370.78,
+   "dayLow": 359.86,
+   "high52": 459.28,
+   "low52": 270.55,
+   "volume": 230461,
+   "closes": [
+    385.12,
+    384.89,
+    393.58,
+    377,
+    397.36,
+    402.4,
+    408.87,
+    409.1,
+    407.9,
+    411.57,
+    389.03,
+    385.11,
+    366.06,
+    347.65,
+    356.15,
+    360.58,
+    359.33,
+    369.54,
+    369.14,
+    375.55,
+    361.14
    ]
   },
   "OPEN": {
    "name": "Opendoor Technologies Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 1.8,
-   "open": 1.85,
-   "prevClose": 1.8,
-   "change": 0,
-   "changePct": 0,
-   "dayHigh": 1.95,
-   "dayLow": 1.79,
-   "high52": 9.46,
-   "low52": 1.76,
-   "volume": 31498544,
+   "price": 1.13,
+   "open": 1.14,
+   "prevClose": 1.19,
+   "change": -0.06,
+   "changePct": -5.04,
+   "dayHigh": 1.21,
+   "dayLow": 1.09,
+   "high52": 8.26,
+   "low52": 1.09,
+   "volume": 42773403,
    "closes": [
-    2.31,
-    2.27,
-    2.27,
-    2.29,
-    2.22,
-    2.09,
-    2.11,
-    1.99,
-    2.32,
-    2.12,
     2.05,
     2.06,
     1.95,
@@ -59050,34 +66001,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     1.91,
     1.9,
     1.8,
-    1.8
+    1.8,
+    1.74,
+    1.98,
+    1.79,
+    1.4,
+    1.41,
+    1.31,
+    1.37,
+    1.24,
+    1.19,
+    1.13
    ]
   },
   "ORCL": {
    "name": "Oracle Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 119.22,
-   "open": 125.88,
-   "prevClose": 130.67,
-   "change": -11.45,
-   "changePct": -8.76,
-   "dayHigh": 126.5,
-   "dayLow": 118.43,
-   "high52": 265.62,
-   "low52": 114.5,
-   "volume": 58710047,
+   "price": 119.09,
+   "open": 122.78,
+   "prevClose": 125.35,
+   "change": -6.26,
+   "changePct": -4.99,
+   "dayHigh": 123.14,
+   "dayLow": 118.27,
+   "high52": 250.25,
+   "low52": 109.21,
+   "volume": 20002041,
    "closes": [
-    142.48,
-    144.77,
-    143.56,
-    135.69,
-    141.4,
-    137.39,
-    143.2,
-    130.55,
-    134.47,
-    128.23,
     129.59,
     131.14,
     129.13,
@@ -59088,34 +66039,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     144.54,
     139.56,
     130.67,
-    119.22
+    119.22,
+    126.19,
+    123.73,
+    115.16,
+    116.1,
+    119.79,
+    117.98,
+    128.38,
+    127.11,
+    125.35,
+    119.09
+   ]
+  },
+  "PDD": {
+   "name": "PDD Holdings Inc.",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 78.11,
+   "open": 79.1,
+   "prevClose": 78.97,
+   "change": -0.86,
+   "changePct": -1.09,
+   "dayHigh": 79.88,
+   "dayLow": 77.79,
+   "high52": 131.57,
+   "low52": 71.94,
+   "volume": 4816375,
+   "closes": [
+    81.39,
+    81.63,
+    78.72,
+    79.17,
+    79.04,
+    78.13,
+    78.4,
+    77.47,
+    79.28,
+    78.61,
+    81.68,
+    80.17,
+    82.15,
+    83.95,
+    83.03,
+    80.5,
+    79.4,
+    79.01,
+    77.53,
+    78.97,
+    78.11
    ]
   },
   "PENN": {
    "name": "PENN Entertainment, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 17.02,
-   "open": 16.05,
-   "prevClose": 15.89,
-   "change": 1.13,
-   "changePct": 7.11,
-   "dayHigh": 17.45,
-   "dayLow": 16,
+   "price": 17.78,
+   "open": 17.45,
+   "prevClose": 17.5,
+   "change": 0.28,
+   "changePct": 1.6,
+   "dayHigh": 17.79,
+   "dayLow": 17.23,
    "high52": 22.36,
    "low52": 11.65,
-   "volume": 4108359,
+   "volume": 2021128,
    "closes": [
-    15.1,
-    15.91,
-    15.72,
-    15.76,
-    15.48,
-    15.4,
-    15.37,
-    14.52,
-    15.21,
-    14.94,
     14.71,
     14.96,
     14.89,
@@ -59126,34 +66115,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     14.72,
     15.33,
     15.89,
-    17.02
+    17.02,
+    17.07,
+    17.44,
+    17.34,
+    17.43,
+    18.54,
+    18.45,
+    18.15,
+    17.53,
+    17.5,
+    17.78
    ]
   },
   "PEP": {
    "name": "PepsiCo, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 140.42,
-   "open": 138.28,
-   "prevClose": 137.34,
-   "change": 3.08,
-   "changePct": 2.24,
-   "dayHigh": 140.65,
-   "dayLow": 137.92,
+   "price": 146.43,
+   "open": 146.73,
+   "prevClose": 145.44,
+   "change": 0.99,
+   "changePct": 0.68,
+   "dayHigh": 148.25,
+   "dayLow": 146.18,
    "high52": 171.48,
    "low52": 123.47,
-   "volume": 9351020,
+   "volume": 10593689,
    "closes": [
-    125.65,
-    125.71,
-    123.73,
-    128.34,
-    125.97,
-    126.68,
-    127.3,
-    129.27,
-    128.38,
-    131.49,
     133.57,
     134.02,
     134.7,
@@ -59164,34 +66153,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     132.63,
     133.79,
     137.34,
-    140.42
+    140.42,
+    137.27,
+    142.42,
+    142.71,
+    141.34,
+    141.88,
+    143.61,
+    143.94,
+    142.26,
+    145.44,
+    146.43
    ]
   },
   "PFE": {
    "name": "Pfizer Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 30.67,
-   "open": 30.45,
-   "prevClose": 30.52,
-   "change": 0.15,
-   "changePct": 0.49,
-   "dayHigh": 31.04,
-   "dayLow": 30.2,
-   "high52": 31.04,
+   "price": 28.86,
+   "open": 29.23,
+   "prevClose": 28.89,
+   "change": -0.03,
+   "changePct": -0.1,
+   "dayHigh": 29.28,
+   "dayLow": 28.81,
+   "high52": 31.44,
    "low52": 23.62,
-   "volume": 50815555,
+   "volume": 30818817,
    "closes": [
-    27.41,
-    27.5,
-    28,
-    27.82,
-    28.28,
-    28.4,
-    28.37,
-    29.21,
-    29.44,
-    29.58,
     29.44,
     30.11,
     29.85,
@@ -59202,34 +66191,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     29.45,
     29.95,
     30.52,
-    30.67
+    30.67,
+    30,
+    30.79,
+    29.88,
+    29.39,
+    29.23,
+    29.36,
+    29.45,
+    28.83,
+    28.89,
+    28.86
    ]
   },
   "PG": {
    "name": "The Procter & Gamble Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 163.56,
-   "open": 162.24,
-   "prevClose": 161.57,
-   "change": 1.99,
-   "changePct": 1.23,
-   "dayHigh": 164.34,
-   "dayLow": 162.24,
-   "high52": 167.25,
+   "price": 173.02,
+   "open": 172.16,
+   "prevClose": 169.8,
+   "change": 3.22,
+   "changePct": 1.9,
+   "dayHigh": 173.57,
+   "dayLow": 171.93,
+   "high52": 173.57,
    "low52": 137.62,
-   "volume": 9724324,
+   "volume": 13095927,
    "closes": [
-    145.94,
-    148.41,
-    147.82,
-    150.59,
-    151.23,
-    153.2,
-    153.04,
-    156.53,
-    157.08,
-    159.35,
     157.69,
     159.32,
     156.84,
@@ -59240,34 +66229,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     158.26,
     160.59,
     161.57,
-    163.56
+    163.56,
+    162.06,
+    167.32,
+    167.1,
+    165.4,
+    168.32,
+    168.66,
+    167.67,
+    168.03,
+    169.8,
+    173.02
    ]
   },
   "PLAY": {
    "name": "Dave & Buster's Entertainment, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 8.51,
+   "price": 7.52,
    "open": 7.9,
-   "prevClose": 7.83,
-   "change": 0.68,
-   "changePct": 8.68,
-   "dayHigh": 8.7,
-   "dayLow": 7.9,
+   "prevClose": 8.02,
+   "change": -0.5,
+   "changePct": -6.23,
+   "dayHigh": 8.06,
+   "dayLow": 7.47,
    "high52": 22.1,
    "low52": 6.26,
-   "volume": 2228239,
+   "volume": 1033557,
    "closes": [
-    6.76,
-    6.86,
-    6.56,
-    6.97,
-    6.9,
-    7.09,
-    7.39,
-    7.15,
-    7.96,
-    7.6,
     7.71,
     7.79,
     7.23,
@@ -59278,34 +66267,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     7.71,
     8.13,
     7.83,
-    8.51
+    8.51,
+    8.22,
+    8.78,
+    8.15,
+    7.81,
+    8.19,
+    8.06,
+    8.03,
+    7.85,
+    8.02,
+    7.52
    ]
   },
   "PLNT": {
    "name": "Planet Fitness, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 55.65,
-   "open": 54.83,
-   "prevClose": 53.58,
-   "change": 2.07,
-   "changePct": 3.86,
-   "dayHigh": 55.89,
-   "dayLow": 54.46,
+   "price": 61.36,
+   "open": 61.23,
+   "prevClose": 61.18,
+   "change": 0.18,
+   "changePct": 0.29,
+   "dayHigh": 61.88,
+   "dayLow": 60.9,
    "high52": 114.26,
    "low52": 37.03,
-   "volume": 1473886,
+   "volume": 1158040,
    "closes": [
-    42.07,
-    42.25,
-    43.09,
-    44.03,
-    47.98,
-    47.89,
-    47.45,
-    46.95,
-    49.41,
-    50.92,
     52.89,
     52.96,
     51.69,
@@ -59316,34 +66305,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     52.63,
     53.72,
     53.58,
-    55.65
+    55.65,
+    55.03,
+    57.34,
+    60.07,
+    60.31,
+    61.11,
+    61.34,
+    61.19,
+    60.15,
+    61.18,
+    61.36
    ]
   },
   "PLTR": {
    "name": "Palantir Technologies Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 178.34,
-   "open": 186.52,
-   "prevClose": 184.11,
-   "change": -5.77,
-   "changePct": -3.13,
-   "dayHigh": 187.55,
-   "dayLow": 178.13,
+   "price": 160.39,
+   "open": 165.76,
+   "prevClose": 167.99,
+   "change": -7.6,
+   "changePct": -4.52,
+   "dayHigh": 166.09,
+   "dayLow": 158.68,
    "high52": 212.94,
    "low52": 106.37,
-   "volume": 37089804,
+   "volume": 17586678,
    "closes": [
-    189.4,
-    192.07,
-    194.12,
-    198.78,
-    209.05,
-    209,
-    208.67,
-    200.97,
-    200.5,
-    186.03,
     194.15,
     192.6,
     201.72,
@@ -59354,34 +66343,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     196.81,
     196.42,
     184.11,
-    178.34
+    178.34,
+    175.4,
+    171.7,
+    154.99,
+    160.38,
+    169.2,
+    168.82,
+    172.4,
+    171.58,
+    167.99,
+    160.39
    ]
   },
   "PLUG": {
    "name": "Plug Power Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 1.31,
-   "open": 1.39,
-   "prevClose": 1.37,
-   "change": -0.06,
-   "changePct": -4.38,
-   "dayHigh": 1.42,
-   "dayLow": 1.3,
+   "price": 1.07,
+   "open": 1.1,
+   "prevClose": 1.11,
+   "change": -0.04,
+   "changePct": -3.6,
+   "dayHigh": 1.12,
+   "dayLow": 1.05,
    "high52": 4.33,
-   "low52": 1.3,
-   "volume": 44037337,
+   "low52": 1.05,
+   "volume": 30158668,
    "closes": [
-    1.89,
-    1.86,
-    1.78,
-    1.73,
-    1.68,
-    1.62,
-    1.56,
-    1.45,
-    1.49,
-    1.38,
     1.37,
     1.4,
     1.41,
@@ -59392,34 +66381,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     1.42,
     1.42,
     1.37,
-    1.31
+    1.31,
+    1.41,
+    1.46,
+    1.35,
+    1.45,
+    1.5,
+    1.37,
+    1.36,
+    1.24,
+    1.11,
+    1.07
    ]
   },
   "PTON": {
    "name": "Peloton Interactive, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 5.3,
-   "open": 5.14,
-   "prevClose": 5.12,
-   "change": 0.18,
-   "changePct": 3.52,
-   "dayHigh": 5.36,
-   "dayLow": 5.11,
-   "high52": 7.92,
+   "price": 5.33,
+   "open": 5.65,
+   "prevClose": 5.7,
+   "change": -0.37,
+   "changePct": -6.49,
+   "dayHigh": 5.78,
+   "dayLow": 5.31,
+   "high52": 7.42,
    "low52": 3.65,
-   "volume": 7639138,
+   "volume": 11682594,
    "closes": [
-    5.01,
-    4.87,
-    4.85,
-    4.92,
-    5.12,
-    5.14,
-    5.22,
-    5.06,
-    5.33,
-    5.22,
     5.23,
     5.45,
     5.24,
@@ -59430,34 +66419,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     5.27,
     5.28,
     5.12,
-    5.3
+    5.3,
+    5.31,
+    5.46,
+    5.66,
+    5.61,
+    5.95,
+    5.81,
+    5.72,
+    5.53,
+    5.7,
+    5.33
    ]
   },
   "PYPL": {
    "name": "PayPal Holdings, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 58.78,
-   "open": 57.68,
-   "prevClose": 57.01,
-   "change": 1.77,
-   "changePct": 3.1,
-   "dayHigh": 59.03,
-   "dayLow": 57.27,
-   "high52": 70.35,
+   "price": 58.83,
+   "open": 59.38,
+   "prevClose": 59.28,
+   "change": -0.45,
+   "changePct": -0.76,
+   "dayHigh": 59.67,
+   "dayLow": 58.5,
+   "high52": 63.93,
    "low52": 38.46,
-   "volume": 14896219,
+   "volume": 8722115,
    "closes": [
-    54.41,
-    54.61,
-    54.95,
-    55.02,
-    55.53,
-    56.05,
-    56.17,
-    56.1,
-    57.16,
-    56.7,
     56.51,
     57.14,
     57.2,
@@ -59468,34 +66457,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     56.55,
     56.95,
     57.01,
-    58.78
+    58.78,
+    58.21,
+    60.2,
+    58.96,
+    59.24,
+    60.05,
+    58.78,
+    59.48,
+    58.3,
+    59.28,
+    58.83
    ]
   },
   "QCOM": {
    "name": "QUALCOMM Incorporated",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 162.08,
-   "open": 166.44,
-   "prevClose": 164.79,
-   "change": -2.71,
-   "changePct": -1.64,
-   "dayHigh": 169.52,
-   "dayLow": 161.46,
+   "price": 168.52,
+   "open": 169.24,
+   "prevClose": 172.47,
+   "change": -3.95,
+   "changePct": -2.29,
+   "dayHigh": 172.92,
+   "dayLow": 168.14,
    "high52": 259.92,
    "low52": 121.99,
-   "volume": 11019565,
+   "volume": 11804113,
    "closes": [
-    180.79,
-    181.03,
-    177.12,
-    176.01,
-    175.5,
-    174.43,
-    176.86,
-    172.62,
-    178.4,
-    172.11,
     173.53,
     175.71,
     177.96,
@@ -59506,34 +66495,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     182.97,
     185.41,
     164.79,
-    162.08
+    162.08,
+    164.43,
+    173.19,
+    156.75,
+    165.41,
+    171.47,
+    173.53,
+    176.57,
+    177.14,
+    172.47,
+    168.52
    ]
   },
   "QQQ": {
    "name": "Invesco QQQ Trust",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 681.09,
-   "open": 695.32,
-   "prevClose": 690.49,
-   "change": -9.4,
-   "changePct": -1.36,
-   "dayHigh": 699.43,
-   "dayLow": 680.33,
+   "price": 661.75,
+   "open": 671.04,
+   "prevClose": 679.89,
+   "change": -18.14,
+   "changePct": -2.67,
+   "dayHigh": 672.14,
+   "dayLow": 660.48,
    "high52": 762.86,
    "low52": 555.6,
-   "volume": 54716423,
+   "volume": 41810606,
    "closes": [
-    756.2,
-    759.66,
-    757.73,
-    747.58,
-    751.27,
-    746.04,
-    743.57,
-    728.95,
-    728,
-    709.8,
     718.36,
     717.63,
     725.2,
@@ -59544,34 +66533,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     725.61,
     715.34,
     690.49,
-    681.09
+    681.09,
+    685.28,
+    691.95,
+    647.05,
+    656.1,
+    679.35,
+    674.76,
+    690.38,
+    688.17,
+    679.89,
+    661.75
    ]
   },
   "QS": {
    "name": "QuantumScape Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 4.02,
-   "open": 4.15,
-   "prevClose": 4.06,
-   "change": -0.04,
-   "changePct": -0.99,
-   "dayHigh": 4.22,
-   "dayLow": 3.99,
-   "high52": 17.86,
-   "low52": 3.8,
-   "volume": 13263774,
+   "price": 3.43,
+   "open": 3.58,
+   "prevClose": 3.68,
+   "change": -0.25,
+   "changePct": -6.79,
+   "dayHigh": 3.6,
+   "dayLow": 3.4,
+   "high52": 13.8,
+   "low52": 3.4,
+   "volume": 15162693,
    "closes": [
-    4.62,
-    4.65,
-    4.52,
-    4.58,
-    4.58,
-    4.27,
-    4.12,
-    3.93,
-    4.23,
-    4.01,
     3.89,
     3.98,
     3.98,
@@ -59582,34 +66571,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     4.24,
     4.2,
     4.06,
-    4.02
+    4.02,
+    4.12,
+    4.43,
+    4.11,
+    4.28,
+    4.57,
+    4.45,
+    4.21,
+    3.88,
+    3.68,
+    3.43
    ]
   },
   "RBLX": {
    "name": "Roblox Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 42.88,
-   "open": 42.9,
-   "prevClose": 42.99,
-   "change": -0.11,
-   "changePct": -0.26,
-   "dayHigh": 44.79,
-   "dayLow": 41.78,
-   "high52": 113.6,
+   "price": 46.12,
+   "open": 49.13,
+   "prevClose": 49.91,
+   "change": -3.79,
+   "changePct": -7.59,
+   "dayHigh": 49.14,
+   "dayLow": 45.55,
+   "high52": 103.78,
    "low52": 33.88,
-   "volume": 14261200,
+   "volume": 8977803,
    "closes": [
-    44.58,
-    45.56,
-    46.41,
-    45.52,
-    48.09,
-    49.58,
-    49.51,
-    47.54,
-    51.13,
-    49.55,
     50.75,
     52.35,
     52.55,
@@ -59620,34 +66609,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     53.28,
     52.46,
     42.99,
-    42.88
+    42.88,
+    45.45,
+    49.31,
+    47.65,
+    49.3,
+    51.6,
+    51.19,
+    52.61,
+    51.42,
+    49.91,
+    46.12
    ]
   },
   "RH": {
    "name": "RH",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 146.52,
-   "open": 148.55,
-   "prevClose": 146.66,
-   "change": -0.14,
-   "changePct": -0.1,
-   "dayHigh": 155,
-   "dayLow": 145.29,
+   "price": 126.16,
+   "open": 127.45,
+   "prevClose": 129.39,
+   "change": -3.23,
+   "changePct": -2.5,
+   "dayHigh": 127.63,
+   "dayLow": 124.41,
    "high52": 239.4,
    "low52": 106.3,
-   "volume": 775541,
+   "volume": 686977,
    "closes": [
-    117.45,
-    117.16,
-    115.19,
-    113.67,
-    116.99,
-    116.76,
-    115.88,
-    110.99,
-    117.87,
-    112.99,
     114.03,
     119.74,
     128.01,
@@ -59658,34 +66647,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     145.06,
     150.79,
     146.66,
-    146.52
+    146.52,
+    134.13,
+    144.9,
+    137.43,
+    130.96,
+    136.61,
+    134.82,
+    135.9,
+    129.17,
+    129.39,
+    126.16
    ]
   },
   "RIG": {
    "name": "Transocean Ltd.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 6.23,
-   "open": 6.65,
-   "prevClose": 6.94,
-   "change": -0.71,
-   "changePct": -10.23,
-   "dayHigh": 6.77,
-   "dayLow": 6.21,
+   "price": 5.22,
+   "open": 5.42,
+   "prevClose": 5.54,
+   "change": -0.32,
+   "changePct": -5.78,
+   "dayHigh": 5.51,
+   "dayLow": 5.19,
    "high52": 7.66,
    "low52": 3.68,
-   "volume": 45683885,
+   "volume": 31190780,
    "closes": [
-    5.51,
-    5.4,
-    5.39,
-    5.54,
-    5.51,
-    5.6,
-    5.65,
-    5.58,
-    5.51,
-    5.62,
     5.89,
     5.82,
     6.04,
@@ -59696,34 +66685,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     6.71,
     6.69,
     6.94,
-    6.23
+    6.23,
+    5.9,
+    5.45,
+    5.1,
+    5.24,
+    5.17,
+    5.18,
+    5.31,
+    5.32,
+    5.54,
+    5.22
    ]
   },
   "RIVN": {
    "name": "Rivian Automotive, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 13.19,
-   "open": 12.75,
-   "prevClose": 12.16,
-   "change": 1.03,
-   "changePct": 8.47,
-   "dayHigh": 13.7,
-   "dayLow": 12.65,
+   "price": 12.1,
+   "open": 12.06,
+   "prevClose": 12.18,
+   "change": -0.08,
+   "changePct": -0.66,
+   "dayHigh": 12.38,
+   "dayLow": 11.96,
    "high52": 22.69,
    "low52": 11.38,
-   "volume": 65299674,
+   "volume": 34976459,
    "closes": [
-    14.6,
-    14.51,
-    14.34,
-    14.33,
-    13.96,
-    13.54,
-    13.37,
-    12.95,
-    13.02,
-    12.42,
     12.34,
     12.43,
     12.46,
@@ -59734,34 +66723,148 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     11.67,
     11.45,
     12.16,
-    13.19
+    13.19,
+    13.29,
+    14.06,
+    13.29,
+    13.61,
+    14.01,
+    13.7,
+    13.54,
+    12.8,
+    12.18,
+    12.1
+   ]
+  },
+  "RKLB": {
+   "name": "Rocket Lab Corporation",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 57.37,
+   "open": 59.65,
+   "prevClose": 61.53,
+   "change": -4.16,
+   "changePct": -6.76,
+   "dayHigh": 61.9,
+   "dayLow": 57.16,
+   "high52": 151,
+   "low52": 37.57,
+   "volume": 13641185,
+   "closes": [
+    51.36,
+    50.9,
+    53.67,
+    51.22,
+    52.6,
+    53.82,
+    58.31,
+    58.6,
+    59.1,
+    54.73,
+    52.07,
+    54.43,
+    52.37,
+    45.99,
+    53.07,
+    58.86,
+    62.71,
+    66.15,
+    64.07,
+    61.53,
+    57.37
+   ]
+  },
+  "RTX": {
+   "name": "RTX Corporation",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 194.89,
+   "open": 199.67,
+   "prevClose": 198.58,
+   "change": -3.69,
+   "changePct": -1.86,
+   "dayHigh": 200,
+   "dayLow": 194.21,
+   "high52": 226.88,
+   "low52": 166.74,
+   "volume": 3582467,
+   "closes": [
+    192.11,
+    193.34,
+    191.6,
+    194.71,
+    191.01,
+    197.48,
+    194.6,
+    195.84,
+    199.4,
+    199.8,
+    202.79,
+    203.82,
+    198.43,
+    191.88,
+    189.53,
+    196.31,
+    200.27,
+    201.29,
+    198.36,
+    198.58,
+    194.89
+   ]
+  },
+  "SAP": {
+   "name": "SAP SE",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 233.83,
+   "open": 235.47,
+   "prevClose": 234.9,
+   "change": -1.07,
+   "changePct": -0.46,
+   "dayHigh": 236.26,
+   "dayLow": 233.21,
+   "high52": 255.9,
+   "low52": 144.97,
+   "volume": 1355653,
+   "closes": [
+    226.03,
+    228.98,
+    232.73,
+    240.59,
+    238.14,
+    238.55,
+    235.8,
+    236.93,
+    234.07,
+    235.02,
+    233.62,
+    230.31,
+    240.04,
+    243.53,
+    233.45,
+    237.42,
+    233.74,
+    234.1,
+    234.06,
+    234.9,
+    233.83
    ]
   },
   "SBUX": {
    "name": "Starbucks Corporation",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 104.4,
-   "open": 104.41,
-   "prevClose": 103.67,
-   "change": 0.73,
-   "changePct": 0.7,
-   "dayHigh": 105.06,
-   "dayLow": 102.29,
-   "high52": 110.51,
-   "low52": 77.99,
-   "volume": 9915772,
+   "price": 108.72,
+   "open": 107.69,
+   "prevClose": 106.44,
+   "change": 2.28,
+   "changePct": 2.14,
+   "dayHigh": 110.11,
+   "dayLow": 107.59,
+   "high52": 111.5,
+   "low52": 81.97,
+   "volume": 7934540,
    "closes": [
-    94.43,
-    96.11,
-    93.58,
-    93.21,
-    90.75,
-    92.29,
-    92,
-    93.25,
-    96.88,
-    97.52,
     97.87,
     99.37,
     99.08,
@@ -59772,34 +66875,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     103.2,
     105.51,
     103.67,
-    104.4
+    104.4,
+    104.77,
+    109.7,
+    106.16,
+    105.41,
+    109.44,
+    109.95,
+    109.89,
+    107.26,
+    106.44,
+    108.72
    ]
   },
   "SCJ": {
    "name": "iShares MSCI Japan Small-Cap ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 105.98,
-   "open": 105.9,
-   "prevClose": 105.3,
-   "change": 0.68,
-   "changePct": 0.65,
-   "dayHigh": 106.49,
-   "dayLow": 105.98,
+   "price": 104.25,
+   "open": 105.06,
+   "prevClose": 106.08,
+   "change": -1.83,
+   "changePct": -1.73,
+   "dayHigh": 105.12,
+   "dayLow": 104.25,
    "high52": 111.44,
    "low52": 88.54,
-   "volume": 7552,
+   "volume": 29409,
    "closes": [
-    110.65,
-    110.89,
-    110.19,
-    109.26,
-    110.03,
-    109.72,
-    110.02,
-    108.56,
-    108.07,
-    108.32,
     107.75,
     107.43,
     107.55,
@@ -59810,34 +66913,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     106.79,
     106.78,
     105.3,
-    105.98
+    105.98,
+    105.54,
+    107.08,
+    101.69,
+    100.99,
+    104.43,
+    104.8,
+    105.41,
+    105.35,
+    106.08,
+    104.25
    ]
   },
   "SHAK": {
    "name": "Shake Shack Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 72.46,
-   "open": 70.43,
-   "prevClose": 70.48,
-   "change": 1.98,
-   "changePct": 2.81,
-   "dayHigh": 73.08,
-   "dayLow": 69.57,
+   "price": 73.15,
+   "open": 74.47,
+   "prevClose": 74.98,
+   "change": -1.83,
+   "changePct": -2.44,
+   "dayHigh": 75.34,
+   "dayLow": 71.71,
    "high52": 107.46,
    "low52": 51.6,
-   "volume": 1796365,
+   "volume": 992165,
    "closes": [
-    62.4,
-    64.61,
-    64.17,
-    67.31,
-    66.9,
-    69.34,
-    71.06,
-    68.77,
-    70.61,
-    69.99,
     71.87,
     69.74,
     67.84,
@@ -59848,34 +66951,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     67.22,
     70.51,
     70.48,
-    72.46
+    72.46,
+    70.14,
+    72.82,
+    69.82,
+    71.89,
+    77.15,
+    75.9,
+    75.04,
+    72.68,
+    74.98,
+    73.15
    ]
   },
   "SHOP": {
    "name": "Shopify Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 156.22,
-   "open": 158.29,
-   "prevClose": 157.49,
-   "change": -1.27,
-   "changePct": -0.81,
-   "dayHigh": 160.88,
-   "dayLow": 153.33,
+   "price": 147.81,
+   "open": 145.16,
+   "prevClose": 147.09,
+   "change": 0.72,
+   "changePct": 0.49,
+   "dayHigh": 150.33,
+   "dayLow": 141.56,
    "high52": 180.88,
    "low52": 94,
-   "volume": 13919506,
+   "volume": 6565358,
    "closes": [
-    160.11,
-    164.44,
-    166.03,
-    164.56,
-    170.85,
-    179.22,
-    176.52,
-    172.5,
-    178.14,
-    169.52,
     171.06,
     173.48,
     174.29,
@@ -59886,34 +66989,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     168.22,
     166.89,
     157.49,
-    156.22
+    156.22,
+    142.57,
+    153.03,
+    143.75,
+    148.91,
+    152.06,
+    146.61,
+    149.26,
+    146.78,
+    147.09,
+    147.81
    ]
   },
   "SIRI": {
    "name": "Sirius XM Holdings Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 29.57,
-   "open": 29.2,
-   "prevClose": 29.01,
-   "change": 0.56,
-   "changePct": 1.93,
-   "dayHigh": 29.73,
-   "dayLow": 29.05,
-   "high52": 32.66,
+   "price": 31.98,
+   "open": 31.99,
+   "prevClose": 31.85,
+   "change": 0.13,
+   "changePct": 0.41,
+   "dayHigh": 32.16,
+   "dayLow": 31.47,
+   "high52": 33.76,
    "low52": 19.77,
-   "volume": 4793874,
+   "volume": 2813958,
    "closes": [
-    26.31,
-    26.36,
-    25.95,
-    26.33,
-    26.51,
-    26.61,
-    26.57,
-    26.51,
-    27.15,
-    26.97,
     26.84,
     27.16,
     26.96,
@@ -59924,34 +67027,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     27.32,
     28.67,
     29.01,
-    29.57
+    29.57,
+    30.8,
+    33.4,
+    33.22,
+    32.4,
+    32.67,
+    32.24,
+    32.26,
+    31.74,
+    31.85,
+    31.98
    ]
   },
   "SLB": {
    "name": "SLB N.V.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 52.31,
-   "open": 52.3,
-   "prevClose": 53.74,
-   "change": -1.43,
-   "changePct": -2.66,
-   "dayHigh": 53.83,
-   "dayLow": 52.23,
+   "price": 50.08,
+   "open": 50.99,
+   "prevClose": 51.67,
+   "change": -1.59,
+   "changePct": -3.08,
+   "dayHigh": 51.21,
+   "dayLow": 49.88,
    "high52": 60.46,
    "low52": 34.65,
-   "volume": 11945165,
+   "volume": 10239159,
    "closes": [
-    50.28,
-    50,
-    47.96,
-    48.98,
-    48.95,
-    48.77,
-    48.77,
-    48.51,
-    48.37,
-    49.5,
     49.09,
     49.98,
     51.1,
@@ -59962,34 +67065,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     53.75,
     53.81,
     53.74,
-    52.31
+    52.31,
+    52.13,
+    51.56,
+    49.64,
+    49.92,
+    50.38,
+    49.9,
+    50.96,
+    50.91,
+    51.67,
+    50.08
    ]
   },
   "SMH": {
    "name": "VanEck Semiconductor ETF",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 508.31,
-   "open": 529.05,
-   "prevClose": 522.49,
-   "change": -14.18,
-   "changePct": -2.71,
-   "dayHigh": 532.76,
-   "dayLow": 506.45,
+   "price": 461.9,
+   "open": 468.71,
+   "prevClose": 486.75,
+   "change": -24.85,
+   "changePct": -5.11,
+   "dayHigh": 473.32,
+   "dayLow": 460.66,
    "high52": 671.83,
    "low52": 315.05,
-   "volume": 8863693,
+   "volume": 9819112,
    "closes": [
-    633.9,
-    632.5,
-    625.03,
-    607.27,
-    603.33,
-    590.99,
-    588.12,
-    564.74,
-    558.84,
-    539.79,
     548.46,
     546.36,
     556.7,
@@ -60000,34 +67103,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     567.67,
     561.67,
     522.49,
-    508.31
+    508.31,
+    518.52,
+    504.27,
+    447.73,
+    463.96,
+    487.41,
+    483.63,
+    506.96,
+    501.73,
+    486.75,
+    461.9
+   ]
+  },
+  "SMIN": {
+   "name": "iShares MSCI India Small-Cap ETF",
+   "exchange": "Cboe US",
+   "type": "ETF",
+   "price": 70.42,
+   "open": 70.59,
+   "prevClose": 71.13,
+   "change": -0.71,
+   "changePct": -1,
+   "dayHigh": 70.73,
+   "dayLow": 70.33,
+   "high52": 74.17,
+   "low52": 57.78,
+   "volume": 46214,
+   "closes": [
+    68.51,
+    68.93,
+    67.39,
+    67.07,
+    65.22,
+    65.57,
+    66.74,
+    66.81,
+    67.47,
+    66.76,
+    67.84,
+    67.59,
+    69.7,
+    69.17,
+    69.22,
+    70.57,
+    70.85,
+    70.82,
+    71.26,
+    71.13,
+    70.42
    ]
   },
   "SNAP": {
    "name": "Snap Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 5.45,
-   "open": 5.38,
-   "prevClose": 5.34,
-   "change": 0.11,
-   "changePct": 2.06,
-   "dayHigh": 5.65,
-   "dayLow": 5.33,
-   "high52": 9.13,
+   "price": 5.09,
+   "open": 5.11,
+   "prevClose": 5.26,
+   "change": -0.17,
+   "changePct": -3.23,
+   "dayHigh": 5.17,
+   "dayLow": 4.99,
+   "high52": 9.07,
    "low52": 3.81,
-   "volume": 39403564,
+   "volume": 46689125,
    "closes": [
-    5.61,
-    5.78,
-    5.81,
-    5.86,
-    6.23,
-    6.53,
-    6.49,
-    6.1,
-    6.44,
-    6.13,
     6.27,
     6.38,
     6.35,
@@ -60038,7 +67179,17 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     5.96,
     5.68,
     5.34,
-    5.45
+    5.45,
+    5.59,
+    5.92,
+    5.09,
+    4.96,
+    5.05,
+    5,
+    5.34,
+    5.22,
+    5.26,
+    5.09
    ]
   },
   "SNBR": {
@@ -60061,27 +67212,17 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
    "name": "Snowflake Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 290.68,
-   "open": 306,
-   "prevClose": 306.08,
-   "change": -15.4,
-   "changePct": -5.03,
-   "dayHigh": 306.96,
-   "dayLow": 287.93,
+   "price": 280.54,
+   "open": 285,
+   "prevClose": 291,
+   "change": -10.46,
+   "changePct": -3.59,
+   "dayHigh": 286.64,
+   "dayLow": 278.69,
    "high52": 384.56,
    "low52": 118.3,
-   "volume": 6437324,
+   "volume": 2499793,
    "closes": [
-    338.99,
-    335.95,
-    332.85,
-    343.4,
-    368.89,
-    360.37,
-    357.76,
-    335.08,
-    335.07,
-    306.84,
     315.35,
     319.61,
     322.73,
@@ -60092,34 +67233,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     339.91,
     330.27,
     306.08,
-    290.68
+    290.68,
+    295.04,
+    290.6,
+    269.54,
+    275.88,
+    291.14,
+    295.76,
+    301.22,
+    298.7,
+    291,
+    280.54
    ]
   },
   "SONO": {
    "name": "Sonos, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 15.73,
-   "open": 16.39,
-   "prevClose": 16.17,
-   "change": -0.44,
-   "changePct": -2.72,
-   "dayHigh": 16.67,
-   "dayLow": 15.69,
+   "price": 17.42,
+   "open": 18.19,
+   "prevClose": 17.97,
+   "change": -0.55,
+   "changePct": -3.06,
+   "dayHigh": 18.35,
+   "dayLow": 17.33,
    "high52": 19.82,
    "low52": 12.44,
-   "volume": 1630590,
+   "volume": 1838146,
    "closes": [
-    17.94,
-    17.43,
-    16.98,
-    16.95,
-    17.26,
-    17.34,
-    17.72,
-    17.6,
-    17.69,
-    17.34,
     16.93,
     17.37,
     17.47,
@@ -60130,34 +67271,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     17.75,
     17.46,
     16.17,
-    15.73
+    15.73,
+    15.94,
+    16.77,
+    16.33,
+    16.41,
+    17.01,
+    16.89,
+    19.06,
+    18.11,
+    17.97,
+    17.42
+   ]
+  },
+  "SONY": {
+   "name": "Sony Group Corporation",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 27.04,
+   "open": 27.15,
+   "prevClose": 27.07,
+   "change": -0.03,
+   "changePct": -0.11,
+   "dayHigh": 27.19,
+   "dayLow": 26.9,
+   "high52": 29.41,
+   "low52": 19.32,
+   "volume": 3714444,
+   "closes": [
+    24.77,
+    25.21,
+    25.1,
+    26.2,
+    26.08,
+    26.03,
+    25.64,
+    25.22,
+    25.47,
+    25.3,
+    25.51,
+    25.39,
+    25.95,
+    27.54,
+    27,
+    27.06,
+    26.71,
+    26.49,
+    26.66,
+    27.07,
+    27.04
    ]
   },
   "SOUN": {
    "name": "SoundHound AI, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 4.09,
-   "open": 4.28,
-   "prevClose": 4.22,
-   "change": -0.13,
-   "changePct": -3.08,
-   "dayHigh": 4.42,
-   "dayLow": 4.09,
-   "high52": 17.85,
-   "low52": 4.04,
-   "volume": 17247939,
+   "price": 3.23,
+   "open": 3.38,
+   "prevClose": 3.49,
+   "change": -0.26,
+   "changePct": -7.45,
+   "dayHigh": 3.39,
+   "dayLow": 3.2,
+   "high52": 13.19,
+   "low52": 3.2,
+   "volume": 19760291,
    "closes": [
-    5.88,
-    5.72,
-    5.63,
-    5.52,
-    5.39,
-    4.97,
-    4.88,
-    4.53,
-    4.89,
-    4.72,
     4.65,
     4.7,
     4.61,
@@ -60168,34 +67347,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     4.44,
     4.36,
     4.22,
-    4.09
+    4.09,
+    4.12,
+    4.32,
+    4.26,
+    4.11,
+    4.05,
+    3.87,
+    3.91,
+    3.6,
+    3.49,
+    3.23
    ]
   },
   "SOXL": {
    "name": "Direxion Daily Semiconductor Bull 3X Shares",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 68.17,
-   "open": 79.45,
-   "prevClose": 77.05,
-   "change": -8.88,
-   "changePct": -11.52,
-   "dayHigh": 81.07,
-   "dayLow": 67.5,
+   "price": 48.76,
+   "open": 51.1,
+   "prevClose": 58.32,
+   "change": -9.56,
+   "changePct": -16.39,
+   "dayHigh": 52.65,
+   "dayLow": 48.37,
    "high52": 302,
    "low52": 28.12,
-   "volume": 159025645,
+   "volume": 179418130,
    "closes": [
-    164.27,
-    164.26,
-    158.91,
-    142.52,
-    139.76,
-    128.4,
-    127.57,
-    110.54,
-    107.35,
-    93.67,
     98.65,
     97.55,
     103.24,
@@ -60206,34 +67385,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     107.35,
     102.39,
     77.05,
-    68.17
+    68.17,
+    73.12,
+    66.68,
+    40.87,
+    45.97,
+    56.2,
+    56.06,
+    66.03,
+    65.53,
+    58.32,
+    48.76
    ]
   },
   "SOXS": {
    "name": "Direxion Daily Semiconductor Bear 3X Shares",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 58.09,
-   "open": 50.38,
-   "prevClose": 52.08,
-   "change": 6.01,
-   "changePct": 11.54,
-   "dayHigh": 58.52,
-   "dayLow": 49.31,
+   "price": 59.18,
+   "open": 57.18,
+   "prevClose": 50.78,
+   "change": 8.4,
+   "changePct": 16.54,
+   "dayHigh": 59.42,
+   "dayLow": 55.71,
    "high52": 1030,
    "low52": 28.46,
-   "volume": 77017172,
+   "volume": 86611143,
    "closes": [
-    29.62,
-    29.63,
-    30.65,
-    33.79,
-    34.39,
-    37.19,
-    37.42,
-    42.52,
-    43.64,
-    49.23,
     46.63,
     47.13,
     44.29,
@@ -60244,34 +67423,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     39.78,
     41.68,
     52.08,
-    58.09
+    58.09,
+    53.64,
+    58.34,
+    81.22,
+    70.95,
+    55.15,
+    55.36,
+    45.32,
+    45.72,
+    50.78,
+    59.18
    ]
   },
   "SPCE": {
    "name": "Virgin Galactic Holdings, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 2.47,
-   "open": 2.62,
-   "prevClose": 2.58,
-   "change": -0.11,
-   "changePct": -4.26,
-   "dayHigh": 2.63,
-   "dayLow": 2.45,
+   "price": 1.56,
+   "open": 1.85,
+   "prevClose": 1.84,
+   "change": -0.28,
+   "changePct": -15.22,
+   "dayHigh": 1.86,
+   "dayLow": 1.56,
    "high52": 8.9,
-   "low52": 2.13,
-   "volume": 5087555,
+   "low52": 1.56,
+   "volume": 22959225,
    "closes": [
-    3.05,
-    3.07,
-    3.01,
-    2.94,
-    2.84,
-    2.67,
-    2.63,
-    2.55,
-    2.58,
-    2.43,
     2.34,
     2.37,
     2.44,
@@ -60282,34 +67461,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     2.66,
     2.73,
     2.58,
-    2.47
+    2.47,
+    2.5,
+    2.51,
+    2.38,
+    2.77,
+    2.87,
+    2.79,
+    2.87,
+    2.67,
+    1.84,
+    1.56
    ]
   },
   "SPOT": {
    "name": "Spotify Technology S.A.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 594.04,
-   "open": 588.8,
-   "prevClose": 593.44,
-   "change": 0.6,
-   "changePct": 0.1,
-   "dayHigh": 600.18,
-   "dayLow": 581.28,
-   "high52": 668.5,
+   "price": 611.73,
+   "open": 618.56,
+   "prevClose": 612.63,
+   "change": -0.9,
+   "changePct": -0.15,
+   "dayHigh": 619.06,
+   "dayLow": 598.56,
+   "high52": 644.57,
    "low52": 405,
-   "volume": 1753645,
+   "volume": 954516,
    "closes": [
-    483.05,
-    488.13,
-    512.92,
-    526.42,
-    529.14,
-    528.8,
-    527.45,
-    523.96,
-    533.37,
-    530.46,
     518.76,
     526.08,
     525.34,
@@ -60320,34 +67499,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     538.4,
     557.24,
     593.44,
-    594.04
+    594.04,
+    600.09,
+    627.66,
+    614.41,
+    603.01,
+    609.1,
+    606.22,
+    609.12,
+    598.51,
+    612.63,
+    611.73
    ]
   },
   "SPXL": {
    "name": "Direxion Daily S&P500 Bull 3X Shares",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 266.32,
-   "open": 274.14,
-   "prevClose": 270.35,
-   "change": -4.03,
-   "changePct": -1.49,
-   "dayHigh": 278.82,
-   "dayLow": 265.77,
+   "price": 250.09,
+   "open": 260.15,
+   "prevClose": 265.1,
+   "change": -15.01,
+   "changePct": -5.66,
+   "dayHigh": 260.28,
+   "dayLow": 247.98,
    "high52": 303.18,
    "low52": 168.04,
-   "volume": 2269902,
+   "volume": 2380077,
    "closes": [
-    294.56,
-    299.21,
-    296.91,
-    293.05,
-    297.97,
-    297.37,
-    297.42,
-    287.63,
-    290,
-    280.17,
     283.62,
     286.27,
     290.87,
@@ -60358,34 +67537,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     288.95,
     285.67,
     270.35,
-    266.32
+    266.32,
+    268.76,
+    281.79,
+    244.98,
+    246.75,
+    264.01,
+    261.05,
+    271.18,
+    268.38,
+    265.1,
+    250.09
    ]
   },
   "SPXS": {
    "name": "Direxion Daily S&P 500 Bear 3X Shares",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 26.01,
-   "open": 25.27,
-   "prevClose": 25.63,
-   "change": 0.38,
-   "changePct": 1.48,
-   "dayHigh": 26.05,
-   "dayLow": 24.81,
+   "price": 26.93,
+   "open": 25.96,
+   "prevClose": 25.48,
+   "change": 1.45,
+   "changePct": 5.69,
+   "dayHigh": 27.14,
+   "dayLow": 25.95,
    "high52": 44.83,
    "low52": 23.04,
-   "volume": 10554277,
+   "volume": 13229119,
    "closes": [
-    23.64,
-    23.26,
-    23.45,
-    23.77,
-    23.37,
-    23.41,
-    23.42,
-    24.19,
-    24,
-    24.82,
     24.5,
     24.27,
     23.91,
@@ -60396,34 +67575,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     24.01,
     24.3,
     25.63,
-    26.01
+    26.01,
+    25.79,
+    24.53,
+    27.78,
+    27.55,
+    25.62,
+    25.9,
+    24.89,
+    25.15,
+    25.48,
+    26.93
+   ]
+  },
+  "SPXU": {
+   "name": "ProShares UltraPro Short S&P500",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 37.84,
+   "open": 36.48,
+   "prevClose": 35.79,
+   "change": 2.05,
+   "changePct": 5.73,
+   "dayHigh": 38.13,
+   "dayLow": 36.47,
+   "high52": 62.85,
+   "low52": 32.38,
+   "volume": 8508921,
+   "closes": [
+    34.43,
+    34.11,
+    33.59,
+    34.79,
+    35.41,
+    34.66,
+    34.07,
+    33.73,
+    34.15,
+    36,
+    36.54,
+    36.23,
+    34.46,
+    39.01,
+    38.72,
+    36,
+    36.41,
+    34.99,
+    35.36,
+    35.79,
+    37.84
    ]
   },
   "SPY": {
    "name": "State Street SPDR S&P 500 ETF Trust",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 752.1,
-   "open": 759.45,
-   "prevClose": 755.72,
-   "change": -3.62,
-   "changePct": -0.48,
-   "dayHigh": 763.86,
-   "dayLow": 751.6,
+   "price": 739.95,
+   "open": 749.66,
+   "prevClose": 754.37,
+   "change": -14.42,
+   "changePct": -1.91,
+   "dayHigh": 749.82,
+   "dayLow": 738.07,
    "high52": 781.62,
    "low52": 629.28,
-   "volume": 50778592,
+   "volume": 67827833,
    "closes": [
-    774.83,
-    779.09,
-    777.22,
-    773.93,
-    778.57,
-    778.1,
-    778.01,
-    769.6,
-    771.79,
-    763.25,
     766.48,
     769.05,
     773.09,
@@ -60434,34 +67651,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     772.31,
     769.36,
     755.72,
-    752.1
+    752.1,
+    754.35,
+    766.81,
+    733,
+    735.29,
+    752.69,
+    749.92,
+    759.81,
+    757.12,
+    754.37,
+    739.95
    ]
   },
   "SQQQ": {
    "name": "ProShares UltraPro Short QQQ",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 43.55,
-   "open": 40.99,
-   "prevClose": 41.83,
-   "change": 1.72,
-   "changePct": 4.11,
-   "dayHigh": 43.7,
-   "dayLow": 40.24,
+   "price": 45.9,
+   "open": 44.16,
+   "prevClose": 42.46,
+   "change": 3.44,
+   "changePct": 8.1,
+   "dayHigh": 46.12,
+   "dayLow": 43.95,
    "high52": 90.72,
    "low52": 31.42,
-   "volume": 53112899,
+   "volume": 50598835,
    "closes": [
-    32.25,
-    31.83,
-    32.07,
-    33.37,
-    32.95,
-    33.63,
-    33.99,
-    36,
-    36.14,
-    38.9,
     37.52,
     37.68,
     36.48,
@@ -60472,34 +67689,147 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     36.28,
     37.83,
     41.83,
-    43.55
+    43.55,
+    42.75,
+    41.56,
+    49.55,
+    47.7,
+    42.79,
+    43.56,
+    40.55,
+    40.93,
+    42.46,
+    45.9
+   ]
+  },
+  "SSNLF": {
+   "name": "Samsung Electronics Co., Ltd.",
+   "exchange": "OTC Markets OTCPK",
+   "type": "EQUITY",
+   "price": 65.21,
+   "open": 65.21,
+   "prevClose": 65.21,
+   "change": 0,
+   "changePct": 0,
+   "dayHigh": 40.6,
+   "dayLow": 40.6,
+   "high52": 65.21,
+   "low52": 40.6,
+   "volume": 200,
+   "closes": [
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21,
+    65.21
+   ]
+  },
+  "TECL": {
+   "name": "Direxion Daily Technology Bull 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 127.76,
+   "open": 132.85,
+   "prevClose": 141.65,
+   "change": -13.89,
+   "changePct": -9.81,
+   "dayHigh": 135.32,
+   "dayLow": 126.52,
+   "high52": 275.4,
+   "low52": 75.16,
+   "volume": 1012544,
+   "closes": [
+    195.97,
+    194.53,
+    204.27,
+    183.81,
+    186.65,
+    196,
+    205.69,
+    210.37,
+    203.18,
+    173.11,
+    157.78,
+    163.95,
+    163.69,
+    124.62,
+    129.91,
+    144.35,
+    139.25,
+    152.62,
+    150.95,
+    141.65,
+    127.76
+   ]
+  },
+  "TECS": {
+   "name": "Direxion Daily Technology Bear 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 79.21,
+   "open": 77.1,
+   "prevClose": 72.48,
+   "change": 6.73,
+   "changePct": 9.29,
+   "dayHigh": 79.99,
+   "dayLow": 75.93,
+   "high52": 240.4,
+   "low52": 46.4,
+   "volume": 388670,
+   "closes": [
+    60.09,
+    60.54,
+    57.52,
+    63.26,
+    62.35,
+    59.23,
+    56.07,
+    55.05,
+    56.94,
+    65,
+    71.2,
+    68.19,
+    68.29,
+    84.7,
+    81.12,
+    72.27,
+    74.86,
+    67.51,
+    68,
+    72.48,
+    79.21
    ]
   },
   "TGT": {
    "name": "Target Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 158.38,
-   "open": 155.13,
-   "prevClose": 154.38,
-   "change": 4,
-   "changePct": 2.59,
-   "dayHigh": 159.29,
-   "dayLow": 155,
+   "price": 160.32,
+   "open": 161.59,
+   "prevClose": 161.45,
+   "change": -1.13,
+   "changePct": -0.7,
+   "dayHigh": 161.93,
+   "dayLow": 158.71,
    "high52": 170.75,
    "low52": 83.44,
-   "volume": 4279508,
+   "volume": 4964609,
    "closes": [
-    152.99,
-    154.33,
-    150.92,
-    154.76,
-    153.64,
-    153.62,
-    151.99,
-    155.31,
-    156.63,
-    154.26,
     153.29,
     154,
     152.38,
@@ -60510,34 +67840,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     148.96,
     151.82,
     154.38,
-    158.38
+    158.38,
+    154.4,
+    163.1,
+    157.95,
+    158.41,
+    165.9,
+    161.78,
+    162.7,
+    160.9,
+    161.45,
+    160.32
    ]
   },
   "TLRY": {
    "name": "Tilray Brands, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 2.55,
-   "open": 2.58,
-   "prevClose": 2.53,
-   "change": 0.02,
-   "changePct": 0.79,
-   "dayHigh": 2.66,
-   "dayLow": 2.52,
+   "price": 2.34,
+   "open": 2.4,
+   "prevClose": 2.43,
+   "change": -0.09,
+   "changePct": -3.7,
+   "dayHigh": 2.4,
+   "dayLow": 2.33,
    "high52": 15.7,
-   "low52": 2.49,
-   "volume": 4611682,
+   "low52": 2.33,
+   "volume": 4212704,
    "closes": [
-    3.72,
-    3.78,
-    3.72,
-    3.59,
-    3.54,
-    3.36,
-    3.27,
-    3.14,
-    3.21,
-    3.04,
     3.03,
     3.03,
     2.92,
@@ -60548,34 +67878,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     2.69,
     2.64,
     2.53,
-    2.55
+    2.55,
+    2.65,
+    2.96,
+    2.81,
+    2.92,
+    2.85,
+    2.65,
+    2.61,
+    2.49,
+    2.43,
+    2.34
+   ]
+  },
+  "TM": {
+   "name": "Toyota Motor Corporation",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 213.85,
+   "open": 215.06,
+   "prevClose": 212.43,
+   "change": 1.42,
+   "changePct": 0.67,
+   "dayHigh": 215.85,
+   "dayLow": 213.07,
+   "high52": 248.9,
+   "low52": 166.1,
+   "volume": 298214,
+   "closes": [
+    194.06,
+    196.53,
+    194.86,
+    198.22,
+    196.79,
+    197.64,
+    196.56,
+    194.85,
+    196.63,
+    195.71,
+    195.83,
+    193,
+    199.46,
+    218.11,
+    216.19,
+    218.51,
+    214.78,
+    213,
+    209.68,
+    212.43,
+    213.85
    ]
   },
   "TMUS": {
    "name": "T-Mobile US, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 160.15,
-   "open": 153.66,
-   "prevClose": 156.44,
-   "change": 3.71,
-   "changePct": 2.37,
-   "dayHigh": 160.48,
-   "dayLow": 154,
+   "price": 170.01,
+   "open": 171.87,
+   "prevClose": 169.95,
+   "change": 0.06,
+   "changePct": 0.04,
+   "dayHigh": 172.68,
+   "dayLow": 169.66,
    "high52": 224.75,
    "low52": 143.75,
-   "volume": 7259759,
+   "volume": 3976493,
    "closes": [
-    164.64,
-    165.93,
-    167.65,
-    171.31,
-    148.58,
-    151.87,
-    153.73,
-    157.79,
-    157.03,
-    159.1,
     156.09,
     157.75,
     153.75,
@@ -60586,34 +67954,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     148.08,
     147.29,
     156.44,
-    160.15
+    160.15,
+    154.41,
+    159.17,
+    160.59,
+    162.01,
+    168.71,
+    169.08,
+    172.16,
+    171.03,
+    169.95,
+    170.01
    ]
   },
   "TQQQ": {
    "name": "ProShares UltraPro QQQ",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 59.46,
-   "open": 63.25,
-   "prevClose": 62.01,
-   "change": -2.55,
-   "changePct": -4.11,
-   "dayHigh": 64.35,
-   "dayLow": 59.22,
+   "price": 53.03,
+   "open": 55.39,
+   "prevClose": 57.68,
+   "change": -4.65,
+   "changePct": -8.06,
+   "dayHigh": 55.67,
+   "dayLow": 52.72,
    "high52": 88.09,
    "low52": 37.32,
-   "volume": 73778531,
+   "volume": 83998746,
    "closes": [
-    83.12,
-    84.25,
-    83.62,
-    80.23,
-    81.28,
-    79.61,
-    78.81,
-    74.12,
-    73.82,
-    68.21,
     70.64,
     70.41,
     72.61,
@@ -60624,34 +67992,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     72.36,
     69.26,
     62.01,
-    59.46
+    59.46,
+    60.55,
+    62.24,
+    50.47,
+    52.25,
+    57.58,
+    56.56,
+    60.44,
+    59.88,
+    57.68,
+    53.03
    ]
   },
   "TRIP": {
    "name": "Tripadvisor, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 9.44,
-   "open": 9.32,
-   "prevClose": 9.22,
-   "change": 0.22,
-   "changePct": 2.39,
-   "dayHigh": 9.65,
-   "dayLow": 9.26,
-   "high52": 17.53,
-   "low52": 8.02,
-   "volume": 4001151,
+   "price": 6.98,
+   "open": 7.2,
+   "prevClose": 7.24,
+   "change": -0.26,
+   "changePct": -3.59,
+   "dayHigh": 7.2,
+   "dayLow": 6.87,
+   "high52": 15.73,
+   "low52": 6.78,
+   "volume": 8540321,
    "closes": [
-    8.79,
-    8.52,
-    8.63,
-    8.96,
-    8.68,
-    8.72,
-    8.74,
-    8.93,
-    9.39,
-    9.32,
     9.27,
     9.51,
     9.44,
@@ -60662,34 +68030,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     8.94,
     9.22,
     9.22,
-    9.44
+    9.44,
+    9.44,
+    10.2,
+    7.38,
+    7,
+    7.12,
+    7.09,
+    7.47,
+    7.26,
+    7.24,
+    6.98
    ]
   },
   "TSLA": {
    "name": "Tesla, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 403.82,
-   "open": 404.66,
-   "prevClose": 399.81,
-   "change": 4.01,
-   "changePct": 1,
-   "dayHigh": 414.23,
-   "dayLow": 397.61,
+   "price": 379.74,
+   "open": 387,
+   "prevClose": 390.22,
+   "change": -10.48,
+   "changePct": -2.69,
+   "dayHigh": 389.8,
+   "dayLow": 375.63,
    "high52": 498.83,
    "low52": 297.38,
-   "volume": 43129424,
+   "volume": 30080721,
    "closes": [
-    378.73,
-    380.68,
-    377.81,
-    375,
-    382.7,
-    378.03,
-    375.23,
-    367.16,
-    362.44,
-    354.72,
     368.06,
     373.71,
     386.47,
@@ -60700,34 +68068,148 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     404.22,
     403.3,
     399.81,
-    403.82
+    403.82,
+    398.5,
+    385.19,
+    343.69,
+    358.22,
+    378.05,
+    379.78,
+    390.84,
+    397.45,
+    390.22,
+    379.74
+   ]
+  },
+  "TSLL": {
+   "name": "Direxion Daily TSLA Bull 2X Shares",
+   "exchange": "NASDAQ",
+   "type": "ETF",
+   "price": 9.8,
+   "open": 10.21,
+   "prevClose": 10.37,
+   "change": -0.57,
+   "changePct": -5.5,
+   "dayHigh": 10.35,
+   "dayLow": 9.6,
+   "high52": 23.74,
+   "low52": 6.7,
+   "volume": 31782942,
+   "closes": [
+    9.57,
+    9.86,
+    10.52,
+    9.88,
+    9.76,
+    10.76,
+    11.63,
+    11.45,
+    11.39,
+    11.17,
+    11.39,
+    11.07,
+    10.37,
+    8.1,
+    8.8,
+    9.76,
+    9.85,
+    10.42,
+    10.77,
+    10.37,
+    9.8
+   ]
+  },
+  "TSLQ": {
+   "name": "Tradr 2X Short TSLA Daily ETF",
+   "exchange": "NASDAQ",
+   "type": "ETF",
+   "price": 15.51,
+   "open": 15,
+   "prevClose": 14.71,
+   "change": 0.8,
+   "changePct": 5.44,
+   "dayHigh": 15.82,
+   "dayLow": 14.77,
+   "high52": 29.76,
+   "low52": 13.71,
+   "volume": 5528851,
+   "closes": [
+    17.77,
+    17.23,
+    16.06,
+    17.04,
+    17.26,
+    15.46,
+    14.24,
+    14.44,
+    14.53,
+    14.78,
+    14.5,
+    14.9,
+    15.86,
+    19.31,
+    17.69,
+    15.73,
+    15.6,
+    14.7,
+    14.18,
+    14.71,
+    15.51
+   ]
+  },
+  "TSM": {
+   "name": "Taiwan Semiconductor Manufacturing Company Limited",
+   "exchange": "NYSE",
+   "type": "EQUITY",
+   "price": 373.45,
+   "open": 379.59,
+   "prevClose": 398.73,
+   "change": -25.28,
+   "changePct": -6.34,
+   "dayHigh": 385.47,
+   "dayLow": 372.46,
+   "high52": 487.47,
+   "low52": 266.82,
+   "volume": 19424679,
+   "closes": [
+    420.22,
+    425.08,
+    431.89,
+    412.35,
+    418.51,
+    424.37,
+    436.87,
+    439.51,
+    431.81,
+    406.13,
+    398.63,
+    404.8,
+    395.75,
+    353.1,
+    375.44,
+    388.62,
+    396.48,
+    413.35,
+    405.49,
+    398.73,
+    373.45
    ]
   },
   "TTD": {
    "name": "The Trade Desk, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 12.55,
-   "open": 12.38,
-   "prevClose": 12.29,
-   "change": 0.26,
-   "changePct": 2.12,
-   "dayHigh": 12.84,
-   "dayLow": 12.38,
-   "high52": 50.06,
+   "price": 14.83,
+   "open": 15.51,
+   "prevClose": 15.68,
+   "change": -0.85,
+   "changePct": -5.42,
+   "dayHigh": 15.59,
+   "dayLow": 14.75,
+   "high52": 41.91,
    "low52": 11.62,
-   "volume": 11576523,
+   "volume": 18383725,
    "closes": [
-    11.98,
-    11.92,
-    12.09,
-    12.34,
-    12.08,
-    11.94,
-    12.17,
-    12.18,
-    13.13,
-    12.23,
     12.26,
     12.65,
     12.59,
@@ -60738,34 +68220,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     12.76,
     13.06,
     12.29,
-    12.55
+    12.55,
+    12.86,
+    13.23,
+    12.81,
+    12.93,
+    14.93,
+    15.42,
+    15.98,
+    15.47,
+    15.68,
+    14.83
+   ]
+  },
+  "TXN": {
+   "name": "Texas Instruments Incorporated",
+   "exchange": "NASDAQ",
+   "type": "EQUITY",
+   "price": 294.21,
+   "open": 294.47,
+   "prevClose": 303.6,
+   "change": -9.39,
+   "changePct": -3.09,
+   "dayHigh": 298.35,
+   "dayLow": 289.59,
+   "high52": 334.03,
+   "low52": 152.73,
+   "volume": 6735260,
+   "closes": [
+    276.15,
+    277.78,
+    284.65,
+    279.5,
+    284.69,
+    298.12,
+    308.91,
+    309.83,
+    312.94,
+    300.84,
+    302.02,
+    312.49,
+    311.49,
+    278.15,
+    277.36,
+    295.73,
+    300.52,
+    309.81,
+    312.48,
+    303.6,
+    294.21
    ]
   },
   "U": {
    "name": "Unity Software Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 38.87,
-   "open": 38.37,
-   "prevClose": 37.7,
-   "change": 1.17,
-   "changePct": 3.1,
-   "dayHigh": 40.76,
-   "dayLow": 38.32,
-   "high52": 52.15,
+   "price": 51.88,
+   "open": 52.37,
+   "prevClose": 52.81,
+   "change": -0.93,
+   "changePct": -1.76,
+   "dayHigh": 53.78,
+   "dayLow": 51.73,
+   "high52": 54.27,
    "low52": 16.78,
-   "volume": 12147609,
+   "volume": 10362187,
    "closes": [
-    45.68,
-    44.95,
-    45.44,
-    45.89,
-    46.88,
-    46.68,
-    46.63,
-    41.4,
-    43.34,
-    40.4,
     40.58,
     40.16,
     41.21,
@@ -60776,34 +68296,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     39.5,
     39.27,
     37.7,
-    38.87
+    38.87,
+    40.48,
+    42.46,
+    48.8,
+    51.49,
+    51.43,
+    50.34,
+    49.65,
+    50.18,
+    52.81,
+    51.88
    ]
   },
   "UAL": {
    "name": "United Airlines Holdings, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 109.24,
-   "open": 108.96,
-   "prevClose": 104.24,
-   "change": 5,
-   "changePct": 4.8,
-   "dayHigh": 112.01,
-   "dayLow": 108.12,
+   "price": 110.76,
+   "open": 108.37,
+   "prevClose": 109.31,
+   "change": 1.45,
+   "changePct": 1.33,
+   "dayHigh": 113.24,
+   "dayLow": 108.75,
    "high52": 138.77,
    "low52": 84.64,
-   "volume": 6632130,
+   "volume": 5784313,
    "closes": [
-    110,
-    111.87,
-    110.17,
-    107.44,
-    107.46,
-    104.44,
-    103.23,
-    98.96,
-    101.31,
-    96.1,
     95.6,
     97.77,
     101.67,
@@ -60814,34 +68334,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     103.43,
     105.21,
     104.24,
-    109.24
+    109.24,
+    107.21,
+    115.76,
+    110.49,
+    112.74,
+    120.38,
+    120.56,
+    118.37,
+    111.25,
+    109.31,
+    110.76
    ]
   },
   "UBER": {
    "name": "Uber Technologies, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 66.71,
-   "open": 66.12,
-   "prevClose": 65.25,
-   "change": 1.46,
-   "changePct": 2.24,
-   "dayHigh": 67.47,
-   "dayLow": 65.55,
-   "high52": 100.35,
+   "price": 69.99,
+   "open": 70,
+   "prevClose": 69.69,
+   "change": 0.3,
+   "changePct": 0.43,
+   "dayHigh": 70.89,
+   "dayLow": 69.46,
+   "high52": 92.92,
    "low52": 64.04,
-   "volume": 17740543,
+   "volume": 14299717,
    "closes": [
-    69.48,
-    69.08,
-    68.45,
-    70.24,
-    71.51,
-    71.5,
-    71.32,
-    69.29,
-    71.27,
-    70.35,
     69.96,
     68.94,
     67.62,
@@ -60852,34 +68372,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     65.27,
     65.74,
     65.25,
-    66.71
+    66.71,
+    66.6,
+    69.87,
+    68.78,
+    68.59,
+    71.17,
+    70.05,
+    70.68,
+    69.12,
+    69.69,
+    69.99
    ]
   },
   "UFO": {
    "name": "Procure Space ETF",
    "exchange": "NASDAQ",
    "type": "ETF",
-   "price": 39.89,
-   "open": 40.63,
-   "prevClose": 40.24,
-   "change": -0.35,
-   "changePct": -0.87,
-   "dayHigh": 40.95,
-   "dayLow": 39.76,
+   "price": 39.54,
+   "open": 40.23,
+   "prevClose": 40.69,
+   "change": -1.15,
+   "changePct": -2.83,
+   "dayHigh": 40.47,
+   "dayLow": 39.32,
    "high52": 68.21,
    "low52": 30.89,
-   "volume": 289149,
+   "volume": 136398,
    "closes": [
-    43.56,
-    44.33,
-    43.04,
-    42.01,
-    41.98,
-    41.51,
-    40.74,
-    39.73,
-    40.01,
-    39.28,
     39.45,
     39.44,
     40.64,
@@ -60890,34 +68410,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     41.28,
     41.72,
     40.24,
-    39.89
+    39.89,
+    40.57,
+    39.41,
+    37.21,
+    39.01,
+    41.57,
+    41.73,
+    42.17,
+    41.12,
+    40.69,
+    39.54
    ]
   },
   "UNH": {
    "name": "UnitedHealth Group Incorporated",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 400.44,
-   "open": 406,
-   "prevClose": 406.97,
-   "change": -6.53,
-   "changePct": -1.6,
-   "dayHigh": 408.88,
-   "dayLow": 394.11,
+   "price": 412.02,
+   "open": 412,
+   "prevClose": 407.46,
+   "change": 4.56,
+   "changePct": 1.12,
+   "dayHigh": 415.19,
+   "dayLow": 409.03,
    "high52": 461.62,
    "low52": 255.97,
-   "volume": 5899348,
+   "volume": 4400735,
    "closes": [
-    378.58,
-    376.32,
-    375.98,
-    370.95,
-    379.3,
-    378.52,
-    377.76,
-    395.62,
-    406.67,
-    401.43,
     406.88,
     419.26,
     417,
@@ -60928,34 +68448,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     407.1,
     410.91,
     406.97,
-    400.44
+    400.44,
+    404.44,
+    409.38,
+    395.72,
+    394.15,
+    397.62,
+    405.12,
+    402.94,
+    405.13,
+    407.46,
+    412.02
+   ]
+  },
+  "UPRO": {
+   "name": "ProShares UltraPro S&P500",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 130.68,
+   "open": 135.96,
+   "prevClose": 138.5,
+   "change": -7.82,
+   "changePct": -5.65,
+   "dayHigh": 136.03,
+   "dayLow": 129.57,
+   "high52": 158.63,
+   "low52": 88.15,
+   "volume": 3419402,
+   "closes": [
+    148.27,
+    149.58,
+    152.01,
+    146.53,
+    144.04,
+    147.05,
+    149.55,
+    151.14,
+    149.35,
+    141.21,
+    139.14,
+    140.41,
+    147.26,
+    127.87,
+    128.94,
+    137.91,
+    136.37,
+    141.7,
+    140.23,
+    138.5,
+    130.68
    ]
   },
   "URBN": {
    "name": "Urban Outfitters, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 88.94,
-   "open": 91.16,
-   "prevClose": 90.72,
-   "change": -1.78,
-   "changePct": -1.96,
-   "dayHigh": 92.35,
-   "dayLow": 88.8,
+   "price": 83.56,
+   "open": 86.47,
+   "prevClose": 86.34,
+   "change": -2.78,
+   "changePct": -3.22,
+   "dayHigh": 86.8,
+   "dayLow": 83,
    "high52": 93.64,
    "low52": 59.54,
-   "volume": 1251455,
+   "volume": 1260670,
    "closes": [
-    81.6,
-    80.25,
-    79.75,
-    80.96,
-    82.18,
-    82.69,
-    84.85,
-    84.68,
-    87.4,
-    86.57,
     86.83,
     87.32,
     86.96,
@@ -60966,34 +68524,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     89.35,
     92.19,
     90.72,
-    88.94
+    88.94,
+    86.72,
+    91.78,
+    87.57,
+    84.7,
+    88.27,
+    86.97,
+    86,
+    84.8,
+    86.34,
+    83.56
    ]
   },
   "V": {
    "name": "Visa Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 425.51,
-   "open": 415.51,
-   "prevClose": 413.59,
-   "change": 11.92,
-   "changePct": 2.88,
-   "dayHigh": 426.78,
-   "dayLow": 414.37,
-   "high52": 426.78,
+   "price": 426.46,
+   "open": 429.65,
+   "prevClose": 425.76,
+   "change": 0.7,
+   "changePct": 0.16,
+   "dayHigh": 430.99,
+   "dayLow": 425.2,
+   "high52": 442.23,
    "low52": 293.89,
-   "volume": 7425819,
+   "volume": 7390924,
    "closes": [
-    369.71,
-    370.64,
-    372.1,
-    375.1,
-    385.45,
-    389.27,
-    396.06,
-    391.43,
-    399.75,
-    402.61,
     402.92,
     406.57,
     407.85,
@@ -61004,34 +68562,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     400.6,
     410.54,
     413.59,
-    425.51
+    425.51,
+    420.42,
+    436.57,
+    422.59,
+    422.65,
+    422.16,
+    423,
+    425.55,
+    420.31,
+    425.76,
+    426.46
+   ]
+  },
+  "VDE": {
+   "name": "Vanguard Energy Index Fund ETF Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 176.98,
+   "open": 179.42,
+   "prevClose": 180.61,
+   "change": -3.63,
+   "changePct": -2.01,
+   "dayHigh": 179.63,
+   "dayLow": 176.5,
+   "high52": 195.8,
+   "low52": 122.79,
+   "volume": 452485,
+   "closes": [
+    189.03,
+    189.18,
+    189.9,
+    187.96,
+    192.98,
+    194.32,
+    190.43,
+    191.2,
+    192.01,
+    195.46,
+    187.38,
+    185.8,
+    176.42,
+    171.07,
+    171.28,
+    172.27,
+    173.03,
+    176.34,
+    179.02,
+    180.61,
+    176.98
    ]
   },
   "VFC": {
    "name": "V.F. Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 19.39,
-   "open": 18.58,
-   "prevClose": 18.3,
-   "change": 1.09,
-   "changePct": 5.96,
-   "dayHigh": 19.48,
-   "dayLow": 18.47,
+   "price": 20.15,
+   "open": 20.94,
+   "prevClose": 20.68,
+   "change": -0.53,
+   "changePct": -2.56,
+   "dayHigh": 21,
+   "dayLow": 20.04,
    "high52": 22.27,
    "low52": 12.46,
-   "volume": 11541162,
+   "volume": 9764972,
    "closes": [
-    14.27,
-    14.45,
-    14.38,
-    14.53,
-    15,
-    15.79,
-    16.07,
-    16.48,
-    17,
-    16.85,
     17.14,
     17.46,
     17.15,
@@ -61042,34 +68638,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     17.23,
     18.33,
     18.3,
-    19.39
+    19.39,
+    20.04,
+    20.93,
+    20.32,
+    20.35,
+    20.88,
+    20.74,
+    20.64,
+    20.03,
+    20.68,
+    20.15
+   ]
+  },
+  "VFH": {
+   "name": "Vanguard Financials Index Fund ETF Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 140.62,
+   "open": 141.99,
+   "prevClose": 141.79,
+   "change": -1.17,
+   "changePct": -0.83,
+   "dayHigh": 142.16,
+   "dayLow": 139.95,
+   "high52": 145.5,
+   "low52": 116.67,
+   "volume": 527864,
+   "closes": [
+    133.73,
+    135.38,
+    136.04,
+    137.66,
+    135.89,
+    136.14,
+    135.89,
+    136.35,
+    138.36,
+    137.32,
+    139.82,
+    138.89,
+    143.44,
+    139.43,
+    138.59,
+    140.71,
+    141.24,
+    141.89,
+    140.76,
+    141.79,
+    140.62
    ]
   },
   "VGK": {
    "name": "Vanguard FTSE Europe ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 88.06,
-   "open": 87.93,
-   "prevClose": 87.54,
-   "change": 0.52,
-   "changePct": 0.59,
-   "dayHigh": 88.49,
-   "dayLow": 87.77,
+   "price": 88.04,
+   "open": 88.92,
+   "prevClose": 89.04,
+   "change": -1,
+   "changePct": -1.12,
+   "dayHigh": 89.07,
+   "dayLow": 88,
    "high52": 93.29,
    "low52": 77.87,
-   "volume": 2006619,
+   "volume": 1694557,
    "closes": [
-    86.28,
-    86.58,
-    85.56,
-    85.43,
-    86.03,
-    85.82,
-    86.31,
-    85.99,
-    87.21,
-    87.29,
     86.43,
     87.18,
     87.58,
@@ -61080,34 +68714,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     87.31,
     88.14,
     87.54,
-    88.06
+    88.06,
+    87.54,
+    90.24,
+    88.42,
+    87.31,
+    89.99,
+    89.65,
+    89.46,
+    88.91,
+    89.04,
+    88.04
+   ]
+  },
+  "VHT": {
+   "name": "Vanguard Health Care Index Fund ETF Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 345.56,
+   "open": 350.49,
+   "prevClose": 347.93,
+   "change": -2.37,
+   "changePct": -0.68,
+   "dayHigh": 352.03,
+   "dayLow": 345.05,
+   "high52": 354.83,
+   "low52": 264.97,
+   "volume": 212579,
+   "closes": [
+    325.94,
+    333.6,
+    332.24,
+    336.26,
+    332.53,
+    332.71,
+    333.16,
+    334.46,
+    341.93,
+    342.33,
+    341.27,
+    340.8,
+    351.23,
+    341.2,
+    341.23,
+    348.11,
+    348.81,
+    349.35,
+    346.45,
+    347.93,
+    345.56
+   ]
+  },
+  "VIS": {
+   "name": "Vanguard Industrials Index Fund ETF Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 318.08,
+   "open": 321.91,
+   "prevClose": 324.07,
+   "change": -5.99,
+   "changePct": -1.85,
+   "dayHigh": 323.23,
+   "dayLow": 317.41,
+   "high52": 362.21,
+   "low52": 282.03,
+   "volume": 68262,
+   "closes": [
+    318.66,
+    319.09,
+    321.89,
+    318.48,
+    314.8,
+    319.06,
+    321.15,
+    322.13,
+    326.04,
+    320.75,
+    325.48,
+    328.54,
+    324.91,
+    310.98,
+    312.49,
+    325.09,
+    324.56,
+    328.71,
+    325.39,
+    324.07,
+    318.08
    ]
   },
   "VTI": {
    "name": "Vanguard Morningstar Total Stock Market ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 370,
-   "open": 373.52,
-   "prevClose": 371.57,
-   "change": -1.57,
-   "changePct": -0.42,
-   "dayHigh": 375.64,
-   "dayLow": 369.75,
+   "price": 364.3,
+   "open": 368.94,
+   "prevClose": 371.11,
+   "change": -6.81,
+   "changePct": -1.84,
+   "dayHigh": 369.25,
+   "dayLow": 363.35,
    "high52": 385.12,
    "low52": 310.4,
-   "volume": 6578469,
+   "volume": 3627114,
    "closes": [
-    380.6,
-    382.54,
-    381.03,
-    379.56,
-    381.94,
-    381.57,
-    381.32,
-    376.88,
-    378.42,
-    374.07,
     375.54,
     377.09,
     379.15,
@@ -61118,34 +68828,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     379.17,
     378.24,
     371.57,
-    370
+    370,
+    371.21,
+    376.92,
+    360.52,
+    361.93,
+    370.9,
+    369.55,
+    374.25,
+    372.62,
+    371.11,
+    364.3
    ]
   },
   "WEN": {
    "name": "The Wendy's Company",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 7.26,
-   "open": 7.22,
-   "prevClose": 7.21,
-   "change": 0.05,
-   "changePct": 0.69,
-   "dayHigh": 7.35,
-   "dayLow": 7.17,
-   "high52": 10.12,
+   "price": 8.47,
+   "open": 8.28,
+   "prevClose": 8.28,
+   "change": 0.19,
+   "changePct": 2.29,
+   "dayHigh": 8.49,
+   "dayLow": 8.23,
+   "high52": 9.45,
    "low52": 5.94,
-   "volume": 6008759,
+   "volume": 5941535,
    "closes": [
-    6.1,
-    6.16,
-    6.11,
-    6.22,
-    6.23,
-    6.31,
-    6.35,
-    6.44,
-    6.7,
-    6.7,
     6.68,
     6.52,
     6.28,
@@ -61156,34 +68866,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     7.07,
     7.17,
     7.21,
-    7.26
+    7.26,
+    7.27,
+    7.65,
+    7.94,
+    8.15,
+    8.3,
+    8.34,
+    8.34,
+    8.18,
+    8.28,
+    8.47
    ]
   },
   "WFC": {
    "name": "Wells Fargo & Company",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 85.89,
-   "open": 84.4,
-   "prevClose": 83.4,
-   "change": 2.49,
-   "changePct": 2.99,
-   "dayHigh": 86.03,
-   "dayLow": 84.1,
+   "price": 84.84,
+   "open": 86.09,
+   "prevClose": 86.05,
+   "change": -1.21,
+   "changePct": -1.41,
+   "dayHigh": 86.35,
+   "dayLow": 84.05,
    "high52": 97.76,
    "low52": 72.78,
-   "volume": 18923647,
+   "volume": 9138810,
    "closes": [
-    81.44,
-    81.51,
-    80.26,
-    82.03,
-    83.55,
-    83.32,
-    80.74,
-    80.9,
-    82.75,
-    83.87,
     81.8,
     82.2,
     82.42,
@@ -61194,34 +68904,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     83.67,
     84.81,
     83.4,
-    85.89
+    85.89,
+    85.53,
+    87.43,
+    84.8,
+    83.94,
+    85.49,
+    85.76,
+    85.8,
+    85.76,
+    86.05,
+    84.84
    ]
   },
   "WING": {
    "name": "Wingstop Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 163.04,
-   "open": 153.46,
-   "prevClose": 149.73,
-   "change": 13.31,
-   "changePct": 8.89,
-   "dayHigh": 170.37,
-   "dayLow": 152.89,
+   "price": 151.73,
+   "open": 158.7,
+   "prevClose": 158.86,
+   "change": -7.13,
+   "changePct": -4.49,
+   "dayHigh": 159.22,
+   "dayLow": 150.5,
    "high52": 302.8,
    "low52": 95.82,
-   "volume": 2973137,
+   "volume": 802793,
    "closes": [
-    106.84,
-    112.2,
-    116.68,
-    118.5,
-    122.26,
-    126.02,
-    125.76,
-    122.9,
-    131.03,
-    131.72,
     132.75,
     130.31,
     119.95,
@@ -61232,34 +68942,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     138.57,
     145.39,
     149.73,
-    163.04
+    163.04,
+    161.57,
+    167.62,
+    165.73,
+    163.28,
+    176.98,
+    169.58,
+    166.73,
+    159.26,
+    158.86,
+    151.73
    ]
   },
   "WMT": {
    "name": "Walmart Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 127.69,
-   "open": 124.1,
-   "prevClose": 123.51,
-   "change": 4.18,
-   "changePct": 3.38,
-   "dayHigh": 127.94,
-   "dayLow": 124.12,
+   "price": 128.41,
+   "open": 129.83,
+   "prevClose": 128.09,
+   "change": 0.32,
+   "changePct": 0.25,
+   "dayHigh": 129.85,
+   "dayLow": 127.88,
    "high52": 135.16,
-   "low52": 98.88,
-   "volume": 27680627,
+   "low52": 99.68,
+   "volume": 17393214,
    "closes": [
-    105.07,
-    107.2,
-    108.16,
-    110.56,
-    111.35,
-    113.08,
-    112.28,
-    116.16,
-    117.87,
-    118.81,
     118.7,
     117.85,
     117.8,
@@ -61270,34 +68980,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     118.77,
     121.25,
     123.51,
-    127.69
+    127.69,
+    124.86,
+    129.17,
+    127.72,
+    125.52,
+    125.66,
+    125.55,
+    125.67,
+    126.19,
+    128.09,
+    128.41
    ]
   },
   "WOOF": {
    "name": "Petco Health and Wellness Company, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 2.74,
-   "open": 2.63,
-   "prevClose": 2.61,
-   "change": 0.13,
-   "changePct": 4.98,
-   "dayHigh": 2.77,
-   "dayLow": 2.62,
+   "price": 2.76,
+   "open": 2.83,
+   "prevClose": 2.85,
+   "change": -0.09,
+   "changePct": -3.16,
+   "dayHigh": 2.84,
+   "dayLow": 2.74,
    "high52": 3.78,
    "low52": 2.14,
-   "volume": 4727059,
+   "volume": 3554648,
    "closes": [
-    2.18,
-    2.22,
-    2.22,
-    2.24,
-    2.23,
-    2.33,
-    2.41,
-    2.37,
-    2.38,
-    2.33,
     2.34,
     2.33,
     2.31,
@@ -61308,34 +69018,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     2.51,
     2.59,
     2.61,
-    2.74
+    2.74,
+    2.69,
+    3.14,
+    2.98,
+    2.96,
+    3.1,
+    2.93,
+    2.88,
+    2.87,
+    2.85,
+    2.76
    ]
   },
   "XLE": {
    "name": "State Street Energy Select Sector SPDR ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 67.25,
-   "open": 68.85,
-   "prevClose": 70.02,
-   "change": -2.77,
-   "changePct": -3.96,
-   "dayHigh": 69.14,
-   "dayLow": 67.23,
+   "price": 63.69,
+   "open": 64.52,
+   "prevClose": 64.96,
+   "change": -1.27,
+   "changePct": -1.96,
+   "dayHigh": 64.69,
+   "dayLow": 63.5,
    "high52": 70.15,
-   "low52": 43.19,
-   "volume": 50873640,
+   "low52": 43.77,
+   "volume": 30598712,
    "closes": [
-    63.45,
-    63.75,
-    63.36,
-    65.24,
-    65.08,
-    66.01,
-    67.2,
-    67.63,
-    66.56,
-    68.24,
     67.8,
     67.97,
     68.16,
@@ -61346,34 +69056,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     68.45,
     68.71,
     70.02,
-    67.25
+    67.25,
+    66.68,
+    63.52,
+    61.63,
+    61.62,
+    61.94,
+    62.21,
+    63.37,
+    64.33,
+    64.96,
+    63.69
    ]
   },
   "XLF": {
    "name": "State Street Financial Select Sector SPDR ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 57.56,
-   "open": 56.96,
-   "prevClose": 56.51,
-   "change": 1.05,
-   "changePct": 1.86,
-   "dayHigh": 57.7,
-   "dayLow": 56.88,
-   "high52": 58.6,
+   "price": 58.18,
+   "open": 58.74,
+   "prevClose": 58.68,
+   "change": -0.5,
+   "changePct": -0.85,
+   "dayHigh": 58.81,
+   "dayLow": 57.89,
+   "high52": 60.04,
    "low52": 47.67,
-   "volume": 41200451,
+   "volume": 37953682,
    "closes": [
-    53.88,
-    54.01,
-    53.75,
-    54.23,
-    54.73,
-    55.05,
-    54.82,
-    54.52,
-    55.27,
-    55.52,
     55.06,
     55.72,
     56.04,
@@ -61384,34 +69094,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     56.13,
     56.94,
     56.51,
-    57.56
+    57.56,
+    57.19,
+    59.2,
+    57.5,
+    57.16,
+    57.99,
+    58.29,
+    58.63,
+    58.21,
+    58.68,
+    58.18
+   ]
+  },
+  "XLI": {
+   "name": "State Street Industrial Select Sector SPDR ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 165.66,
+   "open": 167.72,
+   "prevClose": 168.78,
+   "change": -3.12,
+   "changePct": -1.85,
+   "dayHigh": 168.48,
+   "dayLow": 165.32,
+   "high52": 188.19,
+   "low52": 147.14,
+   "volume": 9056783,
+   "closes": [
+    166.68,
+    166.8,
+    168.31,
+    166.73,
+    164.62,
+    166.96,
+    167.92,
+    168.49,
+    170.13,
+    167.4,
+    169.71,
+    171.32,
+    169.46,
+    162.47,
+    162.67,
+    168.89,
+    168.73,
+    170.97,
+    169.44,
+    168.78,
+    165.66
    ]
   },
   "XLV": {
    "name": "State Street Health Care Select Sector SPDR ETF",
    "exchange": "NYSE ARCA",
    "type": "ETF",
-   "price": 184.6,
-   "open": 184.69,
-   "prevClose": 184.87,
-   "change": -0.27,
-   "changePct": -0.15,
-   "dayHigh": 185.54,
-   "dayLow": 183.38,
-   "high52": 187.99,
+   "price": 187.88,
+   "open": 190.51,
+   "prevClose": 188.85,
+   "change": -0.97,
+   "changePct": -0.51,
+   "dayHigh": 191.33,
+   "dayLow": 187.6,
+   "high52": 192.32,
    "low52": 141.97,
-   "volume": 14062650,
+   "volume": 9651914,
    "closes": [
-    167.37,
-    167.09,
-    168.81,
-    168.16,
-    170.81,
-    171.99,
-    169.66,
-    173.96,
-    177.19,
-    176.71,
     175.65,
     179.82,
     178.94,
@@ -61422,34 +69170,34 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     179.72,
     184.04,
     184.87,
-    184.6
+    184.6,
+    184.02,
+    189.66,
+    184.91,
+    184.8,
+    188.33,
+    188.88,
+    188.95,
+    187.83,
+    188.85,
+    187.88
    ]
   },
   "XOM": {
    "name": "ExxonMobil Holdings Corporation",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 179.67,
-   "open": 183.98,
-   "prevClose": 187.25,
-   "change": -7.58,
-   "changePct": -4.05,
-   "dayHigh": 184.59,
-   "dayLow": 179.67,
+   "price": 166.87,
+   "open": 169.53,
+   "prevClose": 170.59,
+   "change": -3.72,
+   "changePct": -2.18,
+   "dayHigh": 170.25,
+   "dayLow": 166.48,
    "high52": 188.5,
-   "low52": 112.51,
-   "volume": 16459189,
+   "low52": 114.19,
+   "volume": 12664654,
    "closes": [
-    164,
-    164.48,
-    164.05,
-    168.5,
-    168.94,
-    172.15,
-    174.08,
-    177.01,
-    174.68,
-    178.98,
     178.28,
     177.86,
     178.09,
@@ -61460,34 +69208,110 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     182.02,
     183.29,
     187.25,
-    179.67
+    179.67,
+    177.46,
+    169.27,
+    165.3,
+    165.87,
+    164.73,
+    164.47,
+    166.71,
+    169.78,
+    170.59,
+    166.87
+   ]
+  },
+  "XOP": {
+   "name": "State Street SPDR S&P Oil & Gas Exploration & Production ETF",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 179.98,
+   "open": 182.59,
+   "prevClose": 184.8,
+   "change": -4.82,
+   "changePct": -2.61,
+   "dayHigh": 182.84,
+   "dayLow": 179.49,
+   "high52": 206.05,
+   "low52": 123.16,
+   "volume": 2016817,
+   "closes": [
+    199.47,
+    200.05,
+    199.02,
+    196.87,
+    201.69,
+    204.86,
+    200.01,
+    200.37,
+    199.52,
+    203.76,
+    193.56,
+    191.52,
+    179.29,
+    174.1,
+    173.77,
+    174.15,
+    175.52,
+    180.14,
+    183.11,
+    184.8,
+    179.98
+   ]
+  },
+  "YANG": {
+   "name": "Direxion Daily FTSE China Bear 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 33.71,
+   "open": 33.02,
+   "prevClose": 33.18,
+   "change": 0.53,
+   "changePct": 1.6,
+   "dayHigh": 33.78,
+   "dayLow": 32.72,
+   "high52": 42.22,
+   "low52": 19.94,
+   "volume": 562983,
+   "closes": [
+    33.32,
+    33.31,
+    35.06,
+    36.69,
+    37.24,
+    36.58,
+    36.61,
+    36.7,
+    35.98,
+    34.67,
+    34.39,
+    34.46,
+    30.11,
+    29.27,
+    29.23,
+    29.95,
+    30.57,
+    31.93,
+    33.18,
+    33.18,
+    33.71
    ]
   },
   "YETI": {
    "name": "YETI Holdings, Inc.",
    "exchange": "NYSE",
    "type": "EQUITY",
-   "price": 45.42,
-   "open": 44.87,
-   "prevClose": 43.66,
-   "change": 1.76,
-   "changePct": 4.03,
-   "dayHigh": 45.77,
-   "dayLow": 44.65,
+   "price": 38.53,
+   "open": 39.19,
+   "prevClose": 39.42,
+   "change": -0.89,
+   "changePct": -2.26,
+   "dayHigh": 39.85,
+   "dayLow": 38.26,
    "high52": 53.99,
-   "low52": 32.26,
-   "volume": 1322526,
+   "low52": 34.9,
+   "volume": 2692591,
    "closes": [
-    40.52,
-    40.25,
-    39.47,
-    39.6,
-    39.79,
-    39.01,
-    39.34,
-    40.51,
-    42.02,
-    43.07,
     42.12,
     42.55,
     42.77,
@@ -61498,34 +69322,72 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     42.91,
     44.19,
     43.66,
-    45.42
+    45.42,
+    44.85,
+    48.33,
+    46.95,
+    44.97,
+    45.83,
+    44.77,
+    42.79,
+    38.3,
+    39.42,
+    38.53
+   ]
+  },
+  "YINN": {
+   "name": "Direxion Daily FTSE China Bull 3X Shares",
+   "exchange": "NYSE ARCA",
+   "type": "ETF",
+   "price": 22.78,
+   "open": 23.33,
+   "prevClose": 23.15,
+   "change": -0.37,
+   "changePct": -1.6,
+   "dayHigh": 23.47,
+   "dayLow": 22.74,
+   "high52": 51.78,
+   "low52": 20.69,
+   "volume": 1826016,
+   "closes": [
+    23.63,
+    23.63,
+    22.4,
+    21.37,
+    21.07,
+    21.45,
+    21.4,
+    21.33,
+    21.79,
+    22.59,
+    22.8,
+    22.74,
+    25.64,
+    26.35,
+    26.37,
+    25.69,
+    25.19,
+    24.1,
+    23.13,
+    23.15,
+    22.78
    ]
   },
   "ZM": {
    "name": "Zoom Communications, Inc.",
    "exchange": "NASDAQ",
    "type": "EQUITY",
-   "price": 91.98,
-   "open": 95.69,
-   "prevClose": 95.5,
-   "change": -3.52,
-   "changePct": -3.69,
-   "dayHigh": 95.85,
-   "dayLow": 91.39,
+   "price": 96.18,
+   "open": 99.16,
+   "prevClose": 99.8,
+   "change": -3.62,
+   "changePct": -3.63,
+   "dayHigh": 99.75,
+   "dayLow": 96.1,
    "high52": 114.74,
    "low52": 70.7,
-   "volume": 2525733,
+   "volume": 2799237,
    "closes": [
-    93.62,
-    94.2,
-    94.77,
-    94.67,
-    97.74,
-    97.94,
-    98.16,
-    94.47,
-    98.51,
-    94.19,
     97.59,
     97.46,
     99.44,
@@ -61536,44 +69398,54 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
     100.26,
     97.66,
     95.5,
-    91.98
+    91.98,
+    91.84,
+    91.84,
+    88.82,
+    89.88,
+    91.71,
+    90.91,
+    98.08,
+    97.7,
+    99.8,
+    96.18
    ]
   }
  },
  "indices": {
   "sp-500": {
    "symbol": "^GSPC",
-   "price": 7541.4,
-   "open": 7610.83,
-   "prevClose": 7580.07,
-   "change": -38.67,
-   "changePct": -0.51,
-   "dayHigh": 7662.23,
-   "dayLow": 7539.38,
+   "price": 7416.59,
+   "open": 7513.98,
+   "prevClose": 7561.67,
+   "change": -145.08,
+   "changePct": -1.92,
+   "dayHigh": 7515.6,
+   "dayLow": 7400.15,
    "high52": 7844.52,
    "low52": 6316.91
   },
   "nasdaq": {
    "symbol": "^IXIC",
-   "price": 25164.36,
-   "open": 25600.17,
-   "prevClose": 25437,
-   "change": -272.64,
-   "changePct": -1.07,
-   "dayHigh": 25799.46,
-   "dayLow": 25145.95,
+   "price": 24509.76,
+   "open": 24853.35,
+   "prevClose": 25136.27,
+   "change": -626.51,
+   "changePct": -2.49,
+   "dayHigh": 24882.04,
+   "dayLow": 24460.28,
    "high52": 27722.75,
    "low52": 20690.25
   },
   "dow-jones": {
    "symbol": "^DJI",
-   "price": 51983.98,
-   "open": 52008.23,
-   "prevClose": 51770.31,
-   "change": 213.67,
-   "changePct": 0.41,
-   "dayHigh": 52424.91,
-   "dayLow": 51981.66,
+   "price": 51608.17,
+   "open": 52267.06,
+   "prevClose": 52347.55,
+   "change": -739.38,
+   "changePct": -1.41,
+   "dayHigh": 52324,
+   "dayLow": 51511.56,
    "high52": 54744.33,
    "low52": 45057.28
   }
@@ -61581,17 +69453,131 @@ export function useLiveQuote(key: string, price: number, changePct: number): Liv
  "fx": {
   "usdInr": {
    "symbol": "USDINR=X",
-   "price": 94.74,
-   "open": 94.89,
-   "prevClose": 94.9,
-   "change": -0.16,
-   "changePct": -0.17,
-   "dayHigh": 94.89,
-   "dayLow": 94.6,
+   "price": 93.56,
+   "open": 93.91,
+   "prevClose": 94.24,
+   "change": -0.68,
+   "changePct": -0.72,
+   "dayHigh": 93.92,
+   "dayLow": 93.45,
    "high52": 97.05,
    "low52": 85.86
   }
  }
+}
+```
+
+### `src/shared/data/usBanks.ts`
+
+```ts
+import { getCompany } from './companies'
+import type { LinkedBank } from './user'
+// FLAG: not in L3's company logos (L3 gap) — the bank's mark, cropped from its Wikimedia Commons logo.
+import idfcFirstLogo from './assets/idfcfirstb.png'
+
+/**
+ * The banks money for US Stocks can go from (LRS remittance partners): activation, US add money and "Add bank account"
+ * opened from US Stocks all use this list. `symbol` is the bank's NSE symbol — its logo comes from the company
+ * catalogue; IDFC FIRST isn't in it, so its logo is kept here (assets/). `ifsc` is the bank's IFSC prefix.
+ */
+export const SUPPORTED_BANKS = [
+  { symbol: 'ICICIBANK', ifsc: 'ICIC', name: 'ICICI Bank', short: 'ICICI', initials: 'I' },
+  { symbol: 'HDFCBANK', ifsc: 'HDFC', name: 'HDFC Bank', short: 'HDFC', initials: 'H' },
+  { symbol: 'KOTAKBANK', ifsc: 'KKBK', name: 'Kotak Mahindra Bank', short: 'Kotak', initials: 'K' },
+  { symbol: 'IDFCFIRSTB', ifsc: 'IDFB', name: 'IDFC FIRST Bank', short: 'IDFC FIRST', initials: 'I' },
+  { symbol: 'AXISBANK', ifsc: 'UTIB', name: 'Axis Bank', short: 'Axis', initials: 'A' },
+] as const
+
+export const bankLogoUrl = (symbol: string) => (symbol === 'IDFCFIRSTB' ? idfcFirstLogo : getCompany(symbol)?.logoUrl)
+
+/** "ICICI, HDFC, Kotak, IDFC FIRST and Axis Bank" — the supported banks in one line. */
+export const supportedBanksLine = () => {
+  const names = SUPPORTED_BANKS.map((b) => b.short)
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} Bank`
+}
+
+/** Whether US Stocks money can go from this linked account. */
+export const isUsSupported = (bank: LinkedBank) => SUPPORTED_BANKS.some((s) => s.symbol === bank.logoSymbol)
+
+/** The user's linked accounts US Stocks can use. */
+export const supportedOf = (banks: LinkedBank[]) => banks.filter(isUsSupported)
+
+/** Whether an IFSC belongs to a bank US Stocks money can go from. */
+export const isUsSupportedIfsc = (ifsc: string) => SUPPORTED_BANKS.some((s) => ifsc.startsWith(s.ifsc))
+```
+
+### `src/shared/data/usDeposit.ts`
+
+```ts
+// The US Stocks deposit on its way (paid in ₹, not yet in the USD wallet). Shared because Home's "Money on the way"
+// card and the US wallet both explain it with the same sheet (shared/ui/DepositProgressSheet).
+
+/** A deposit paid on the bank's page: $ that will land, ₹ that left the bank, and which bank. */
+export type SentDeposit = { usd: number; inr: string; bank: string }
+
+/** When a deposit paid now is ready to trade (the prototype's fixed day). */
+export const DEPOSIT_ETA = 'by Thu 8 PM'
+
+/** Shown when no deposit was paid in this session (a screen opened straight from the list). */
+const SAMPLE_DEPOSIT: SentDeposit = { usd: 1035.37, inr: '₹91,320', bank: 'HDFC Bank ••7821' }
+
+let sent: SentDeposit | null = null
+
+/** Remember the deposit being paid (Add money → the bank's page). */
+export const setSentDeposit = (deposit: SentDeposit) => {
+  sent = deposit
+}
+
+/** The deposit last paid, or the sample. Kept: it's shown until it lands. */
+export const depositOnTheWay = (): SentDeposit => sent ?? SAMPLE_DEPOSIT
+```
+
+### `src/shared/data/usShortNames.ts`
+
+```ts
+// The short name people know each US stock by ("Procter & Gamble", not "The Procter & Gamble Company"): for titles
+// and sentences like "ETFs with Procter & Gamble". Collected from the names the app already shows in its lists.
+// A symbol not here falls back to its catalogue name without "The" and legal endings (usShortName).
+export const US_SHORT_NAMES: Record<string, string> = {
+  AAL: "American Airlines", AAPL: "Apple", ABBV: "AbbVie", ABNB: "Airbnb", ADBE: "Adobe", ADI: "Analog Devices",
+  AEO: "American Eagle", AMAT: "Applied Materials", AMC: "AMC Entertainment", AMD: "AMD", AMZN: "Amazon",
+  ANF: "Abercrombie & Fitch", ARM: "Arm", ASML: "ASML", ASTS: "AST SpaceMobile", AVGO: "Broadcom", BA: "Boeing",
+  BABA: "Alibaba", BAC: "Bank of America", BB: "BlackBerry", BBWI: "Bath & Body Works", BIDU: "Baidu",
+  BIRK: "Birkenstock", BLNK: "Blink Charging", BOOT: "Boot Barn", BROS: "Dutch Bros", BYND: "Beyond Meat",
+  CAKE: "Cheesecake Factory", CAR: "Avis Budget", CAVA: "CAVA Group", CHPT: "ChargePoint", CHWY: "Chewy",
+  CLOV: "Clover Health", CMG: "Chipotle", COIN: "Coinbase", COLM: "Columbia Sportswear", COP: "ConocoPhillips",
+  COST: "Costco", CPRI: "Capri", CRM: "Salesforce", CROX: "Crocs", CRWD: "CrowdStrike", CSCO: "Cisco",
+  CVX: "Chevron", CZR: "Caesars", DAL: "Delta Air Lines", DASH: "DoorDash", DDOG: "Datadog", DELL: "Dell",
+  DIS: "Disney", EBAY: "eBay", ELF: "e.l.f. Beauty", ETSY: "Etsy", F: "Ford", FIVE: "Five Below", FUBO: "FuboTV",
+  GAP: "Gap", GE: "GE Aerospace", GM: "General Motors", GOOG: "Google", GOOGL: "Google", GPRO: "GoPro",
+  GRMN: "Garmin", HAS: "Hasbro", HD: "Home Depot", HOG: "Harley-Davidson", HOOD: "Robinhood", IBM: "IBM",
+  INTC: "Intel", ISRG: "Intuitive Surgical", JBLU: "JetBlue", JNJ: "Johnson & Johnson", JPM: "JPMorgan", KLAC: "KLA",
+  KO: "Coca-Cola", LAZR: "Luminar", LCID: "Lucid", LEVI: "Levi Strauss", LLY: "Eli Lilly", LMT: "Lockheed Martin",
+  LRCX: "Lam Research", LULU: "Lululemon", LYFT: "Lyft", M: "Macy’s", MA: "Mastercard", MAR: "Marriott",
+  MAT: "Mattel", MCD: "McDonald’s", META: "Meta", MRK: "Merck", MRVL: "Marvell", MSFT: "Microsoft", MU: "Micron",
+  MUFG: "Mitsubishi UFJ", NET: "Cloudflare", NIO: "NIO", NKE: "Nike", NOC: "Northrop Grumman", NVDA: "NVIDIA",
+  NVO: "Novo Nordisk", NXPI: "NXP Semiconductors", OPEN: "Opendoor", ORCL: "Oracle", PDD: "PDD",
+  PENN: "PENN Entertainment", PEP: "PepsiCo", PFE: "Pfizer", PG: "Procter & Gamble", PLAY: "Dave & Buster’s",
+  PLNT: "Planet Fitness", PLTR: "Palantir", PLUG: "Plug Power", PTON: "Peloton", PYPL: "PayPal", QCOM: "Qualcomm",
+  QS: "QuantumScape", RBLX: "Roblox", RH: "RH", RIG: "Transocean", RIVN: "Rivian", RKLB: "Rocket Lab", RTX: "RTX",
+  SAP: "SAP", SBUX: "Starbucks", SHAK: "Shake Shack", SHOP: "Shopify", SIRI: "SiriusXM", SLB: "SLB", SNAP: "Snap",
+  SNOW: "Snowflake", SONO: "Sonos", SONY: "Sony", SOUN: "SoundHound", SPCE: "Virgin Galactic", SPOT: "Spotify",
+  SSNLF: "Samsung Electronics", TGT: "Target", TLRY: "Tilray", TM: "Toyota", TMUS: "T-Mobile", TRIP: "Tripadvisor",
+  TSLA: "Tesla", TSM: "TSMC", TTD: "The Trade Desk", TXN: "Texas Instruments", U: "Unity", UAL: "United Airlines",
+  UBER: "Uber", UNH: "UnitedHealth", URBN: "Urban Outfitters", V: "Visa", VFC: "VF Corp", WEN: "Wendy’s",
+  WFC: "Wells Fargo", WING: "Wingstop", WMT: "Walmart", WOOF: "Petco", XOM: "ExxonMobil", YETI: "YETI", ZM: "Zoom",
+}
+
+/** A US stock's short name: the list above, else its full name without a leading "The" and legal endings (Inc., Corp …). */
+export function usShortName(sym: string, fullName: string): string {
+  if (US_SHORT_NAMES[sym]) return US_SHORT_NAMES[sym]
+  const ending = /[,\s]+(inc\.?|incorporated|corp\.?|corporation|company|co\.?|ltd\.?|limited|plc|holdings?|group|n\.?v\.?|s\.?a\.?|se|class [a-c]|common stock|ordinary shares|ads|\(the\))$/i
+  let short = fullName.replace(/^the\s+/i, '').trim()
+  for (let before = ''; before !== short; ) {
+    before = short
+    short = short.replace(ending, '').trim()
+  }
+  return short || fullName
 }
 ```
 
@@ -61801,6 +69787,12 @@ export const linkedBanks: LinkedBank[] = [
   { ...bankAccount, id: 'hdfc', logoSymbol: 'HDFCBANK', last4: '7821', primary: true },
   { id: 'icici', bank: 'ICICI Bank', accountNumber: '002101554410', ifsc: 'ICIC0000021', type: 'Savings', branch: 'Powai, Mumbai', logoSymbol: 'ICICIBANK', last4: '4410' },
 ]
+
+/**
+ * A linked account at a bank that can't send money abroad for US Stocks (not an LRS partner) — "User status → Bank
+ * accounts: Three" and "SBI only" add it, to show the US Stocks bank step with an account it can't use.
+ */
+export const otherBank: LinkedBank = { id: 'sbi', bank: 'State Bank of India', accountNumber: '38201945520', ifsc: 'SBIN0000300', type: 'Savings', branch: 'Fort, Mumbai', logoSymbol: 'SBIN', last4: '5520' }
 ```
 
 ### `src/shared/money.module.css`
@@ -61843,8 +69835,6 @@ import { Tabs } from '@l3/components/Tabs'
 import type { FlowOption } from '../flows/types'
 import { usdInrSnapshot } from './data/usStocks'
 import { liveDrift, useLiveTick } from './data/live'
-import { useFlowOption } from './prototype'
-import { USER_STATUS } from './userStatus'
 import styles from './money.module.css'
 
 // ── The rate ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -61921,12 +69911,14 @@ export const moneyOptions: FlowOption[] = [
     // $ only by default (3 Nov): the ₹ shows when picked here. The stock and ETF pages are the exception — their price
     // always has its ≈ ₹ under it.
     default: 'off',
-    // The Home and its US tab screens (the US tab's fixed states show $ amounts too), a US stock page, the wallet's US tab.
-    floatOn: ['stocks-01', 'stocks-09', 'stocks-10', 'stocks-13', 'stocks-14', 'stocks-15', 'stocks-16', 'stocks-17', 'stocks-19', 'stocks-20', 'stocks-21', 'us-stocks-13', 'us-stocks-54'],
+    // Not in the floating card beside the phone any more (18 Nov, the user's call): still in the settings list.
   },
 ]
 
-const useInrDisplay = () => useFlowOption(USER_STATUS, 'inrDisplay', moneyOptions[0].default) as InrDisplay
+// Archived 18 Nov (the user's call): the "₹ equivalent" setting is no longer offered — US money shows in $ only. The
+// ₹ below / $ ⇄ ₹ switch code stays; set INR_DISPLAY to 'below' or 'switch' to see it (stock and ETF pages keep their ≈ ₹).
+const INR_DISPLAY = moneyOptions[0].default as InrDisplay
+const useInrDisplay = () => INR_DISPLAY
 
 // The currency picked on the switch: one for the whole app, remembered on this device (like a real app's preference).
 const CURRENCY_KEY = 'us-currency'
@@ -62070,10 +70062,31 @@ export type Preview = {
   back?: () => boolean
   /** The screen was reached by going back (a back button, or a screen earlier in the app) — a page can come back as it was left. */
   cameBack?: boolean
+  /** An `over` screen (a sheet over the screen the user is on): the screen under it — closing the sheet goes there. */
+  under?: string
 }
 
 export const PreviewContext = createContext<Preview>({ interactive: false, go: () => {} })
 export const usePreview = () => useContext(PreviewContext)
+
+// ---- Which way the next move goes ------------------------------------------------------------------------------------
+// The preview guesses a move's direction (a screen visited before, or one earlier in the same flow, is "back"). A tap can
+// say it instead: Deposit opens Add money (listed earlier in the flow) as a page going forward; a back button's fallback
+// (nothing in the history) is back, and replaces the page instead of adding to the history.
+let intent: { id: string; direction: 'forward' | 'back' } | null = null
+
+/** Say the move to screen `id` that is about to happen is forward (a page opening) or back. */
+export const markMove = (id: string, direction: 'forward' | 'back') => {
+  intent = { id, direction }
+}
+
+/** The preview: the direction said for a move to `id`, if any. */
+export const moveIntent = (id: string) => (intent?.id === id ? intent.direction : undefined)
+
+/** The preview: the move happened. */
+export const clearMoveIntent = () => {
+  intent = null
+}
 
 /** Prototype only: after `ms`, go to `next` (loaders, "Verifying…"). */
 export function useAutoAdvance(next: string | undefined, ms: number) {
@@ -62185,7 +70198,7 @@ export function emailSupport(subject: string) {
 ```css
 /*
  * Add-money amount entry (AmountEntry.tsx). FLAG: L3 has no big amount input and no in-app keypad — drawn here on L3
- * tokens. The amount is Heading 36, centred, with a brand caret (the field is always being typed into: L3's Typing
+ * tokens. The amount is Heading 36, centred, with a discover (blue) caret, as on L3's TextField (the field is always being typed into: L3's Typing
  * state has no big-number version).
  */
 .entry {
@@ -62220,7 +70233,7 @@ export function emailSupport(subject: string) {
   width: 2px; /* the text caret */
   height: var(--l3-size-40);
   margin-left: var(--l3-spacing-04);
-  background: var(--l3-content-accent-brand-default);
+  background: var(--l3-content-accent-discover-default); /* L3's typing caret colour (TextField --tf-caret) */
   animation: blink 1s steps(1) infinite;
 }
 
@@ -62409,7 +70422,7 @@ import { Icon } from '@l3/components/Icon'
 import { ListCell } from '@l3/components/ListCell'
 import { Stack } from '@l3/components/Stack'
 import { msAccountBalance, msAdd, msChevronRight } from '@l3/icons/material'
-import { getCompany } from '../data/companies'
+import { bankLogoUrl } from '../data/usBanks'
 import type { LinkedBank } from '../data/user'
 import { Sheet } from './Sheet'
 
@@ -62426,7 +70439,7 @@ export type BankPickerCopy = {
   addAnother: string
 }
 
-const bankLogo = (bank: LinkedBank) => getCompany(bank.logoSymbol)?.logoUrl
+const bankLogo = (bank: LinkedBank) => bankLogoUrl(bank.logoSymbol)
 export const bankLine = (bank: LinkedBank) => `${bank.bank} ••${bank.last4}`
 
 /**
@@ -62458,7 +70471,7 @@ export function BankRow({ bank, copy, note, onChange, onAdd }: {
   return (
     <ListCell
       as="button"
-      iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 2)} shape="rounded" size={32} label={bank.bank} />}
+      iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 1)} shape="rounded" size={32} label={bank.bank} />}
       label={copy.method}
       description={note ? `${bankLine(bank)} · ${note}` : bankLine(bank)}
       iconRight={<Icon icon={msChevronRight} />}
@@ -62495,9 +70508,9 @@ export function BankSheet({ banks, selected, copy, onSelect, onAdd, onClose }: {
 
 /**
  * The sheet's body alone — the linked banks as radio rows — for a screen that hosts its own L3 BottomSheet (US Stocks).
- * `card`: each bank a bordered card row, 8 apart (the chosen one gets border-dark); `plain` (default): flat rows.
+ * `card` (default): each bank a bordered card row, 8 apart (the chosen one gets border-dark); `plain`: flat rows.
  */
-export function BankOptions({ banks, selected, name, onPick, variant = 'plain' }: {
+export function BankOptions({ banks, selected, name, onPick, variant = 'card' }: {
   banks: LinkedBank[]
   selected: string
   name: string
@@ -62512,7 +70525,7 @@ export function BankOptions({ banks, selected, name, onPick, variant = 'plain' }
           as="label"
           variant={variant}
           selected={bank.id === selected}
-          iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 2)} shape="rounded" size={32} label={bank.bank} />}
+          iconLeft={<Avatar src={bankLogo(bank)} initials={bank.bank.slice(0, 1)} shape="rounded" size={32} label={bank.bank} />}
           label={bankLine(bank)}
           description={`${bank.type} · ${bank.branch}`}
           trailing={<Radio name={name} checked={bank.id === selected} onChange={() => onPick(bank.id)} />}
@@ -62523,38 +70536,315 @@ export function BankOptions({ banks, selected, name, onPick, variant = 'plain' }
 }
 ```
 
+### `src/shared/ui/DepositProgressSheet.module.css`
+
+```css
+.safeNote {
+  border-radius: var(--l3-radius-12);
+  background: var(--l3-surface-accent-success-light);
+  font: var(--l3-text-description-12);
+  color: var(--l3-content-secondary);
+}
+
+.safeNote > * > :first-child {
+  flex: none;
+  color: var(--l3-content-accent-success-default);
+}
+```
+
+### `src/shared/ui/DepositProgressSheet.tsx`
+
+```tsx
+// "Money on the way": where a US Stocks deposit is, as L3 Steps — Paid → Sent to the US → US bank processing (the
+// current step) → Ready to trade. The story the user should take away: the money has already left India; the wait is
+// the US side crediting it (US banks take 1–2 working days). Kept short: one line per step, the safe note under them.
+// Opened from Home's "Money on the way" card, the wallet's deposit-in-progress bar, and back from the bank's page.
+// When it'll be ready is a Tag in the header (processing colour: still under way).
+// L3 gap: Steps has no warning (yellow) or pulsing "in progress" marker — the running step uses `current` (success dot).
+import { BottomSheet, BottomSheetHeader } from '@l3/components/BottomSheet'
+import { Button } from '@l3/components/Button'
+import { ButtonGroup } from '@l3/components/ButtonGroup'
+import { Icon } from '@l3/components/Icon'
+import { Inset } from '@l3/components/Inset'
+import { Stack } from '@l3/components/Stack'
+import { Steps } from '@l3/components/Steps'
+import { Tag } from '@l3/components/Tag'
+import { msSchedule, msShieldLockFill } from '@l3/icons/material'
+import { formatUsd } from '../money'
+import { Sheet } from './Sheet'
+import styles from './DepositProgressSheet.module.css'
+
+export type DepositInProgress = {
+  /** $ that will land in the USD wallet. */
+  usd: number
+  /** ₹ that left the bank, as written ("₹4,312.50"). */
+  inr: string
+  /** The bank it left, as written ("HDFC Bank ••7821"). */
+  bank: string
+}
+
+type DepositProgressSheetProps = {
+  deposit: DepositInProgress
+  /** When it's ready to trade ("by Thu 8 PM"). */
+  eta: string
+  onClose: () => void
+  /** A screen that draws its own sheet layer (US Stocks' Phone) passes it; otherwise the screen's SheetHost shows it. */
+  container?: HTMLElement | null
+}
+
+const HEADING_ID = 'deposit-progress-title'
+
+export function DepositProgressSheet({ deposit, eta, onClose, container }: DepositProgressSheetProps) {
+  // When it's expected stands out as a tag beside the heading ("By Thu 8 PM"), not buried in the description.
+  const header = (
+    <BottomSheetHeader
+      heading={`${formatUsd(deposit.usd)} on the way`}
+      headingId={HEADING_ID}
+      description="Expected to be ready to trade"
+      trailing={<Tag variant="secondary" color="processing" size="md" iconLeft={<Icon icon={msSchedule} />}>{eta.charAt(0).toUpperCase() + eta.slice(1)}</Tag>}
+    />
+  )
+  const footer = (
+    <ButtonGroup aria-label="Deposit progress">
+      <Button variant="primary" size="lg" fullWidth onClick={onClose}>Got it</Button>
+    </ButtonGroup>
+  )
+  const body = (
+    <Stack gap="24">
+      <Steps
+        label="Your deposit"
+        steps={[
+          { label: 'Paid', state: 'done', description: `${deposit.inr} from ${deposit.bank}` },
+          { label: 'Sent to the US', state: 'done', description: 'Your money has left India' },
+          { label: 'US bank processing', state: 'current', description: 'US banks usually take 1–2 working days' },
+          { label: 'Ready to trade', state: 'todo', description: `${eta} · we'll notify you` },
+        ]}
+      />
+      <Inset padding="12" className={styles.safeNote}>
+        <Stack direction="horizontal" align="center" gap="12">
+          <Icon icon={msShieldLockFill} size={24} />
+          <span>Your money is safe, held in your name at our US partner.</span>
+        </Stack>
+      </Inset>
+    </Stack>
+  )
+  if (container !== undefined) {
+    return (
+      <BottomSheet open onClose={onClose} container={container} aria-labelledby={HEADING_ID} header={header} footer={footer}>
+        {body}
+      </BottomSheet>
+    )
+  }
+  return <Sheet labelledBy={HEADING_ID} onClose={onClose} header={header} footer={footer}>{body}</Sheet>
+}
+```
+
 ### `src/shared/ui/Flag.module.css`
 
 ```css
-.flag {
-  display: block;
+/* A flag emoji at icon size: 16 tall, as wide as the glyph. Doubled so it beats an icon slot's square (L3 Tabs /
+   Button: `.icon > span` is 16 × 16), and that slot widens to it. L3 gap: icon slots are square only. */
+.flag.flag {
+  display: inline-flex;
   flex: none;
-  width: var(--l3-icon-size-16);
+  align-items: center;
+  justify-content: center;
+  width: auto;
   height: var(--l3-icon-size-16);
+  font-size: var(--l3-icon-size-16);
+  line-height: 1;
+  /* Full strength in an inactive tab too (the user's call): an emoji takes its text colour's alpha, and L3's inactive
+     tab text is 60%. */
+  color: var(--l3-content-primary);
+}
+
+[class]:has(> .flag.flag) {
+  width: auto;
 }
 ```
 
 ### `src/shared/ui/Flag.tsx`
 
 ```tsx
-import flagChina from '../assets/flags/china.svg'
-import flagEurope from '../assets/flags/europe.svg'
-import flagIndia from '../assets/flags/india.svg'
-import flagJapan from '../assets/flags/japan.svg'
-import flagKorea from '../assets/flags/korea.svg'
-import flagUs from '../assets/flags/us.svg'
 import styles from './Flag.module.css'
 
 export type FlagCode = 'us' | 'in' | 'cn' | 'jp' | 'eu' | 'kr'
 
-const files: Record<FlagCode, string> = { us: flagUs, in: flagIndia, cn: flagChina, jp: flagJapan, eu: flagEurope, kr: flagKorea }
+/** The flag emoji themselves (the user's call, 19 Nov): the device's own 🇮🇳 / 🇺🇸, as in text. */
+const emoji: Record<FlagCode, string> = { us: '🇺🇸', in: '🇮🇳', cn: '🇨🇳', jp: '🇯🇵', eu: '🇪🇺', kr: '🇰🇷' }
 
 /**
- * A round flag, 16 like the icons in small buttons and tabs (use as an `iconLeft`).
- * L3 gap: no flag icons in L3 — round flag SVGs of our own (shared/assets/flags), not emoji, so they look the same and
- * sit centred on every device.
+ * A country's flag emoji, 16 like the icons in small buttons and tabs (use as an `iconLeft`).
+ * L3 gap: no flag icons in L3, so the system emoji is used.
  */
-export const Flag = ({ code }: { code: FlagCode }) => <img className={styles.flag} src={files[code]} alt="" aria-hidden="true" />
+export const Flag = ({ code }: { code: FlagCode }) => (
+  <span className={styles.flag} aria-hidden="true">{emoji[code]}</span>
+)
+```
+
+### `src/shared/ui/Keyboard.module.css`
+
+```css
+/* OS number keypad mock: 3 × 4 keys on a grey tray. */
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--app-space-key);
+  padding: var(--l3-spacing-12) var(--l3-spacing-12) var(--l3-spacing-24);
+  /* On a real phone, clear the home indicator (like the L3 button dock does). */
+  padding-bottom: calc(var(--l3-spacing-24) + env(safe-area-inset-bottom, var(--l3-spacing-00)));
+  background: var(--l3-surface-secondary);
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--l3-spacing-04);
+  height: var(--app-size-key);
+  border: 0;
+  border-radius: var(--l3-radius-08);
+  background: var(--l3-surface-primary);
+  color: var(--l3-content-primary);
+  font: var(--l3-text-description-18);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key[data-kind='fn'] {
+  background: var(--l3-surface-tertiary);
+}
+
+
+.key:active {
+  transform: scale(var(--l3-motion-scale-press-default));
+}
+
+
+/* KeypadSlide: the wrapper's height is animated; the keypad stays pinned to its top and is clipped. */
+.slide { overflow: hidden; flex: none; }
+```
+
+### `src/shared/ui/Keyboard.tsx`
+
+```tsx
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { Icon } from '@l3/components/Icon'
+import { msBackspace } from '@l3/icons/material'
+import styles from './Keyboard.module.css'
+
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'Backspace']
+
+/**
+ * The phone's own number keypad (OS chrome, NOT part of the app or L3 — real apps get the system keyboard by setting
+ * the field's input type to number). Drawn so the phone / OTP / PIN screens read like the phone. In the prototype the
+ * keys type into the screen. `data-surface` tells the OS navigation bar below it to take the keypad's grey.
+ */
+export function Keyboard({ onKey, decimal }: { onKey?: (key: string) => void; /** Show "." in the bottom-left key (amounts in $, fractional shares). */ decimal?: boolean }) {
+  const keys = decimal ? KEYS.map((k) => (k === '' ? '.' : k)) : KEYS
+  return (
+    <div className={styles.keyboard} role="group" aria-label="Number keypad" data-surface="secondary">
+      {keys.map((k) =>
+        k === '' ? <span key="blank" /> : (
+          <button key={k} type="button" className={styles.key} data-kind={k === 'Backspace' ? 'fn' : 'digit'} aria-label={k === 'Backspace' ? 'Delete' : k === '.' ? 'Decimal point' : undefined} onPointerDown={keepFocus} onClick={() => onKey?.(k)}>
+            {k === 'Backspace' ? <Icon icon={msBackspace} /> : k}
+          </button>
+        ),
+      )}
+    </div>
+  )
+}
+
+/** Like the OS keyboard, a key press doesn't take focus: the field being typed into keeps its Typing state. */
+const keepFocus = (e: PointerEvent) => e.preventDefault()
+
+/** Apply a keypad key to a digit string (max length). */
+export const typeKey = (value: string, key: string, max: number) =>
+  key === 'Backspace' ? value.slice(0, -1) : /^\d$/.test(key) && value.length < max ? value + key : value
+
+/**
+ * The drawn keypad IS the keyboard here, so the fields it types into must never open the phone's own keyboard:
+ * inputmode="none" (Android, desktop) and, on touch screens, read-only too (the only sure way on iPhone). They still
+ * take focus, so they show L3's Typing state. Real apps don't need this: the system keyboard is the keypad.
+ */
+export const keypadFieldProps = () => ({
+  inputMode: 'none' as const,
+  readOnly: typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+})
+
+/**
+ * Prototype glue: the drawn keypad types into an L3 OtpInput, so focus follows the box being typed (the next empty
+ * one) — the Typing state moves along as it would with the phone's keyboard — and the boxes never open the phone's
+ * keyboard (keypadFieldProps). Put the ref on an element around the OtpInput.
+ */
+export function useKeypadFocus(value: string, length: number, enabled: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!enabled) return
+    const boxes = ref.current?.querySelectorAll('input')
+    const { inputMode, readOnly } = keypadFieldProps()
+    boxes?.forEach((box) => { box.inputMode = inputMode; box.readOnly = readOnly })
+    boxes?.[Math.min(value.length, length - 1)]?.focus({ preventScroll: true })
+  }, [value, length, enabled])
+  return ref
+}
+
+/**
+ * The keypad sliding in and out, like the phone's own keyboard: up from the bottom when `open` turns on (260 ms,
+ * ease-out), down to the bottom when it turns off (200 ms, ease-in), then gone. The wrapper's height runs between 0 and
+ * the keypad's with the keypad pinned to its top, so what sits above it (a dock, a sheet) moves with it. A reopen
+ * mid-close turns around from where it is; reduced motion skips the slide.
+ */
+export function KeypadSlide({ open, children }: { open: boolean; children: ReactNode }) {
+  const [mounted, setMounted] = useState(open)
+  const openRef = useRef(open)
+  openRef.current = open
+  const wrap = useRef<HTMLDivElement>(null)
+  const anim = useRef<Animation | null>(null)
+  const first = useRef(true)
+  if (open && !mounted) setMounted(true)
+  useLayoutEffect(() => {
+    if (first.current) { first.current = false; return }
+    const el = wrap.current
+    const midway = anim.current
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      midway?.cancel()
+      anim.current = null
+      if (!open) setMounted(false)
+      return
+    }
+    const from = open && !midway ? 0 : el.getBoundingClientRect().height
+    midway?.cancel()
+    const full = el.getBoundingClientRect().height
+    const run = el.animate(
+      [{ height: `${from}px` }, { height: `${open ? full : 0}px` }],
+      open
+        ? { duration: 260, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+        : { duration: 200, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+    )
+    anim.current = run
+    run.finished.then(() => {
+      if (anim.current !== run) return
+      anim.current = null
+      if (!openRef.current) setMounted(false)
+    }, () => {})
+  }, [open])
+  if (!mounted) return null
+  return <div ref={wrap} className={styles.slide} inert={!open}>{children}</div>
+}
+```
+
+### `src/shared/ui/MainNav.module.css`
+
+```css
+/* The navbar paints above the page it sits under, so its upward shadow shows over every screen's content — on the
+   Stocks home the feed's cards (raised, transformed by the scroll reveal) were painting over it (18 Nov).
+   L3 gap: BottomNavbar is position: static (no stacking of its own). */
+.nav {
+  position: relative;
+  z-index: 1; /* stacking order isn't a design token */
+}
 ```
 
 ### `src/shared/ui/MainNav.tsx`
@@ -62562,6 +70852,7 @@ export const Flag = ({ code }: { code: FlagCode }) => <img className={styles.fla
 ```tsx
 import { BottomNavbar } from '@l3/components/BottomNavbar'
 import { NavIcon } from '@l3/components/BottomNavbar/NavIcon'
+import styles from './MainNav.module.css'
 
 export type Section = 'stocks' | 'market' | 'portfolio' | 'mutualFund' | 'fno'
 
@@ -62578,6 +70869,7 @@ export function MainNav({ value, onChange }: { value: Section; onChange?: (value
   return (
     <BottomNavbar
       aria-label="Main"
+      className={styles.nav}
       value={value}
       onChange={(v) => onChange?.(v as Section)}
       items={items.map((i) => ({ ...i, icon: <NavIcon name={i.value} />, selectedIcon: <NavIcon name={i.value} selected /> }))}
@@ -62600,6 +70892,9 @@ export function rememberStocksHome(screen: string, market: 'in' | 'us') {
   lastStocks = { screen, market }
 }
 
+/** The IND / US tab the Stocks home was last on (none before it has opened): Market opens on that market (19 Nov). */
+export const lastStocksMarket = (): 'in' | 'us' | undefined => lastStocks?.market
+
 /**
  * The Stocks home, when it opens: the IND / US tab to come back to — if the navbar brought the user back to it, or a
  * back move did (back from a stock page, Market, the wallet … returns to the tab it was opened from).
@@ -62619,6 +70914,86 @@ export const goToTab = (go: (id: string) => void, section: Section) => {
   }
   const id = tabScreens[section]
   if (id) go(id)
+}
+```
+
+### `src/shared/ui/Rail.module.css`
+
+```css
+/*
+ * Sideways rail. Item width = the row (inside its 16 insets) shared by `--rail-visible` items with 12 between them, so
+ * the same rail reads well from 360 to 412. --rail-visible is a count (set inline), not a size.
+ */
+.rail {
+  /* Positioned, so absolutely placed bits inside (e.g. PriceChange's screen-reader text) are clipped by the rail
+     instead of hanging off a far-away ancestor and making the whole page scroll sideways. */
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--rail-visible) - 1) * var(--l3-spacing-12)) / var(--rail-visible));
+  gap: var(--l3-spacing-12);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-inline: var(--l3-spacing-16);
+  scroll-padding-inline: var(--l3-spacing-16);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Room for the cards' shadow: a sideways scroller clips vertically too, so it pads 12 above and below and takes it
+     back with a negative margin (same layout, shadow not cut). */
+  padding-block: var(--l3-spacing-12);
+  margin-block: calc(-1 * var(--l3-spacing-12));
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail > * {
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+.rail[data-snap='center'] > * {
+  scroll-snap-align: center;
+}
+
+/* Two rows that scroll together. */
+.rail[data-rows='2'] {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+}
+```
+
+### `src/shared/ui/Rail.tsx`
+
+```tsx
+import type { CSSProperties, ReactNode } from 'react'
+import styles from './Rail.module.css'
+
+type RailProps = {
+  children: ReactNode
+  /** What the row holds, for screen readers ("Top gainers"). */
+  label: string
+  /** How many items show across the screen — a fraction (2.3) lets the next one peek in, so it reads as scrollable. */
+  visible: number
+  /** Two rows that scroll together (a grid of cards). */
+  rows?: 1 | 2
+  /** Snap each item to the start (lists) or the centre (one featured card at a time, neighbours peeking). */
+  snap?: 'start' | 'center'
+  /** Extra room inside the row (e.g. above the cards, for a tag sitting on a card's top edge). */
+  className?: string
+}
+
+/**
+ * A row that scrolls sideways — cards, baskets, ideas. Its first item lines up with the 16 page margin, items are
+ * 12 apart and snap into place, and there's no scrollbar. Not L3 yet (a "carousel / rail" is missing there).
+ */
+export function Rail({ children, label, visible, rows = 1, snap = 'start', className }: RailProps) {
+  return (
+    <div className={[styles.rail, className].filter(Boolean).join(' ')} role="region" aria-label={label} data-rows={rows} data-snap={snap} style={{ '--rail-visible': visible } as CSSProperties}>
+      {children}
+    </div>
+  )
 }
 ```
 
@@ -62762,6 +71137,31 @@ export function SheetHost({ container, children }: { container: HTMLElement | nu
 .value {
   font: var(--l3-text-label-14);
 }
+
+/* FLAG: L3 gap — a static ListCell card has no shadow; the app gives every stock card L3's soft one (as Portfolio's holdings). */
+.static[data-variant='card'] {
+  box-shadow: inset 0 0 0 1px var(--l3-border-light), var(--l3-shadow-elevation-soft); /* 1px: Figma stroke weight has no variable */
+}
+
+/* look="list": an edge-to-edge row; its hairline runs from the logo's start to the price's end (the row's 16 padding on
+   both sides — 18 Nov, was edge to edge). FLAG: L3 gap — ListCell has no divider option (its USAGE.md, open question). */
+.listRow {
+  position: relative;
+}
+
+.listRow::after {
+  content: '';
+  position: absolute;
+  inset: auto var(--l3-spacing-16) 0;
+  border-bottom: 1px solid var(--l3-border-light); /* 1px hairline */
+  pointer-events: none;
+}
+
+/* The last row of the list draws no line (rows sit in <li>s, or directly in the list). */
+li:last-child > .listRow::after,
+.listRow:not(li > .listRow):last-child::after {
+  display: none;
+}
 ```
 
 ### `src/shared/ui/StockListCard.tsx`
@@ -62797,22 +71197,40 @@ type StockListCardProps = {
   changePct?: number
   /** Opens the stock / ETF page. Without it the card is static (no fill, no press). */
   onOpen?: () => void
+  /** A plain row (L3 ListCell `variant="plain"`, no card) for lists split by hairlines — the US F1 home (Figma 6441:3). */
+  plain?: boolean
+  /**
+   * 'card' (default): the flat card, for most lists. 'list': edge to edge, no fill, rows split by a hairline that runs
+   * from the symbol's start to the price's end (the Market page, 17 Nov). Use 'list' rows inside a list with no gap
+   * and no side padding; the last row draws no line.
+   */
+  look?: 'card' | 'list'
+  /** The logo's size (default 40; the F1 home's plain rows use 32). */
+  logoSize?: 24 | 32 | 40
   'aria-label'?: string
 }
 
 /**
  * The one stock row of the app, as a card — the Market list's style, used wherever stocks or ETFs are listed:
- * logo · symbol over name · price over the day's change. Long lists show it flat (border only, no shadow).
+ * logo · symbol over name · price over the day's change. Every card wears L3's soft shadow (`elevation-soft`, the user's
+ * call on 4 Nov): tappable ones get it from ListCell (raised, the default); static ones (no `onOpen`) from `.static`.
  *
- * Flat = L3 ListCell `raised={false}`, symbol in Label 14 = `labelSize="14"` (list-cell 1.9.0).
+ * Symbol in Label 14 = `labelSize="14"` (list-cell 1.9.0).
  */
-export function StockListCard({ symbol, name, logoUrl, initials, logo, tag, price, changePct, onOpen, ...rest }: StockListCardProps) {
+export function StockListCard({ symbol, name, logoUrl, initials, logo, tag, price, changePct, onOpen, plain = false, look: layout = 'card', logoSize = 40, ...rest }: StockListCardProps) {
+  const list = layout === 'list'
+  const look = list
+    ? ({ variant: 'plain', density: 'breathable' } as const)
+    : plain
+      ? ({ variant: 'plain' } as const)
+      : ({ variant: 'card', raised: false } as const)
+  const className = [list ? styles.listRow : undefined, !onOpen && !list ? styles.static : undefined].filter(Boolean).join(' ') || undefined
   return (
     <ListCell
-      variant="card"
+      {...look}
       as={onOpen ? 'button' : undefined}
-      raised={false}
-      iconLeft={logo ?? <Avatar initials={initials ?? symbol.slice(0, 2)} src={logoUrl} size={40} label={name} />}
+      className={className}
+      iconLeft={logo ?? <Avatar initials={initials ?? symbol.slice(0, 1)} src={logoUrl} size={logoSize} label={name} />}
       labelSuffix={tag || undefined}
       labelSuffixTone="neutral"
       labelSize="14"
@@ -62831,17 +71249,117 @@ export function StockListCard({ symbol, name, logoUrl, initials, logo, tag, pric
 }
 ```
 
+### `src/shared/ui/SupportedBanks.module.css`
+
+```css
+/* A supported bank's short name under its logo. */
+.name {
+  font: var(--l3-text-label-12);
+  color: var(--l3-content-secondary);
+}
+```
+
+### `src/shared/ui/SupportedBanks.tsx`
+
+```tsx
+import { Avatar } from '@l3/components/Avatar'
+import { Stack } from '@l3/components/Stack'
+import { bankLogoUrl, SUPPORTED_BANKS } from '../data/usBanks'
+import styles from './SupportedBanks.module.css'
+
+/**
+ * The five banks US Stocks money can go from, as logos with their short names in one row — wherever the user has to add
+ * one (activation with no supported bank, "Add bank" there, Add bank account opened from US Stocks).
+ */
+export function SupportedBanks({ label }: { /** The list's accessible name, "Supported banks for US Stocks". */ label: string }) {
+  return (
+    <Stack as="ul" direction="horizontal" justify="between" aria-label={label}>
+      {SUPPORTED_BANKS.map((bank) => (
+        <Stack as="li" key={bank.symbol} align="center" gap="08">
+          <Avatar src={bankLogoUrl(bank.symbol)} initials={bank.initials} shape="rounded" size={40} label={bank.name} />
+          <span className={styles.name}>{bank.short}</span>
+        </Stack>
+      ))}
+    </Stack>
+  )
+}
+```
+
+### `src/shared/ui/TopBarAction.module.css`
+
+```css
+/* Home's round top-bar button (stocks TopBar .wallet): 38 circle, border/light edge, no shadow. L3 gap: see TopBarAction.tsx. */
+.action.action {
+  --btn-radius: var(--l3-radius-full);
+  --btn-border: var(--l3-border-light);
+  --btn-icon-size: var(--l3-icon-size-20);
+  width: var(--app-stocks-topbar-control);
+  height: var(--app-stocks-topbar-control);
+  padding: 0;
+}
+
+/* A toggled action (pressed) takes border-dark, like any selected bordered control (as L3's ActionbarAction). */
+.action.action[aria-pressed='true'] {
+  --btn-border: var(--l3-border-dark);
+}
+```
+
+### `src/shared/ui/TopBarAction.tsx`
+
+```tsx
+import { Button } from '@l3/components/Button'
+import { Icon } from '@l3/components/Icon'
+import { Stack } from '@l3/components/Stack'
+import { msAccountBalanceWallet, msSearch } from '@l3/icons/material'
+import styles from './TopBarAction.module.css'
+
+/**
+ * The app's icon button in a top bar (Actionbar `actions`): the same round button as Home's top bar — a 38 circle with
+ * a 1px border/light edge, a 20 icon and no shadow — so every page's top-bar icons match.
+ * It's L3's Tertiary Small button with three local changes (L3 gap: ActionbarAction is a 32 rounded square with
+ * the tertiary border and a soft raise, no round option): fully round, border/light, raised none.
+ * Icon-only actions with no box keep L3's `ActionbarAction variant="ghost"`.
+ */
+export function TopBarAction({ icon, label, onClick, pressed }: { icon: string; label: string; onClick: () => void; pressed?: boolean }) {
+  return (
+    <Button
+      size="sm"
+      variant="tertiary"
+      raised="none"
+      className={styles.action}
+      iconLeft={<Icon icon={icon} size={20} />}
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+    />
+  )
+}
+
+/**
+ * The top bar's search and wallet, in this order, 8 apart — the same pair on every navbar tab (Stocks home, Market,
+ * Portfolio, Mutual Fund), so nothing moves when you switch tabs. Copy it as is; don't redraw it per screen.
+ */
+export function SearchWalletActions({ searchLabel, walletLabel, onSearch, onWallet }: { searchLabel: string; walletLabel: string; onSearch: () => void; onWallet: () => void }) {
+  return (
+    <Stack direction="horizontal" align="center" gap="08">
+      <TopBarAction icon={msSearch} label={searchLabel} onClick={onSearch} />
+      <TopBarAction icon={msAccountBalanceWallet} label={walletLabel} onClick={onWallet} />
+    </Stack>
+  )
+}
+```
+
 ### `src/shared/userStatus.ts`
 
 ```ts
 // Where the user is in the app — the prototype's app-level settings ("User status" in the preview panel, the phone's
 // settings sheet and a floating card beside the phone). Every screen that depends on it reads it here, so they all stay
-// in sync: pick "US Stocks: activated · money on the way" once and the Home's US tab, a US stock page and the wallet all
+// in sync: pick "User account state: Active · money on the way" once and the Home's US tab, a US stock page and the wallet all
 // show that state. Picking never moves on by itself; taps in the prototype don't change it.
 // In a real app these come from the user's account (KYC status, US Stocks activation, wallet, holdings).
 import type { FlowOption } from '../flows/types'
 import { setFlowOption, useFlowOption } from './prototype'
-import { linkedBanks, type LinkedBank } from './data/user'
+import { linkedBanks, otherBank, type LinkedBank } from './data/user'
 
 /** The settings' owner in the preview (as a flow id: where the picks are remembered). */
 export const USER_STATUS = 'app'
@@ -62850,7 +71368,7 @@ export type KycStatus = 'done' | 'pending'
 export type UsActivation = 'kyc' | 'off' | 'review' | 'support' | 'failed' | 'active'
 export type UsWallet = 'empty' | 'onTheWay' | 'funded'
 export type UsHoldings = 'none' | 'some'
-export type BankLinks = 'none' | 'one' | 'two'
+export type BankLinks = 'none' | 'one' | 'two' | 'three' | 'sbi'
 
 /**
  * Screens that change with the user status: the settings float beside the phone on these (desktop preview). The Home,
@@ -62858,48 +71376,34 @@ export type BankLinks = 'none' | 'one' | 'two'
  * the wallet's US tab.
  */
 /** The add-money screens and the wallet: the bank row and its sheet change with the user's linked banks. */
-const BANK_SCREENS = ['deposit-01', 'deposit-06', 'deposit-07', 'deposit-08', 'deposit-09', 'us-stocks-21', 'us-stocks-22', 'us-stocks-23', 'us-stocks-24', 'us-stocks-53', 'us-stocks-54']
+const BANK_SCREENS = ['deposit-01', 'deposit-06', 'deposit-07', 'deposit-08', 'deposit-09', 'us-stocks-21', 'us-stocks-22', 'us-stocks-23', 'us-stocks-24', 'us-stocks-53', 'us-stocks-54', 'us-stocks-95']
 
 const STATUS_SCREENS = ['stocks-01', 'stocks-09', 'stocks-10', 'stocks-13', 'stocks-14', 'stocks-15', 'stocks-16', 'stocks-17', 'stocks-19', 'stocks-20', 'stocks-21', 'us-stocks-13', 'us-stocks-54']
 
-/** The settings, parent first: each one below only matters (and shows) while the one above has the listed values. */
+/** The app-level user status settings. */
 export const userStatusOptions: FlowOption[] = [
   {
-    // One list for the whole way in, in order: Lemonn KYC first (US Stocks can't be activated until it's done), then
-    // the activation steps.
-    id: 'us',
+    // One list for the whole way in, in order — one row of states (18 Nov, the user's call; was three settings: US
+    // Stocks activation, then USD wallet and US holdings under "Active"): not active while the Lemonn KYC is pending
+    // (US Stocks can't be activated until it's done), not active, the activation steps, then active with $0, money on
+    // the way, money in the wallet, US holdings. The values are the UsJourney steps.
+    id: 'account',
     group: 'User status',
-    label: 'US Stocks activation',
+    label: 'User account state',
     picker: 'dropdown',
     values: [
-      { value: 'kyc', label: 'Lemonn KYC pending' },
-      { value: 'off', label: 'KYC done · not activated' },
-      { value: 'review', label: 'Activation under review' },
+      { value: 'kyc', label: 'Not active · KYC pending' },
+      { value: 'activate', label: 'Not active' },
+      { value: 'review', label: 'Under review' },
       { value: 'support', label: 'Under review · contact support' },
       { value: 'failed', label: 'Activation failed' },
-      { value: 'active', label: 'Activated' },
+      { value: 'activated', label: 'Active · $0' },
+      { value: 'onTheWay', label: 'Active · money on the way' },
+      { value: 'ready', label: 'Active · has money' },
+      { value: 'holding', label: 'Active · US holdings' },
     ],
     // The prototype opens on a user who's all set: activated, money in the wallet, holding US stocks.
-    default: 'active',
-    floatOn: STATUS_SCREENS,
-  },
-  {
-    id: 'usWallet',
-    group: 'User status',
-    label: 'USD wallet',
-    values: [{ value: 'empty', label: '$0' }, { value: 'onTheWay', label: 'Money on the way' }, { value: 'funded', label: 'Has money' }],
-    default: 'funded',
-    showIf: { us: ['active'] },
-    floatOn: STATUS_SCREENS,
-  },
-  {
-    id: 'usHoldings',
-    group: 'User status',
-    label: 'US holdings',
-    picker: 'toggle',
-    values: [{ value: 'none', label: 'None' }, { value: 'some', label: 'Holds NVDA' }],
-    default: 'some',
-    showIf: { usWallet: ['funded'] },
+    default: 'holding',
     floatOn: STATUS_SCREENS,
   },
   {
@@ -62907,8 +71411,10 @@ export const userStatusOptions: FlowOption[] = [
     id: 'banks',
     group: 'User status',
     label: 'Bank accounts',
-    values: [{ value: 'none', label: 'None' }, { value: 'one', label: 'One' }, { value: 'two', label: 'Two' }],
-    default: 'two',
+    picker: 'dropdown', // a dropdown like User account state (18 Nov: five choices didn't fit a segmented row)
+    // Three / SBI only: with an account at a bank US Stocks money can't go from (State Bank of India).
+    values: [{ value: 'none', label: 'None' }, { value: 'one', label: 'One' }, { value: 'two', label: 'Two' }, { value: 'three', label: 'Three (+ SBI)' }, { value: 'sbi', label: 'SBI only' }],
+    default: 'three',
     floatOn: BANK_SCREENS,
   },
 ]
@@ -62920,13 +71426,17 @@ export type UserStatus = { kyc: KycStatus; us: UsActivation; usWallet: UsWallet;
 
 /** The user status as picked (settings under one that's off keep their last pick). KYC comes from the activation list. */
 export function useUserStatus(): UserStatus {
-  const us = useStatus('us') as UsActivation
+  return { ...statusOf(useStatus('account') as UsJourney), banks: useStatus('banks') as BankLinks }
+}
+
+/** One account state as the activation, wallet and holdings it means. */
+function statusOf(step: UsJourney): Omit<UserStatus, 'banks'> {
+  const us: UsActivation = step === 'activate' ? 'off' : ['kyc', 'review', 'support', 'failed'].includes(step) ? (step as UsActivation) : 'active'
   return {
     kyc: us === 'kyc' ? 'pending' : 'done',
     us,
-    usWallet: useStatus('usWallet') as UsWallet,
-    usHoldings: useStatus('usHoldings') as UsHoldings,
-    banks: useStatus('banks') as BankLinks,
+    usWallet: step === 'activated' ? 'empty' : step === 'onTheWay' ? 'onTheWay' : 'funded',
+    usHoldings: step === 'holding' ? 'some' : 'none',
   }
 }
 
@@ -62937,12 +71447,31 @@ export function useUserStatus(): UserStatus {
  */
 export function useLinkedBanks(): LinkedBank[] {
   const picked = useStatus('banks') as BankLinks
-  const us = useStatus('us') as UsActivation
-  const usWallet = useStatus('usWallet') as UsWallet
+  const { us, usWallet } = statusOf(useStatus('account') as UsJourney)
   const moneyMoved = us === 'active' && usWallet !== 'empty'
   const banks = picked === 'none' && moneyMoved ? 'one' : picked
-  return banks === 'none' ? [] : banks === 'one' ? linkedBanks.slice(0, 1) : linkedBanks
+  const linked = { none: [], one: linkedBanks.slice(0, 1), two: linkedBanks, three: [...linkedBanks, otherBank], sbi: [{ ...otherBank, primary: true }] }[banks]
+  return addedBank ? [...linked, addedBank] : linked
 }
+
+// A bank account added in the prototype ("Add bank account" → verified). Kept in memory, so a reload starts without it.
+let addedBank: LinkedBank | undefined
+let addBankOpener: string | undefined
+let addBankForUsStocks = false
+
+/**
+ * An add-money screen (₹ or US) or the US Stocks activation opens "Add bank account": remember which, so the verified
+ * account comes back to it. `usStocks`: the account is for US Stocks, so it must be at a bank that can send money abroad.
+ */
+export const startAddBank = (fromScreen?: string, { usStocks = false }: { usStocks?: boolean } = {}) => { addBankOpener = fromScreen; addBankForUsStocks = usStocks }
+/** "Add bank account" was opened from US Stocks: only the supported banks can be added. */
+export const addBankForUs = () => addBankForUsStocks
+/** The add-money screen that opened "Add bank account" (undefined when it was opened straight from the screen list). */
+export const addBankReturnScreen = () => addBankOpener
+/** The ₹1 check passed: the account joins the linked banks, and the add-money screens pick it. */
+export const linkBank = (bank: LinkedBank) => { addedBank = bank }
+/** The account added in this session, if any. */
+export const newlyLinkedBank = () => addedBank
 
 /**
  * Where the user is with US Stocks, as one step: KYC pending → 'kyc'; not activated → 'activate'; under review /
@@ -62964,11 +71493,6 @@ export const useUsJourney = () => usJourney(useUserStatus())
 
 /** Sets the user status to one US Stocks step (a US tab screen showing its own state sets it on arrival). */
 export function setUsJourney(step: UsJourney) {
-  const us: UsActivation = step === 'activate' ? 'off' : ['kyc', 'review', 'support', 'failed'].includes(step) ? (step as UsActivation) : 'active'
-  const set = (id: string, value: string) => setFlowOption(USER_STATUS, id, option(id).default, value)
-  set('us', us)
-  if (us !== 'active') return
-  set('usWallet', step === 'activated' ? 'empty' : step === 'onTheWay' ? 'onTheWay' : 'funded')
-  if (step === 'ready' || step === 'holding') set('usHoldings', step === 'holding' ? 'some' : 'none')
+  setFlowOption(USER_STATUS, 'account', option('account').default, step)
 }
 ```
